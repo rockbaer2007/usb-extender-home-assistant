@@ -125,7 +125,8 @@ class ButtonProtocolTests(fixtures.TemporaryHome):
         self.event("press", 1.2)
         self.event("repeat", 1.21)
         self.event("release", 1.25)
-        wait_for(lambda: all(self.values("switch", i) == ["ON", "OFF"] for i in (0, 1)))
+        wait_for(lambda: all(self.values("switch", i) == ["ON", "OFF"] and
+                             self.values("state", i) == ["ON", "OFF", "ON", "OFF"] for i in (0, 1)))
         self.assertEqual(self.values("state"), ["ON", "OFF", "ON", "OFF"])
 
     def test_single_click_all_channels_plain_and_plus_reset(self):
@@ -152,7 +153,7 @@ class ButtonProtocolTests(fixtures.TemporaryHome):
         self.core.tick(3.71)
         self.event("release", 4)
         self.core.tick(5)
-        wait_for(lambda: self.values("button") == ["double_click", "hold"])
+        wait_for(lambda: self.values("button") == ["double_click", "hold"] and self.values("hold") == ["hold"])
         self.assertEqual(self.values("double-click"), ["double_click"])
         self.assertEqual(self.values("hold"), ["hold"])
         self.assertFalse(self.values("click"))
