@@ -6,7 +6,8 @@ Datum: 21. November 2026. Lokale Windows-Prüfung mit Python 3.13.14.
 
 `python -m unittest discover -v`
 
-**25 Prüfungen erfolgreich** in der lokalen Gesamtausführung.
+Der letzte Gesamtlauf umfasst **26 Prüfungen**, einschließlich identischer
+Spiegelung zu mehreren Brokern.
 
 - Konfigurationsversion und genau drei Brokerplätze; Passwort-Hash,
   ausgeblendete Zugangsdaten und Erhalt gespeicherter MQTT-Passwörter.
@@ -15,6 +16,7 @@ Datum: 21. November 2026. Lokale Windows-Prüfung mit Python 3.13.14.
 - Zuordnung zweier Stream Decks ohne USB-Seriennummer über libusb-Pfade.
 - Drei echte Paho-MQTT-Clients über lokale TCP-Verbindungen zu isolierten
   MQTT-3.1.1-Testgegenstellen. Ereignisse erreichen alle drei Ziele ohne retained.
+- Festes Sende-Topic an allen drei Brokern: Topic und Payload sind bytegleich.
 - Ausfall einer Gegenstelle beeinträchtigt die anderen zwei nicht.
 - Fehlerhafte CA-Datei eines Brokers blockiert die übrigen Verbindungen nicht.
 - Zustandsabonnement am ausgewählten Empfangsbroker und Wiederholung der

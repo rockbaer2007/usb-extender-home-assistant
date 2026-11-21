@@ -162,6 +162,15 @@ class MqttTests(unittest.TestCase):
             self.assertEqual(json.loads(event[1])["event_type"], "press")
             self.assertTrue(any(m[0].startswith("homeassistant/device_automation/") for m in server.messages))
 
+    def test_identical_topic_and_payload_on_all_brokers(self):
+        self.config["bindings"][0]["topic"] = "haus/usb/taste"
+        self.assertEqual(self.pool.send("deck", "key:0", "press"), 3)
+        wait_for(lambda: all(any(m[0] == "haus/usb/taste" for m in s.messages) for s in self.servers))
+        copies = [next(m for m in s.messages if m[0] == "haus/usb/taste") for s in self.servers]
+        self.assertEqual(copies[0], copies[1])
+        self.assertEqual(copies[1], copies[2])
+        self.assertFalse(copies[0][2])
+
     def test_one_broker_down_others_continue(self):
         self.servers[0].close()
         wait_for(lambda: self.pool.states["broker1"] == "offline")

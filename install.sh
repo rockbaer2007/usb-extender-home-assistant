@@ -109,6 +109,7 @@ import paho.mqtt.client
 import evdev
 import cairosvg
 from StreamDeck.DeviceManager import DeviceManager
+DeviceManager().enumerate()
 cairosvg.svg2png(bytestring=b'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="red"/></svg>')
 print('  OK: MQTT, Bildverarbeitung, SVG, evdev und Stream-Deck-Treiber')
 PY

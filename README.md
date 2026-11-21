@@ -103,6 +103,16 @@ Die separate Checkbox löscht es ausdrücklich.
 
 Unter **Vorgabe für neue Geräte** die gewünschten Broker ankreuzen. Speichern.
 
+**Beispiel: ioBroker produktiv und Testsystem gleichzeitig.** Broker 1 mit dem
+MQTT-Server des Produktivsystems verbinden, Broker 2 mit dem MQTT-Server des
+Testsystems. An Gerät oder Belegung beide Ziele ankreuzen. Für identische Topics
+bei beiden dasselbe Präfix oder in der Belegung ein festes Sende-Topic setzen.
+Die Eingabe-Payload ist dann bytegleich. Die Übertragungen laufen unabhängig,
+aber ohne Garantie auf exakt gleichzeitige Ankunft. Bei Ausfall eines Brokers
+empfangen die anderen weiter; ausgefallene Eingaben werden nicht nachgesendet.
+Dieselben Zugangsdaten sind nicht erforderlich. Wenn zwei Plätze auf denselben
+MQTT-Server mit demselben Topic zeigen, entstehen doppelte Nachrichten.
+
 ### 2. USB-Gerät freigeben
 
 Gerät einstecken, **USB-Geräte** öffnen. Bei neu eingesteckten Geräten die Seite
