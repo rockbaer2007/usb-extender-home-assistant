@@ -2,10 +2,13 @@
 
 ## Als Nächstes: Praxisprüfung auf dem Raspberry Pi 4
 
-- 0.1.4 auf dem Pi installieren und den Anlernmodus mit der Trust-Tastatur prüfen:
+- 0.1.5 auf dem Pi installieren und den Anlernmodus mit der Trust-Tastatur prüfen:
   keine Aktionen beim Anlernen, keine Duplikate, Übernahme/Speicherung und Neustart.
 - Press/Release, Plus-Rücksetzung und Switch ON/OFF praktisch prüfen; Lauter/Leiser
   halten und kontrollieren, dass die Wiederholung beim Loslassen stoppt.
+- Switch als Umschalter, separaten Tastenzustand und Klick/Doppelklick/Hold per
+  physischer Taste prüfen. App-Neustart mit gesetztem Switch praktisch nachtesten.
+- Breite gruppierte Tastenliste visuell in Chrome und auf Tablet prüfen.
 - Fehlenden ioBroker-Empfang unabhängig davon weiter eingrenzen: .116:1883 ist
   online, neue Objekte sind erlaubt, keine ignorierten Topics; Tastendaten fehlen.
 - Ein konkretes Stream-Deck-Modell prüfen: Erkennung, Freigabe,
@@ -27,7 +30,7 @@
 
 ## Mögliche Erweiterungen nach der Praxisprüfung
 
-- Profil-/Seitenwechsel für Stream Decks und Doppelklick-Gesten.
+- Profil-/Seitenwechsel für Stream Decks.
 - Optionale Animationen und gestaltbare Stream-Deck-Plus-Touchscreen-Anzeigen.
 - Weitere USB-Adapter anhand konkret vorhandener Geräte, zum Beispiel serielle
   Bedienelemente. Eine allgemeine USB-Erkennung ersetzt keine Protokollanbindung.

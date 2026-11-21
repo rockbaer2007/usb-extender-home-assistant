@@ -7,9 +7,13 @@ function learnedKey(device, control) {
   const base=learning.topic_name+'-'+control.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   return {id:'key-'+keyId(),device,control,name:keyNames[control]||control.replace(/^KEY_/,''),enabled:true,
     topic_version:2,device_topic:learning.topic_name,
-    press:true,release:true,switch:true,press_plus:true,release_plus:true,
+    press:true,release:true,switch:true,press_plus:true,release_plus:true,switch_mode:'toggle',
+    state:true,button:true,button_plus:true,click:true,double_click:true,hold:true,
     press_topic:base+'/press',release_topic:base+'/release',switch_topic:base+'/switch',
-    press_plus_topic:base+'/press-plus',release_plus_topic:base+'/release-plus',targets:null,icon:'',
+    press_plus_topic:base+'/press-plus',release_plus_topic:base+'/release-plus',
+    state_topic:base+'/state',button_topic:base+'/button',button_plus_topic:base+'/button-plus',
+    click_topic:base+'/click',double_click_topic:base+'/double-click',hold_topic:base+'/hold',
+    double_ms:300,hold_ms:700,targets:null,icon:'',
     repeat:['KEY_VOLUMEUP','KEY_VOLUMEDOWN'].includes(control),repeat_delay:500,repeat_interval:150};
 }
 function collectLearned() {
@@ -28,19 +32,28 @@ function collectLearned() {
 function drawKeyList(parent, rows, draft=false) {
   if(!rows.length){parent.append(el('p',draft?'Noch keine neue Taste angelernt.':'Noch keine Tastenliste. Anlernmodus starten; vorhandene Einzelbelegungen bleiben unten erhalten.'));return;}
   const wrap=el('div',undefined,'table-wrap'),table=el('table',undefined,'key-table'),head=el('tr');
-  ['Aktiv','USB-Gerät · Taste / Name','Topic Press','Topic Release','Topic Switch · ON/OFF','Icon',''].forEach(x=>head.append(el('th',x)));table.append(head);
+  ['Aktiv','USB-Gerät · Taste / Name','Press / Press+','Release / Release+','Switch / Tastenzustand','Button / Button+','Einzelne Gesten','Icon / Bearbeiten'].forEach(x=>head.append(el('th',x)));table.append(head);
   rows.forEach(k=>{
     const tr=el('tr');
     function cell(){const td=el('td');tr.append(td);return td;}
     field(cell(),'Aktiv',k.enabled,v=>k.enabled=v,'checkbox');
     const name=cell();name.append(el('small',config.devices[k.device]?.name||k.device),el('div',k.control,'device-id'));field(name,'Name',k.name,v=>k.name=v);
-    ['press','release','switch'].forEach(mode=>{
+    const groups=[['press','press_plus'],['release','release_plus'],['switch','state'],['button','button_plus'],['click','double_click','hold']];
+    const labels={press:'Press',press_plus:'Press+ · danach leer',release:'Release',release_plus:'Release+ · danach leer',
+      switch:'Switch · Drücken schaltet um',state:'Tastenzustand · gedrückt ON',button:'Button · alle Gesten',button_plus:'Button+ · danach leer',
+      click:'Klick',double_click:'Doppelklick',hold:'Halten'};
+    groups.forEach(group=>{
       const td=cell();
       function channel(channel,label){
-        field(td,label,k[channel],v=>k[channel]=v,'checkbox');
-        const input=field(td,'Topic',k[channel+'_topic'],v=>{k[channel+'_topic']=v;preview();});input.placeholder='Automatisch';
-        const targetText=el('div');td.append(targetText);
+        const extras=['state','button','button_plus','click','double_click','hold'];
+        const entry=el('div',undefined,'key-channel');td.append(entry);
+        field(entry,label,k[channel]??!extras.includes(channel),v=>k[channel]=v,'checkbox');
+        const fallbackTopic=k.topic_version===2?k.device_topic+'-'+k.control.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'/'+channel.replace('_','-'):'';
+        const input=field(entry,'Topic',k[channel+'_topic']??fallbackTopic,v=>{k[channel+'_topic']=v;preview();});input.placeholder='Automatisch';
+        input.title=input.value;
+        const targetDetails=el('details',undefined,'key-targets');targetDetails.append(el('summary','Ziele'));const targetText=el('div');targetDetails.append(targetText);entry.append(targetDetails);
         function preview(){
+          input.title=input.value;
           targetText.replaceChildren();const targets=k.targets??config.devices[k.device]?.targets??config.default_targets;
           targets.forEach(id=>{const b=config.brokers.find(b=>b.id===id);if(!b)return;
             const fallback=k.topic_version===2?k.device_topic+'-'+k.control.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'/'+channel.replace('_','-'):b.prefix+'/'+k.device+'/'+k.control.toLowerCase().replace(/[^a-z0-9_-]/g,'-')+'/'+channel;
@@ -48,16 +61,23 @@ function drawKeyList(parent, rows, draft=false) {
           });
         }preview();
       }
-      channel(mode,'Senden');
-      if(mode!=='switch'){
-        if(k.topic_version===2)channel(mode+'_plus',mode==='press'?'Press+ · eigener Kanal':'Release+ · eigener Kanal');
-        else field(td,mode==='press'?'Press+ · danach leer':'Release+ · danach leer',k[mode+'_plus'],v=>k[mode+'_plus']=v,'checkbox');
-      }
+      group.forEach(mode=>{
+        if(k.topic_version===2||['press','release','switch'].includes(mode))channel(mode,labels[mode]);
+        else if(['press_plus','release_plus'].includes(mode))field(td,labels[mode],k[mode],v=>k[mode]=v,'checkbox');
+      });
+      if(group[0]==='switch'&&k.switch_mode==='momentary')td.append(el('small','Kompatibilität: bisheriger Switch folgt Drücken/Loslassen. Umschaltung unter Bearbeiten wählen.'));
     });
     const icon=cell();if(k.icon){const image=el('img');image.src='/icons/'+k.icon+'.png';image.alt=k.name;image.className='key-icon';icon.append(image);}
     field(icon,'Icon',k.icon,v=>k.icon=v,'select',[['','Kein Icon'],...iconList.map(i=>[i.id,i.name])]);
-    button(cell(),'Bearbeiten',()=>{const details=tr.nextElementSibling;details.hidden=!details.hidden;});table.append(tr);
-    const detailRow=el('tr');detailRow.hidden=true;const details=el('td');details.colSpan=7;detailRow.append(details);table.append(detailRow);
+    button(icon,'Bearbeiten',()=>{const details=tr.nextElementSibling;details.hidden=!details.hidden;});table.append(tr);
+    const detailRow=el('tr');detailRow.hidden=true;const details=el('td');details.colSpan=8;detailRow.append(details);table.append(detailRow);
+    field(details,'Switch-Verhalten',k.switch_mode||'toggle',v=>k.switch_mode=v,'select',[['toggle','Umschalter: Drücken ON, nächstes Drücken OFF'],['momentary','Kompatibilität: Drücken ON, Loslassen OFF']]);
+    if(k.topic_version===2){
+      const times=el('div',undefined,'fields');details.append(times);
+      const double=field(times,'Doppelklick-Zeit (ms)',k.double_ms??300,v=>k.double_ms=v,'number');double.min=150;double.max=1000;
+      const hold=field(times,'Halten ab (ms)',k.hold_ms??700,v=>k.hold_ms=v,'number');hold.min=400;hold.max=5000;
+      details.append(el('small','Button: click, double_click oder hold. Ein Einzelklick wartet das Doppelklick-Fenster ab. Doppelklick und Halten erzeugen keinen zusätzlichen Klick.'));
+    }
     field(details,'Geräteziele übernehmen',k.targets==null,v=>{k.targets=v?null:[];render();},'checkbox');
     if(k.targets!=null)routes(details,k.targets,v=>k.targets=v);
     if(['KEY_VOLUMEUP','KEY_VOLUMEDOWN'].includes(k.control)){
@@ -94,7 +114,7 @@ function learningPanel() {
     button(c,'Tasten übernehmen',()=>{config.keys||=[];config.keys.push(...learnedDraft);learnedDraft=[];dirty();render();notice('Tasten übernommen. Jetzt speichern, um MQTT zu aktivieren.');},'primary');
     button(c,'Anlernliste verwerfen',()=>{learnedDraft=[];render();});
   }
-  c.append(el('small','Neue Tasten: Gerätename-key-taste/press, /release, /switch, /press-plus und /release-plus. Alle fünf Kanäle sind vorbereitet und aktiv. Nur die Plus-Kanäle werden nach 50 ms leer zurückgesetzt. Switch sendet ON/OFF. Bestehende Topics bleiben erhalten.'));
+  c.append(el('small','Neue Tasten erhalten alle Topics: press/release und Plus, switch als Umschalter, state als Tastenzustand, button/button-plus sowie click/double-click/hold. Alle Kanäle sind einzeln abschaltbar. Bestehende Zusatzkanäle bleiben aus, bis du sie aktivierst.'));
   const list=card('Gespeicherte Tasten');drawKeyList(list,config.keys||[]);
 }
 async function endLearning() {

@@ -1,5 +1,27 @@
 # Aktueller Stand
 
+## USB Extender für Home Assistant 0.1.5
+
+Switch ist jetzt ein Umschalter mit dauerhaftem Zustand in `switches.json`.
+Tastenzustand, gemeinsame Button-/Button+-Ereignisse und einzelne Klick-,
+Doppelklick- und Halten-Kanäle sind ergänzt. Die Oberfläche nutzt die volle
+Fensterbreite und gruppiert die Kanäle kompakt nebeneinander.
+
+Sicherung der vorherigen Quellen:
+`M:\repos-backups\usb-extender-before-buttons-20261121-133714`.
+61 Python-Prüfungen und beide JavaScript-Prüfläufe erfolgreich. Die lokale
+DOM-Prüfung lädt die echten Styles und prüft die aufgehobene Breitenbegrenzung.
+Dies ist kein visueller Chrome-Live-Test auf dem Pi.
+
+Auf .112 wurde inzwischen 0.1.4 mit gespeicherten Lautstärketasten gesehen.
+Der zuvor in ioBroker betrachtete JSON-Wert gehörte zum alten Datenpunkt
+`mqtt.0.Trust-key-f1`; neue Lautstärketopics waren vorhanden konfiguriert, aber
+ihre letzten beobachteten Eingaben stammten noch aus dem Anlernmodus und wurden
+nicht gesendet. Der neue Live-Nachweis bleibt offen.
+
+0.1.5 wurde in diesem Schritt nicht auf dem Pi installiert; vorhandene
+Pi-Einstellungen wurden nicht verändert. Neues ZIP für den regulären Installer.
+
 ## USB Extender für Home Assistant 0.1.4
 
 Neue Tasten werden mit fünf lesbaren, vorbelegten Topics aus dem Gerätenamen

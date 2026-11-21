@@ -1,5 +1,30 @@
 # Prüfungen
 
+## 0.1.5 – Umschalter, Button-Gesten und breite Liste
+
+61 Python-Prüfungen und beide JavaScript-Prüfläufe lokal erfolgreich.
+
+- Reale Paho-/TCP-Verbindungen zu zwei isolierten MQTT-Testbrokern: Switch
+  liefert ON beim ersten Druck und OFF beim zweiten. Loslassen und native
+  Wiederholungen toggeln nicht. `/state` liefert parallel ON/OFF bei Drücken/Loslassen.
+- App-Neuinitialisierung und neue MQTT-Verbindungen lesen den gespeicherten
+  Switch-Wert zurück; der nächste Druck schaltet korrekt weiter. Konfiguration bleibt gleich.
+- Klick erst nach Doppelklick-Fenster; Doppelklick ohne Einzelklick, Hold einmalig
+  ohne Klick beim Loslassen. Verspätete zweite Klicks, gehaltene zweite Betätigung,
+  native Repeat-Ereignisse, unabhängige Geräte und eigene Zeitwerte geprüft.
+- `/button`, `/button-plus` und einzelne Gesten-Topics liefern einfache Werte.
+  Button+ wird leer zurückgesetzt; keine Datenmeldung retained.
+- Anlernmodus und bekannte Geräteverluste verwerfen wartende Gesten, ohne den
+  gespeicherten Switch umzuschalten.
+- 15 Discovery-Komponenten einer voll aktivierten Taste (13 Geräteauslöser,
+  zwei Binärsensoren) mit einer Gerätekennung; Type/Subtype-Paare eindeutig.
+- DOM-Ablauf prüft neue Topicvorgaben, Speichern und echte CSS-Regel für die volle
+  Breite. Syntaxprüfung und `git diff --check` erfolgreich.
+
+Kein physischer Pi-/HA-/ioBroker-Nachtest und keine visuelle Browserabnahme der
+neuen Fassung. Die Discovery-Auslöser verwenden die dokumentierten
+[HA-Geräteauslöser](https://www.home-assistant.io/integrations/device_trigger.mqtt/).
+
 ## 0.1.4 – Lesbare Topics und Gerätezuordnung
 
 47 Python-Prüfungen und beide JavaScript-Prüfläufe lokal erfolgreich.

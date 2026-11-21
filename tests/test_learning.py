@@ -20,7 +20,7 @@ from ugso_usbhub.web import Server
 
 def row(control="KEY_VOLUMEUP"):
     return {"id": "volume", "device": "keyboard", "control": control, "name": "Lauter",
-            "enabled": True, "press": True, "release": True, "switch": True,
+            "enabled": True, "press": True, "release": True, "switch": True, "switch_mode": "momentary",
             "press_plus": True, "release_plus": True, "repeat": True,
             "repeat_delay": 500, "repeat_interval": 150, "targets": None}
 

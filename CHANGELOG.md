@@ -1,5 +1,21 @@
 # Änderungen
 
+## 0.1.5 – 21. November 2026
+
+- Switch als Umschalter: erster Druck ON, nächster OFF. Zustand dauerhaft separat
+  gespeichert und beim Wiederverbinden synchronisiert; Loslassen schaltet nicht um.
+- Separater Tastenzustand `/state` für gedrückt ON / losgelassen OFF. Bisheriger
+  Switch-Modus bleibt bei Bedarf ausdrücklich als Kompatibilitätsauswahl verfügbar.
+- Button mit Einzel-/Doppelklick und Halten; gemeinsames `/button`, optional
+  `/button-plus` mit Leer-Rücksetzung sowie einzelne Gesten-Topics.
+- Zeiten pro Taste einstellbar; keine zusätzlichen Einzelklicks bei Doppelklick
+  oder Halten. OS-Wiederholung zählt weder als Klick noch als neuer Switch-Druck.
+- Gemeinsame HA-Gerätezuordnung, eindeutige Button-Auslöser und separater
+  Binärsensor für den Tastenzustand; nur einfache Werte auf allen Daten-Topics.
+- Volle Fensterbreite, kompakte gruppierte Tastenliste, einblendbare Broker-Ziele.
+- Bestehende Topics/Aktivierungen erhalten. Neue Zusatzkanäle bestehender Zeilen
+  sind zunächst aus; neu angelernte Tasten haben alle elf Kanäle vorbereitet.
+
 ## 0.1.4 – 21. November 2026
 
 - Neue Tasten haben sofort lesbare, ausgefüllte Topics:

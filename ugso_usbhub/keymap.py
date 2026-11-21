@@ -4,6 +4,11 @@ import unicodedata
 from .storage import canonical_control
 
 VOLUME_KEYS = {"KEY_VOLUMEUP", "KEY_VOLUMEDOWN"}
+EXTRA_MODES = ("state", "button", "button_plus", "click", "double_click", "hold")
+
+
+def button_enabled(key):
+    return key.get("enabled", True) and any(key.get(mode, False) for mode in EXTRA_MODES if mode != "state")
 
 
 def topic_slug(name):
@@ -54,17 +59,20 @@ def validate_keys(config):
                 raise ValueError("Lesbarer Gerätename für MQTT fehlt")
         elif key.get("topic_version") is not None:
             raise ValueError("Unbekannte Topic-Version")
-        for mode in ("press", "release", "switch", "press_plus", "release_plus"):
+        if key.get("switch_mode", "toggle") not in ("toggle", "momentary"):
+            raise ValueError("Ungültiger Switch-Modus")
+        for mode in ("press", "release", "switch", "press_plus", "release_plus", *EXTRA_MODES):
             topic = key.get(mode + "_topic", "")
             if not isinstance(topic, str) or any(x in topic for x in ("#", "+", "\x00")):
                 raise ValueError("Sende-Topic darf keine Wildcards enthalten")
-        for name in ("enabled", "press", "release", "switch", "press_plus", "release_plus", "repeat"):
+        for name in ("enabled", "press", "release", "switch", "press_plus", "release_plus", "repeat", *EXTRA_MODES):
             if name in key and not isinstance(key[name], bool):
                 raise ValueError("Tastenoptionen müssen ein/aus sein")
-        for name, default, low, high in (("repeat_delay", 500, 200, 5000), ("repeat_interval", 150, 100, 2000)):
+        for name, default, low, high in (("repeat_delay", 500, 200, 5000), ("repeat_interval", 150, 100, 2000),
+                                       ("double_ms", 300, 150, 1000), ("hold_ms", 700, 400, 5000)):
             value = key.get(name, default)
             if type(value) is not int or not low <= value <= high:
-                raise ValueError("Wiederholung: Start 200–5000 ms, Abstand 100–2000 ms")
+                raise ValueError("Ungültige Zeit: Wiederholung 200–5000/100–2000 ms, Doppelklick 150–1000 ms, Halten 400–5000 ms")
         if key.get("repeat") and key["control"] not in VOLUME_KEYS:
             raise ValueError("Wiederholung beim Halten ist für Lauter/Leiser vorgesehen")
     return config
@@ -76,11 +84,21 @@ def key_bindings(config):
         if not key.get("enabled", True):
             continue
         named = key.get("topic_version") == 2
-        modes = ("press", "press_plus", "release", "release_plus", "switch") if named else ("press", "release", "switch")
+        modes = ("press", "press_plus", "release", "release_plus", "switch", *EXTRA_MODES) if named else ("press", "release", "switch")
         for mode in modes:
-            if not key.get(mode, True):
+            if not key.get(mode, mode not in EXTRA_MODES):
                 continue
-            gestures = ("press", "release") if mode == "switch" else (mode.removesuffix("_plus"),)
+            toggle = mode == "switch" and key.get("switch_mode", "toggle") == "toggle"
+            if toggle:
+                gestures = ("toggle_on", "toggle_off")
+            elif mode in ("switch", "state"):
+                gestures = ("press", "release")
+            elif mode in ("button", "button_plus"):
+                gestures = ("button_click", "button_double_click", "button_hold")
+            elif mode in ("click", "double_click", "hold"):
+                gestures = ("button_" + mode,)
+            else:
+                gestures = (mode.removesuffix("_plus"),)
             for gesture in gestures:
                 suffix = mode.replace("_", "-")
                 readable_topic = key.get("device_topic", "") + "-" + topic_slug(key["control"]) + "/" + suffix
@@ -89,9 +107,10 @@ def key_bindings(config):
                                "gesture": gesture, "targets": key.get("targets"),
                                "topic": key.get(mode + "_topic", "") or (readable_topic if named else ""),
                                "key_topic": key["device"] + "/" + re.sub(r"[^a-z0-9_-]", "-", key["control"].lower()) + "/" + mode,
-                               "payload": ("ON" if gesture == "press" else "OFF") if mode == "switch" else gesture,
+                               "payload": ("ON" if gesture in ("press", "toggle_on") else "OFF") if mode in ("switch", "state") else gesture.removeprefix("button_"),
                                "reset": mode.endswith("_plus") if named else mode != "switch" and key.get(mode + "_plus", False),
                                "key_mode": mode, "key_id": key["id"],
+                               "toggle": toggle,
                                "icon": key.get("icon", ""), "text": key.get("name", "")})
     return result
 

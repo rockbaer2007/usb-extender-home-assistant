@@ -6,6 +6,7 @@ const vm=require('node:vm');
 const html=fs.readFileSync('ugso_usbhub/static/index.html','utf8');
 const dom=new JSDOM(html,{url:'http://127.0.0.1:8098',runScripts:'outside-only'});
 const w=dom.window;
+const style=w.document.createElement('style');style.textContent=fs.readFileSync('ugso_usbhub/static/style.css','utf8');w.document.head.append(style);
 let config={schema:1,hub_id:'demo',devices:{kbd:{enabled:true,name:'Trust Keyboard',targets:['broker1','broker2']}},
   brokers:[{id:'broker1',name:'HA',enabled:true,prefix:'test/ha'},{id:'broker2',name:'IOB',enabled:true,prefix:'test/iob'}],default_targets:['broker1'],bindings:[]};
 let snapshot={active:true,devices:[],events:[],brokers:{},errors:{}};
@@ -47,6 +48,10 @@ const click=async text=>{const b=[...w.document.querySelectorAll('button')].find
   assert.equal(config.keys.length,2);
   assert.equal(config.keys[0].repeat,true);
   assert.equal(config.keys[0].switch,true);
+  assert.equal(config.keys[0].switch_mode,'toggle');
+  assert.equal(config.keys[0].button_plus,true);
+  assert.equal(config.keys[0].button_topic,'trust-keyboard-key-volumeup/button');
+  assert.equal(w.getComputedStyle(w.document.querySelector('main')).maxWidth,'none');
   assert.equal(config.keys[1].control,'KEY_F2');
   assert.equal(config.bindings.length,0);
   assert.equal(w.document.querySelector('#dirty').textContent,'Gespeichert');

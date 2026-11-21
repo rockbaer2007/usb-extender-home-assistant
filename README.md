@@ -2,7 +2,7 @@
 
 **USB-Geräte und Stream Decks über MQTT verbinden – für Raspberry Pi.**
 
-Version **0.1.4** · Privates Projekt · Stand 21. November 2026
+Version **0.1.5** · Privates Projekt · Stand 21. November 2026
 
 Ein Raspberry Pi 4 wird zur USB-/MQTT-Brücke: Tastaturen, Medientasten,
 Makropads und unterstützte physische Stream Decks liefern Eingaben an bis zu
@@ -53,15 +53,20 @@ im Browser; vorhandene Einstellungen und Einzelbelegungen bleiben erhalten.
 | --- | --- | --- |
 | Press | `press` beim Drücken | an |
 | Release | `release` beim Loslassen | an |
-| Switch | `ON` beim Drücken, `OFF` beim Loslassen | an |
+| Switch | Erstes Drücken `ON`, nächstes Drücken `OFF` | an |
 | Press+ | Eigener Kanal: `press`, nach 50 ms leer zurücksetzen | an |
 | Release+ | Eigener Kanal: `release`, nach 50 ms leer zurücksetzen | an |
+| Tastenzustand | `/state`: `ON` beim Drücken, `OFF` beim Loslassen | an |
+| Button | `/button`: `click`, `double_click` oder `hold` | an |
+| Button+ | `/button-plus`: gleiche Aktion, danach nach 50 ms leer | an |
+| Einzelne Gesten | `/click`, `/double-click`, `/hold`: jeweilige Aktion | an |
 
-Ab 0.1.4 sind alle fünf Topics beim Anlernen mit lesbaren Namen ausgefüllt:
+Ab 0.1.4 sind die ersten fünf Topics beim Anlernen mit lesbaren Namen ausgefüllt:
 `trust-keyboard-key-f1/press`, `/release`, `/switch`, `/press-plus` und `/release-plus`.
 Sie gehen mit identischem Namen an alle gewählten Broker. In MQTT ist `+` ein
 Platzhalter; deshalb heißen die Plus-Topics ausdrücklich `press-plus`/`release-plus`.
-Nur diese beiden Kanäle werden leer zurückgesetzt; normale Press-/Release-Kanäle
+Zusätzlich gibt es ab 0.1.5 die sechs weiteren Kanäle aus der Tabelle. Nur die
+Plus-Kanäle werden leer zurückgesetzt; normale Press-/Release-/Button-Kanäle
 bleiben unverändert. Die Leer-Nachricht ist kein physisches Loslassen.
 
 Gerätenamen werden MQTT-tauglich umgewandelt, etwa „Büro Tastatur“ zu
@@ -70,6 +75,28 @@ Nach dem Speichern bleiben Topics auch bei einer späteren Umbenennung stabil.
 Die technische Gerätekennung wird weiterhin intern verwendet und steht nicht
 im neuen Daten-Topic. Bestehende Einzelbelegungen und Tasten aus 0.1.3 behalten
 ihre bisherigen Topics und ihre ursprüngliche Plus-Funktion; keine stille Umstellung.
+
+**Switch ist ab 0.1.5 ein Umschalter:** Loslassen verändert seinen Zustand nicht.
+Der Wert steht in `switches.json`, überlebt einen App-Neustart und wird beim
+MQTT-Wiederverbinden erneut als aktueller Zustand gesendet (nicht retained).
+Bei Bedarf lässt sich unter **Bearbeiten → Switch-Verhalten** der bisherige
+Momenttaster-Modus wählen. Der neue Kanal **Tastenzustand** erfüllt diese Aufgabe
+separat. Zusatzkanäle vorhandener Zeilen starten ausgeschaltet; neue Anlerntasten
+haben alle elf Kanäle vorbereitet und eingeschaltet.
+
+**Button-Gesten:** Einzelklick wird nach dem Doppelklick-Fenster (Vorgabe 300 ms
+ab Loslassen) gesendet. Ein zweiter Klick innerhalb dieses Fensters ergibt nur
+`double_click`. Halten ab 700 ms sendet `hold` genau einmal; beim Loslassen folgt
+kein Klick. Wird der zweite Druck gehalten, ersetzt Hold die noch wartende
+Klickfolge. Native Tastaturwiederholungen zählen nicht als weitere Klicks und
+schalten Switch nicht erneut um. Beide Zeiten sind pro Taste unter **Bearbeiten**
+einstellbar. Alle Kanäle können unabhängig genutzt werden; mehrere zugeordnete
+Automationen lösen entsprechend auch mehrere Aktionen aus.
+
+Die Oberfläche verwendet die verfügbare Fensterbreite. Press, Release,
+Switch/Tastenzustand, gemeinsame Button-Ereignisse und einzelne Gesten stehen
+gruppiert nebeneinander. Auf schmalen Fenstern lässt sich nur die Tabelle
+horizontal scrollen. Die Broker-Ziele sind pro Kanal aufklappbar.
 Alle Tastenmeldungen bleiben QoS 0 und nicht retained; Offline-Eingaben werden
 nicht nachgesendet. Die Anzeige „übergeben“ bestätigt die lokale MQTT-Übergabe,
 nicht den Empfang oder die Entitätsanlage im Zielsystem.
@@ -106,8 +133,8 @@ Installationspaket, kein vollständig offline installierbares ARM-Abbild.
    ```bash
    # Falls unzip noch nicht vorhanden ist:
    sudo apt-get update && sudo apt-get install -y unzip
-   unzip USB-Extender-Home-Assistant-0.1.4-Raspi4.zip
-   cd USB-Extender-Home-Assistant-0.1.4
+   unzip USB-Extender-Home-Assistant-0.1.5-Raspi4.zip
+   cd USB-Extender-Home-Assistant-0.1.5
    sudo bash install.sh
    ```
 

@@ -79,6 +79,14 @@ class Brokers:
                 if device.get("receive_broker") == ident and binding.get("state_topic"):
                     client.subscribe(binding["state_topic"])
             self.sync_discovery(broker)
+            try:
+                switches = read_json(home() / "switches.json", {})
+                for binding in all_bindings(self.config):
+                    if binding.get("toggle") and binding["gesture"] == "toggle_on" and ident in resolve_targets(self.config, binding["device"], binding):
+                        state = isinstance(switches, dict) and switches.get(binding["key_id"]) is True
+                        client.publish(self.event_topic(broker, binding), "ON" if state else "OFF", qos=0, retain=False)
+            except (OSError, ValueError):
+                LOG.exception("Switch-Zustände konnten nicht abgeglichen werden")
         return callback
 
     def _disconnected(self, ident):
@@ -149,17 +157,20 @@ class Brokers:
             for b in all_bindings(self.config):
                 if broker["id"] not in resolve_targets(self.config, b["device"], b):
                     continue
-                if b.get("key_mode") == "switch":
-                    if b["gesture"] != "press":
+                if b.get("key_mode") in ("switch", "state"):
+                    if b["gesture"] not in ("press", "toggle_on"):
                         continue
-                    topic = f"homeassistant/binary_sensor/ugso_{self.config['hub_id']}_{b['key_id']}/config"
-                    desired[topic] = json.dumps({"name": b.get("text") or b["control"],
-                        "unique_id": f"ugso_{self.config['hub_id']}_{b['key_id']}_switch",
+                    mode = b["key_mode"]
+                    topic = f"homeassistant/binary_sensor/ugso_{self.config['hub_id']}_{b['key_id']}" + ("_state" if mode == "state" else "") + "/config"
+                    desired[topic] = json.dumps({"name": (b.get("text") or b["control"]) + (" · Tastenzustand" if mode == "state" else " · Switch"),
+                        "unique_id": f"ugso_{self.config['hub_id']}_{b['key_id']}_{mode}",
                         "state_topic": self.event_topic(broker, b), "payload_on": "ON", "payload_off": "OFF",
                         "availability_topic": broker["prefix"] + "/availability",
                         "device": self.discovery_device(b["device"])})
                     continue
-                kind = {"press": "button_short_press", "release": "button_short_release", "hold": "button_long_press"}.get(b["gesture"], b["gesture"])
+                kind = {"press": "button_short_press", "release": "button_short_release", "hold": "button_long_press",
+                        "button_click": "button_short_press", "button_double_click": "button_double_press",
+                        "button_hold": "button_long_press"}.get(b["gesture"], b["gesture"])
                 payload = {"automation_type": "trigger", "topic": self.event_topic(broker, b),
                            "type": kind, "subtype": (b.get("key_mode", "") + "_" if b.get("key_mode") else "") + canonical_control(b["control"]).replace(":", "_"),
                            "device": self.discovery_device(b["device"])}
@@ -191,7 +202,7 @@ class Brokers:
         matched = 0
         transmissions = []
         for binding in all_bindings(self.config):
-            if switch_only and binding.get("key_mode") != "switch":
+            if switch_only and binding.get("key_mode") not in ("switch", "state"):
                 continue
             if repeat_key and binding.get("key_mode") not in ("press", "press_plus"):
                 continue

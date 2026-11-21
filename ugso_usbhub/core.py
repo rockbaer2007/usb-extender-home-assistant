@@ -7,9 +7,10 @@ import time
 from . import __version__
 from .hardware import Hardware
 from .mqtt import Brokers
-from .storage import atomic_json, home, load_config, validate, status_path, canonical_control
+from .storage import atomic_json, home, load_config, validate, status_path, canonical_control, read_json
 from .learning import current as learning_lease
-from .keymap import VOLUME_KEYS
+from .keymap import VOLUME_KEYS, button_enabled
+from .gestures import Buttons
 
 LOG = logging.getLogger(__name__)
 
@@ -28,6 +29,9 @@ class Core:
         self.learning = {}
         self.learning_releases = set()
         self.sequence = 0
+        self.buttons = Buttons()
+        stored = read_json(home() / "switches.json", {})
+        self.toggle_states = stored if isinstance(stored, dict) else {}
         self.started = time.time()
 
     def enqueue(self, device, control, gesture, value=1):
@@ -70,9 +74,12 @@ class Core:
         now = time.monotonic()
         control = canonical_control(control)
         key = (device, control)
+        was_down = key in self.pressed
+        row = next((k for k in self.config.get("keys", []) if (k["device"], k["control"]) == key and k.get("enabled", True)), {})
         learning = self.learning if self.learning.get("expires", 0) > time.time() else {}
         suppressed = learning.get("device") == device or key in self.learning_releases
         if suppressed:
+            self.buttons.cancel(key=key)
             self.pressed.pop(key, None)
             self.repeat_due.pop(key, None)
             if gesture == "press":
@@ -86,9 +93,8 @@ class Core:
             if now - self.repeats.get(key, 0) < 0.15:
                 return
             self.repeats[key] = now
-        if gesture == "press" and not suppressed:
+        if gesture == "press" and not suppressed and not was_down:
             self.pressed[key] = (now, False)
-            row = next((k for k in self.config.get("keys", []) if k["device"] == device and k["control"] == control and k.get("enabled", True)), {})
             if row.get("repeat") and control in VOLUME_KEYS:
                 self.repeat_due[key] = now + row.get("repeat_delay", 500) / 1000
         elif gesture == "release":
@@ -96,15 +102,39 @@ class Core:
             self.repeats.pop(key, None)
             self.repeat_due.pop(key, None)
         report = report or self.brokers.send_report(device, control, gesture, value)
+        if not suppressed and gesture == "press" and not was_down and row.get("switch", True) and row and row.get("switch_mode", "toggle") == "toggle":
+            ident = row["id"]
+            state = not (self.toggle_states.get(ident) is True)
+            updated = {k: v for k, v in self.toggle_states.items() if k in {r["id"] for r in self.config.get("keys", [])}}
+            updated[ident] = state
+            atomic_json(home() / "switches.json", updated)
+            self.toggle_states = updated
+            switched = self.brokers.send_report(device, control, "toggle_on" if state else "toggle_off", int(state))
+            report = {"delivered": report["delivered"] + switched["delivered"],
+                      "matched": report["matched"] + switched["matched"],
+                      "reason": "sent" if report["delivered"] + switched["delivered"] else switched["reason"],
+                      "transmissions": report["transmissions"] + switched["transmissions"]}
+        self.record(device, control, gesture, value, report, learning.get("id") if suppressed else None)
+        if not suppressed and button_enabled(row):
+            for button_key, action in self.buttons.feed(key, gesture, now, row):
+                self.button_event(button_key, action)
+
+    def record(self, device, control, gesture, value, report, learning_id=None):
         self.sequence += 1
         self.events.appendleft({"time": time.time(), "device": device, "control": control,
                                 "gesture": gesture, "value": value, "delivered": report["delivered"],
                                 "delivery": report, "sequence": self.sequence,
-                                "learning_id": learning.get("id") if suppressed else None})
+                                "learning_id": learning_id})
+
+    def button_event(self, key, action):
+        report = self.brokers.send_report(*key, action, 1)
+        self.record(*key, action.removeprefix("button_"), 1, report)
 
     def tick(self, now=None):
         now = time.monotonic() if now is None else now
         self.brokers.flush_resets(now)
+        for key, action in self.buttons.tick(now):
+            self.button_event(key, action)
         for key, due in list(self.repeat_due.items()):
             if key not in self.pressed:
                 self.repeat_due.pop(key, None)
@@ -118,14 +148,16 @@ class Core:
                 self.repeat_due[key] = now + row.get("repeat_interval", 150) / 1000
 
     def release_key(self, key):
-        # Administrative cleanup clears only the new switch state. It must not
-        # invent physical release actions for existing individual bindings.
+        # Clear momentary state, not the latched toggle. Do not invent physical
+        # release actions for existing individual bindings.
         self.brokers.send_report(*key, "release", 0, switch_only=True)
+        self.buttons.cancel(key=key)
         self.pressed.pop(key, None)
         self.repeat_due.pop(key, None)
         self.repeats.pop(key, None)
 
     def release_all(self, device=None):
+        self.buttons.cancel(device=device)
         for key in list(self.pressed):
             if device is None or key[0] == device:
                 self.release_key(key)
@@ -175,7 +207,7 @@ class Core:
                     try:
                         self.hardware.scan(self.config)
                         present = {d["id"] for d in self.hardware.inventory}
-                        for device in {key[0] for key in self.pressed if key[0] not in present}:
+                        for device in {key[0] for key in [*self.pressed, *self.buttons.keys] if key[0] not in present}:
                             self.release_all(device)
                         self.pressed = {key: value for key, value in self.pressed.items() if key[0] in present}
                     except Exception:
