@@ -2,23 +2,20 @@
 
 ## Als Nächstes: Praxisprüfung auf dem Raspberry Pi 4
 
-- 0.1.5 auf dem Pi installieren und den Anlernmodus mit der Trust-Tastatur prüfen:
-  keine Aktionen beim Anlernen, keine Duplikate, Übernahme/Speicherung und Neustart.
+- Gespeicherte Tasten nach einem Pi-Neustart und USB-Wiederanstecken praktisch prüfen.
 - Press/Release, Plus-Rücksetzung und Switch ON/OFF praktisch prüfen; Lauter/Leiser
   halten und kontrollieren, dass die Wiederholung beim Loslassen stoppt.
 - Switch als Umschalter, separaten Tastenzustand und Klick/Doppelklick/Hold per
   physischer Taste prüfen. App-Neustart mit gesetztem Switch praktisch nachtesten.
-- Breite gruppierte Tastenliste visuell in Chrome und auf Tablet prüfen.
-- Fehlenden ioBroker-Empfang unabhängig davon weiter eingrenzen: .116:1883 ist
-  online, neue Objekte sind erlaubt, keine ignorierten Topics; Tastendaten fehlen.
+- Breite gruppierte Tastenliste zusätzlich auf Tablet prüfen; Desktop-Nutzerbilder liegen vor.
 - Ein konkretes Stream-Deck-Modell prüfen: Erkennung, Freigabe,
   Drücken/Loslassen/Halten, Icons und Helligkeit.
 - Weitere Medientasten prüfen, insbesondere Play/Pause und Titelsprung.
   Tastatur press/release sowie Lautstärke− und Stumm wurden bereits live bestätigt.
 - USB-Geräte abziehen/wieder anstecken, den Pi neu starten und die gespeicherten
   Belegungen sowie MQTT-Wiederverbindung prüfen.
-- Drei reale MQTT-Broker anschließen, Ausfall eines Brokers prüfen und HA-Discovery
-  sowie Display-Rückmeldungen mit der tatsächlichen HA-Installation testen.
+- Drei Broker sind im Nutzeraufbau online sichtbar. Ausfall eines Brokers und
+  Wiederverbindung praktisch prüfen, außerdem HA-Display-Rückmeldungen testen.
 - HA-Binärsensor für den Switch-Zustand sowie gefilterte Press/Release-Auslöser
   einschließlich der separaten Plus-Kanäle unter einem benannten USB-Gerät
   mit Discovery praktisch prüfen. IOB-Discovery bleibt aus: hass-mqtt meldete

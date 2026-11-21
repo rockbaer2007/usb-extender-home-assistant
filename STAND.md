@@ -1,5 +1,27 @@
 # Aktueller Stand
 
+## Öffentliche Veröffentlichung und Nutzer-Praxistest 0.1.5
+
+Der Nutzer hat 0.1.5 inzwischen auf dem Raspberry Pi eingesetzt und neun
+Screenshots bereitgestellt. Sie liegen unter `docs/screenshots/live-0.1.5/`.
+Sichtbar: drei online gemeldete Brokerplätze, Funktionstasten, HA-Switchwerte Ein
+und Tastenzustände Aus nach Loslassen sowie einzelne ioBroker-Datenpunkte mit
+press/release/click/hold und ON/OFF. Leere Plus-Rücksetzungen erscheinen dort als null.
+Der zuvor fehlende ioBroker-Empfang ist damit für die gezeigten Topics nachgewiesen.
+
+Der Verlauf zeigt MQTT-Übergaben an drei Ziele; er allein beweist keinen Empfang
+auf jedem Broker. Doppelklick und Neustartpersistenz bleiben automatisierte
+Prüfnachweise, nicht zusätzliche durch die Bilder belegte Hardwaretests.
+Physische Stream Decks und ähnliche Fremdgeräte benötigen weitere Praxistests.
+
+Deutsche/englische README, Hardwaretest-Issueformular und bebilderte DE/EN/FR-
+Webdokumentation sind für die öffentliche Veröffentlichung ergänzt. Der bestehende
+Git-Verlauf wurde auf versehentlich versionierte Konfigurationen und typische
+Zugangstoken/Privatschlüssel geprüft; keine solchen Treffer. Dies ist kein
+vollständiges Sicherheitsaudit. GitHub Secret Scanning war im privaten Repo nicht aktiv.
+
+Die folgenden Abschnitte dokumentieren die früheren Implementierungsstände.
+
 ## USB Extender für Home Assistant 0.1.5
 
 Switch ist jetzt ein Umschalter mit dauerhaftem Zustand in `switches.json`.

@@ -1,5 +1,18 @@
 # Prüfungen
 
+## Nutzerbilder 0.1.5 – Praxisempfang bestätigt
+
+Neun vom Nutzer gelieferte Screenshots zeigen die installierte 0.1.5 und die
+breite Oberfläche, drei online gemeldete Brokerplätze, USB-/Anlerneinstellungen,
+Ereignisübergaben und die tatsächlichen Anzeigen in HA/ioBroker. In ioBroker sind
+einzelne Topics mit press, release, click, hold, ON und OFF erkennbar. Plus-Kanäle
+werden leer zurückgesetzt (im gezeigten Adapter als null). HA zeigt getrennte
+Switch- und Tastenzustand-Sensoren mit Werten nach der Betätigung.
+
+Damit ist der vorher fehlende ioBroker-Empfang für die gezeigten Topics bestätigt.
+Keine neue Agenten-Liveprüfung und kein vollständiger Nachweis aller drei Broker,
+aller Gesten oder Neustarts. Die Screenshots beweisen keinen physischen Stream-Deck-Test.
+
 ## 0.1.5 – Umschalter, Button-Gesten und breite Liste
 
 61 Python-Prüfungen und beide JavaScript-Prüfläufe lokal erfolgreich.

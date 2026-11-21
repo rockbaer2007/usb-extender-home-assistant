@@ -2,7 +2,13 @@
 
 **USB-Geräte und Stream Decks über MQTT verbinden – für Raspberry Pi.**
 
-Version **0.1.5** · Privates Projekt · Stand 21. November 2026
+Version **0.1.5** · Öffentliches Projekt · Stand 21. November 2026
+
+**Deutsch** · [English](README.en.md) · [ZIP herunterladen](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/latest)
+
+Bedienungsanleitung mit Bildern: [DE](https://opensource.ugso-software.de/projects/usb-extender/)
+· [EN](https://opensource.ugso-software.de/en/projects/usb-extender/)
+· [FR](https://opensource.ugso-software.de/fr/projects/usb-extender/).
 
 Ein Raspberry Pi 4 wird zur USB-/MQTT-Brücke: Tastaturen, Medientasten,
 Makropads und unterstützte physische Stream Decks liefern Eingaben an bis zu
@@ -10,6 +16,41 @@ drei unabhängige MQTT-Broker. Die Weboberfläche dient nur zur Einrichtung und
 lässt sich vollständig abschalten. Der USB-/MQTT-Dienst arbeitet weiter.
 
 Eigenständiges Projekt, keine offizielle Software von Home Assistant oder Elgato.
+
+![Tastenliste mit lesbaren Topics und einzeln aktivierbaren Kanälen](docs/screenshots/live-0.1.5/key-list.png)
+
+## Welche Geräte werden erkannt und genutzt?
+
+**USB-Erkennung ist nicht gleich Funktionsunterstützung.** Der Pi listet angeschlossene
+USB-Geräte aus dem Linux-System auf. Erst ein passender Eingabetreiber und deine
+ausdrückliche Freigabe machen ein Gerät zur MQTT-Eingabequelle. Das Programm ist
+kein USB-over-IP-Tunnel und leitet keine beliebigen USB-Protokolle weiter.
+
+| Geräteklasse | Was möglich ist | Stand |
+| --- | --- | --- |
+| USB-Tastaturen, auch Windows-Medientastaturen | Tasten, Press/Release, Klick/Doppelklick/Hold, Umschalter, Tastenzustand | Trust-/HCT-Tastaturen im Praxisaufbau genutzt |
+| Medien- und Lautstärketasten | `KEY_VOLUMEUP`, `KEY_VOLUMEDOWN`, `KEY_MUTE`; weitere vom Gerät gemeldete Play-/Titeltasten; Lautstärkewiederholung beim Halten | Lautstärke-/Stummeingaben beobachtet; weitere Tasten je Modell testen |
+| HID-Makropads, USB-Fußtaster und ähnliche Tastaturgeräte | Derselbe Eingabepfad, wenn Linux normale Tastencodes liefert | Modellabhängig, Rückmeldungen willkommen |
+| Physische Elgato Stream Decks | Eigener HID-Treiber; Funktionen unten | Implementiert, noch kein physisches Stream Deck in diesem Projekt geprüft |
+| Stream-Deck-ähnliche Geräte mit LCD-Tasten | Tastatureingaben eventuell über HID; Displayansteuerung nur mit passendem Herstellerprotokoll/Treiber | Keine pauschale Kompatibilitätszusage |
+| Drucker, Kameras, USB-Speicher, Audiointerfaces, serielle Geräte, weitere Controller | Bestandsanzeige; spezielle Nutzfunktionen brauchen eigene Adapter | Keine allgemeine Druck-, Kamera-, Audio-, MIDI- oder serielle Weiterleitung |
+| Stream Deck Mobile / Tablet-App | Kein direktes USB-Stream-Deck am Pi | Derzeit nicht angebunden |
+
+### Stream Deck: Welche Funktionen sind vorgesehen?
+
+- Tasten drücken, loslassen, halten, Einzel-/Doppelklick und MQTT-Zielwahl pro Taste.
+- Eigene Icons und Beschriftungen auf unterstützten **Displaytasten**, Helligkeit pro Gerät.
+- Aktives/anderes Icon über MQTT-Zustandsrückmeldung sowie gezielte Displayaufträge.
+- Bei Modellen mit Drehreglern: Drehrichtung und Reglerdruck als Ereignisse.
+- Bei Modellen mit Touchscreen: Touch-Ereignisse; kein frei gestaltbarer Touchscreen-Editor.
+- Iconbibliothek: eigene Ordner/Bilder sowie lokal vorhandene `.streamDeckIconPack`- oder ZIP-Pakete.
+  Nutzungsrechte der jeweiligen Iconpacks beachten; keine Marketplace-Pakete im Download enthalten.
+- Modelle ohne Display, etwa Pedal, liefern Eingaben, aber keine Display-Icons.
+
+Der eingebundene Treiber `python-elgato-streamdeck` 0.10.0 kennt unter anderem
+Original/MK.2, Mini, XL, Neo, Pedal und Plus. Das ist **keine bestätigte Hardware-
+Testliste** dieses Projekts. Aktuell gibt es eine feste Belegung; Profil-/Seitenwechsel
+und animierte Icons sind nicht umgesetzt. Bei Bildanimationen wird das erste Bild verwendet.
 
 ## Im Paket
 
@@ -117,7 +158,26 @@ erforderlich. Alle Tasten, Plus-Auslöser und Switch-Binärsensoren eines USB-Ge
 teilen dieselbe stabile Gerätekennung und den gewählten Gerätenamen. Eine
 Namensänderung erzeugt dadurch kein neues Gerät. Für ioBroker Discovery
 ausgeschaltet lassen und die MQTT-Topics
-verwenden. Der tatsächliche ioBroker-Tastenempfang ist noch separat zu klären.
+verwenden. Der neue Nutzertest zeigt dort einzelne Datenpunkte mit einfachen
+Werten. Discovery-Konfigurationen selbst sind weiterhin JSON, wie von HA erwartet.
+
+## Praxisnachweis 0.1.5
+
+Die vom Nutzer bereitgestellten Screenshots zeigen 0.1.5 mit drei als online
+gemeldeten Brokerplätzen, gespeicherten Funktionstasten und erfolgreichen
+Zustandsanzeigen in HA sowie einzelnen ioBroker-Datenpunkten. `press`, `release`,
+`click`, `hold`, `ON` und `OFF` sind sichtbar. Plus-Kanäle erscheinen nach der leeren
+Rücksetzung in ioBroker als `(null)`; das ist in diesem Aufbau erwartbar.
+
+![Einzelne MQTT-Datenpunkte in ioBroker](docs/screenshots/live-0.1.5/iobroker-states.png)
+
+<img src="docs/screenshots/live-0.1.5/ha-states.png" alt="HA zeigt Switch Ein und Tastenzustand Aus nach der Betätigung" width="280">
+
+Der Ereignisverlauf zeigt die Übergabe an HA, IOB und Testserver. Diese
+Übergabeanzeige allein ist kein Empfangsnachweis für alle drei Broker. Die
+HA-/ioBroker-Screenshots sind der zusätzliche sichtbare Nachweis. Doppelklick,
+Neustartpersistenz und Fehlerfälle sind automatisiert geprüft; die Bilder belegen
+keinen vollständigen Hardwaretest aller Funktionen und insbesondere kein Stream Deck.
 
 ## Installation auf dem Raspberry Pi
 
@@ -430,8 +490,24 @@ python -m unittest discover -v
 Siehe [TESTBERICHT.md](TESTBERICHT.md), [STAND.md](STAND.md),
 [ROADMAP.md](ROADMAP.md) und [CHANGELOG.md](CHANGELOG.md).
 
-Die Screenshots in `docs/screenshots/` zeigen **lokale Beispieldaten**, keine
-bestätigten Raspberry-Pi-Hardwareverbindungen.
+`docs/screenshots/live-0.1.5/` enthält die vom Nutzer gelieferten echten Aufnahmen
+des Praxisaufbaus. Die älteren Dateien `*-demo.jpg` zeigen lokale Beispieldaten.
+
+## Stream Deck oder ähnliches Gerät vorhanden? Bitte testen!
+
+Wir freuen uns über Rückmeldungen zu physischen Stream Decks und anderen
+Makropads. [Hardwaretest melden](https://github.com/rockbaer2007/usb-extender-home-assistant/issues/new?template=hardware-test.yml).
+Bitte Modell, Hardware-Revision, Raspberry-Pi-Modell, Betriebssystem und App-Version
+nennen. Schreibe dazu, ob das Gerät nur aufgelistet wird oder bereits Tastencodes
+liefert, und welche Funktionen funktionieren: Drücken/Loslassen, Klick/Doppelklick,
+Halten, Icons/Text, Helligkeit, Drehregler, Touch und Wiederanstecken.
+
+Teste zuerst mit einem unkritischen MQTT-Topic, ohne echte Geräteaktionen.
+Ein Screenshot der Bestandsliste und der erkannten Ereignisse hilft. Keine
+Passwörter, Tokens, `config.json` oder Sicherungsarchive veröffentlichen.
+Nicht funktionierende Displaytasten eines Fremdgeräts sind ebenfalls eine
+nützliche Rückmeldung; ein passender Adapter kann anhand eines konkreten Modells
+untersucht werden. Fehlerberichte und Mitarbeit sind willkommen.
 
 ## Verwendete Schnittstellen
 

@@ -1,0 +1,48 @@
+name: Hardware test / Hardwaretest
+description: Report a Stream Deck, HID macro pad, keyboard or other USB input device.
+title: "[Hardware] "
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for testing! Deutsch, English and français are welcome. Do not upload passwords, tokens, config.json or backups. Inventory detection does not guarantee functional support."
+  - type: input
+    id: device
+    attributes:
+      label: Device model and hardware revision / Gerätemodell
+      placeholder: "Exact manufacturer, model, revision; USB VID:PID if known"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Pi model, operating system and app version
+      placeholder: "Pi 4, Raspberry Pi OS 64-bit, USB Extender 0.1.5"
+    validations:
+      required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: USB connection
+      options:
+        - Directly connected
+        - Powered USB hub
+        - Other USB hub
+  - type: textarea
+    id: detection
+    attributes:
+      label: Discovery and input events / Erkennung und Eingaben
+      description: "Listed only, or real key codes? Include the received codes and MQTT payloads where possible."
+    validations:
+      required: true
+  - type: textarea
+    id: functions
+    attributes:
+      label: Working and failing features / Funktionen
+      description: "Press/release, click/double-click/hold, switch/state, icons/text, brightness, dials, touch, replug; mark untested features."
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots and relevant log excerpts
+      description: "Remove credentials and personal data first. Use a harmless MQTT test topic."
