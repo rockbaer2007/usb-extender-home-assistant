@@ -1,5 +1,30 @@
 # Prüfungen
 
+## 0.1.3 – Anlernmodus und Tastenliste
+
+44 Python-Prüfungen sowie die beiden JavaScript-Prüfläufe sind lokal erfolgreich.
+Syntaxprüfung beider Skripte und `git diff --check` ebenfalls erfolgreich.
+Der DOM-Test umfasst auch eine erst beim Beenden sichtbare letzte Taste.
+
+Lokale Prüfung mit isolierten Konfigurationen und TCP-MQTT-Testbrokern:
+
+- Press → ON → Leer-Rücksetzung sowie Release → OFF → Leer-Rücksetzung in der
+  richtigen Reihenfolge auf zwei echten Paho-Verbindungen; nichts retained.
+- Schnell aufeinanderfolgende Press+-Meldungen haben eine leere Trennmeldung.
+- Kanal-/Zeilen-Deaktivierung und individuelle Brokerwahl greifen.
+- HA-Discovery enthält ON/OFF-Binärsensor und gefilterte Press/Release-Auslöser.
+- Lautstärkewiederholung startet nach dem Zeitlimit und endet beim Loslassen;
+  Switch und Release werden nicht wiederholt. Anlernen unterdrückt den Versand.
+- Anlernsitzungen benötigen ein freigegebenes Gerät, Fremdsitzungen sind gesperrt;
+  abgelaufene Sitzungen pausieren keine Eingaben mehr.
+- Speichern/erneutes Laden erhält neue Zeilen, alte Einzelbelegungen und Passwörter.
+- Authentifizierter HTTP-Anlernzyklus verändert die gespeicherte Konfiguration nicht.
+- JavaScript prüft Sitzungsfilter, Duplikate, bestehende Zuordnungen und Medienvorgaben.
+- DOM-Bedientest: Anlernen → Liste → Beenden → Übernehmen → Speichern → Bearbeiten.
+
+Keine physische Prüfung dieser neuen Fassung auf .112 und kein behaupteter
+ioBroker-Empfangsnachweis. Das bleibt ein eigener Live-Nachtest.
+
 ## 0.1.2 – MQTT-Versand und Discovery pro Broker
 
 **35 lokale Prüfungen erfolgreich.** Zusätzliche lokale TCP-/Paho-Prüfungen:

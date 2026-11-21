@@ -1,5 +1,29 @@
 # Aktueller Stand
 
+## USB Extender für Home Assistant 0.1.3
+
+Implementiert: Anlernmodus, editierbare Tastenliste, Press/Release, Switch ON/OFF,
+Press+/Release+ und Wiederholung für KEY_VOLUMEUP/KEY_VOLUMEDOWN. Bestehende
+Einzelbelegungen, Brokerzugangsdaten und Geräteziele werden nicht ersetzt.
+
+Vorherige lokale Quellen und vorhandener lokaler Zustand gesichert unter
+`M:\repos-backups\usb-extender-before-learning-20261121-123412`.
+Keine Installation oder Einstellungsänderung auf dem Raspi in diesem Arbeitsschritt.
+Das neue ZIP ist für ein Update mit `sudo bash install.sh` vorgesehen; der Installer
+sichert dabei den tatsächlichen Zustand auf dem Pi vor dem Update.
+
+Auf .112 wurde inzwischen **0.1.2** in der Weboberfläche bestätigt. Die Meldung
+„an MQTT übergeben“ ist kein Empfangsnachweis. ioBroker mqtt.0 9.3.0 ist als Server
+auf Port 1883 erreichbar; neue Objekte sind erlaubt und keine Topics ignoriert.
+Nur availability wurde dort gesehen, Tastendaten fehlen weiterhin. Keine
+ioBroker-Einstellungen geändert. Alte Discovery-Warnungen stammen von hass-mqtt;
+seit Abschalten der IOB-Discovery keine neuen davon beobachtet.
+
+0.1.3: 44 Python-Prüfungen, JavaScript-Anlernprüfung und DOM-Bedienablauf erfolgreich.
+Physisches Anlernen, Lautstärke-Halten und tatsächlicher
+Empfang auf HA/ioBroker sind nach Installation noch offen. Ältere Abschnitte unten
+beschreiben den damaligen Stand.
+
 ## USB Extender für Home Assistant 0.1.2
 
 - Ursache des fehlenden Versands im Browser gefunden: Belegung `key:tab`,

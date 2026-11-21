@@ -8,6 +8,7 @@ import threading
 import time
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from .storage import home, canonical_control
+from .keymap import all_bindings
 
 LOG = logging.getLogger(__name__)
 
@@ -126,7 +127,7 @@ class Hardware:
         for ident, deck in list(self.decks.items()):
             try:
                 deck.set_brightness(int(self.config["devices"].get(ident, {}).get("brightness", 30)))
-                for b in self.config["bindings"]:
+                for b in all_bindings(self.config):
                     if b["device"] == ident and b["control"].startswith("key:"):
                         self.display(ident, int(b["control"].split(":")[1]), b.get("icon", ""), b.get("text", ""))
             except Exception as exc:

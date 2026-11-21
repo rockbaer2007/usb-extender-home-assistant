@@ -10,7 +10,7 @@ async function api(path, data) {
 }
 function error(e) { $('#error').textContent = e.message || String(e); $('#error').hidden = false; }
 function notice(text) { $('#notice').textContent = text; $('#notice').hidden = false; }
-function dirty() { changed = true; $('#save').disabled = false; $('#dirty').textContent = 'Ungespeicherte Änderungen'; }
+function dirty() { changed = true; $('#save').disabled = !!learning; $('#dirty').textContent = 'Ungespeicherte Änderungen'; }
 function serviceAlive() { return typeof status.active === 'boolean' ? status.active : !!(status.updated && Math.abs(Date.now()/1000-status.updated)<15 && !status.stopped); }
 function card(title, parent=$('#content')) { const c=el('article',undefined,'card'); if(title)c.append(el('h2',title)); parent.append(c); return c; }
 function field(parent, label, value, change, type='text', choices=null) {
@@ -36,7 +36,7 @@ function render() {
 }
 function overview() {
   const grid=el('div',undefined,'grid');$('#content').append(grid);
-  [['USB-Geräte',status.devices.length,'Vom Linux-System erkannt'],['Aktive Belegungen',config.bindings.length,'Tasten, Mediensteuerung und Anzeigen'],['MQTT-Verbindungen',Object.values(status.brokers).filter(x=>x==='online').length+' / 3','Jeder Broker arbeitet unabhängig']].forEach(([t,v,s])=>{const c=card(t,grid);c.append(el('div',String(v),'stat'),el('small',s));});
+  [['USB-Geräte',status.devices.length,'Vom Linux-System erkannt'],['Aktive Belegungen',config.bindings.length+(config.keys||[]).filter(k=>k.enabled!==false).length,'Tasten, Mediensteuerung und Anzeigen'],['MQTT-Verbindungen',Object.values(status.brokers).filter(x=>x==='online').length+' / 3','Jeder Broker arbeitet unabhängig']].forEach(([t,v,s])=>{const c=card(t,grid);c.append(el('div',String(v),'stat'),el('small',s));});
   const c=card('So richtest du deinen Hub ein');
   const list=el('ol');['Unter „MQTT-Broker“ mindestens eine Verbindung einrichten.','Unter „USB-Geräte“ das gewünschte Gerät ausdrücklich freigeben.','Taste drücken und das Ereignis unter „Tasten & Anzeigen“ übernehmen.','Zielbroker, Belegung und bei Stream Decks ein Icon auswählen.','Speichern. Danach kann die Weboberfläche per CLI abgeschaltet werden.'].forEach(t=>list.append(el('li',t)));c.append(list);
   if(!serviceAlive())c.append(el('p','USB-/MQTT-Dienst ist nicht aktiv oder liefert keinen aktuellen Status. Mit sudo systemctl status ugso-usbhub prüfen.','warning'));
@@ -76,8 +76,9 @@ function brokers() {
   const c=card('Vorgabe für neue Geräte');routes(c,config.default_targets,v=>config.default_targets=v);c.append(el('p','Tastendrücke werden nicht gespeichert oder nach einer Verbindungsunterbrechung nachgesendet. MQTT-Rückmeldungen zur Anzeige kommen je Gerät von genau einem ausgewählten Broker.'));
 }
 function bindings() {
+  learningPanel();
   const learn=card('Taste drücken und übernehmen');learn.append(el('p','Gerät zuerst freigeben und speichern. Mit „Übernehmen“ wird der tatsächliche Tastenname eingetragen. Danach die Belegung speichern. Erst passende Belegungen senden MQTT. „Gedrückt halten“ löst zusätzlich nach 0,7 Sekunden aus.'));
-  const recent=el('div');learn.append(recent);renderEvents(recent,true);
+  const recent=el('div');recent.id='learn-events';learn.append(recent);renderEvents(recent,true);
   button(learn,'Leere Belegung hinzufügen',()=>addBinding());
   config.bindings.forEach((b,index)=>{
     const c=card();const row=el('div',undefined,'row spread');row.append(el('span','BELEGUNG '+(index+1),'binding-number'));button(row,'Entfernen',()=>{config.bindings.splice(index,1);dirty();render();},'danger');c.append(row);
@@ -117,7 +118,7 @@ function renderEvents(parent,learn=false) {
   const wrap=el('div',undefined,'table-wrap'),t=el('table'),head=el('tr');['Zeit','Gerät','Taste','Ereignis','MQTT',...(learn?['']:[])].forEach(x=>head.append(el('th',x)));t.append(head);
   events.forEach(event=>{const row=el('tr');[new Date(event.time*1000).toLocaleTimeString(),config.devices[event.device]?.name||event.device,event.control,event.gesture].forEach(v=>row.append(el('td',v)));
     const delivery=el('td'),report=event.delivery;
-    if(report){const labels={no_binding:'Keine passende gespeicherte Belegung',no_targets:'Kein MQTT-Ziel ausgewählt',not_connected:'Ziel deaktiviert oder nicht verbunden',sent:report.delivered+'× an MQTT übergeben'};delivery.append(el('div',labels[report.reason]||report.reason));
+    if(report){const labels={learning:'Anlernmodus · nicht gesendet',no_binding:'Keine passende gespeicherte Belegung',no_targets:'Kein MQTT-Ziel ausgewählt',not_connected:'Ziel deaktiviert oder nicht verbunden',sent:report.delivered+'× an MQTT übergeben'};delivery.append(el('div',labels[report.reason]||report.reason));
       (report.transmissions||[]).forEach(tx=>{const line=el('div');line.append(el('small',tx.name+' · '+({sent:'gesendet',offline:'offline',disabled:'deaktiviert',failed:'fehlgeschlagen'}[tx.state]||tx.state)+' · '+tx.topic));delivery.append(line);});
     }else delivery.textContent=event.delivered?event.delivered+'× an MQTT übergeben':'Nicht gesendet';
     row.append(delivery);if(learn){const action=el('td');button(action,'Übernehmen',()=>addBinding(event));row.append(action);}t.append(row);});wrap.append(t);parent.append(wrap);
@@ -141,9 +142,10 @@ function system() {
 async function enter() { config=await api('config'); status=await api('status');iconList=await api('icons');$('#login').hidden=true;$('#workspace').hidden=false;$('#logout').hidden=false;$('#error').hidden=true;render(); }
 function showLogin(){config=null;$('#login').hidden=false;$('#workspace').hidden=true;$('#logout').hidden=true;}
 $('#login-form').onsubmit=async e=>{e.preventDefault();try{await api('login',{password:$('#password').value});$('#password').value='';await enter();}catch(e){error(e);}};
-$('#logout').onclick=async()=>{if(changed&&!confirm('Ungespeicherte Änderungen verwerfen?'))return;await api('logout',{});changed=false;showLogin();};
-document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{page=b.dataset.page;render();});
-$('#save').onclick=async()=>{try{await api('config',config);config=await api('config');changed=false;$('#save').disabled=true;$('#dirty').textContent='Gespeichert';$('#error').hidden=true;render();notice('Gespeichert. Der USB-/MQTT-Dienst übernimmt die Einstellungen innerhalb weniger Sekunden.');}catch(e){error(e);}};
-setInterval(async()=>{if(!config)return;try{status=await api('status');$('#connection').textContent=serviceAlive()?'● USB-/MQTT-Dienst aktiv':'○ Dienst nicht aktiv';if(page==='bindings'){const target=$('#content article:first-child > div');if(target)renderEvents(target,true);}if(page==='system'&&$('#event-log'))renderEvents($('#event-log')); }catch(e){error(e);}},2500);
-window.addEventListener('beforeunload',e=>{if(changed){e.preventDefault();e.returnValue='';}});
+$('#logout').onclick=async()=>{if(changed&&!confirm('Ungespeicherte Änderungen verwerfen?'))return;await endLearning();await api('logout',{});changed=false;learnedDraft=[];showLogin();};
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{if(learning){error(new Error('Anlernmodus zuerst beenden.'));return;}page=b.dataset.page;render();});
+$('#save').onclick=async()=>{try{if(learning||learnedDraft.length)throw new Error('Anlernen zuerst beenden und die Tasten übernehmen oder verwerfen.');await api('config',config);config=await api('config');changed=false;$('#save').disabled=true;$('#dirty').textContent='Gespeichert';$('#error').hidden=true;render();notice('Gespeichert. Der USB-/MQTT-Dienst übernimmt die Einstellungen innerhalb weniger Sekunden.');}catch(e){error(e);}};
+let polling=false;
+setInterval(async()=>{if(!config||polling)return;polling=true;try{status=await api('status');await pollLearning();$('#connection').textContent=serviceAlive()?'● USB-/MQTT-Dienst aktiv':'○ Dienst nicht aktiv';if(page==='bindings'&&$('#learn-events'))renderEvents($('#learn-events'),true);if(page==='system'&&$('#event-log'))renderEvents($('#event-log')); }catch(e){error(e);}finally{polling=false;}},2500);
+window.addEventListener('beforeunload',e=>{if(changed||learning||learnedDraft.length){e.preventDefault();e.returnValue='';}});
 enter().catch(()=>{});

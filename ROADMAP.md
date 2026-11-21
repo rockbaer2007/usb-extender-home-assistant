@@ -2,8 +2,12 @@
 
 ## Als Nächstes: Praxisprüfung auf dem Raspberry Pi 4
 
-- ZIP kopieren und den neunstufigen Installer auf Raspberry Pi OS 64 Bit ausführen;
-  Paketprüfung, Installation und Dienststart bestätigen.
+- 0.1.3 auf dem Pi installieren und den Anlernmodus mit der Trust-Tastatur prüfen:
+  keine Aktionen beim Anlernen, keine Duplikate, Übernahme/Speicherung und Neustart.
+- Press/Release, Plus-Rücksetzung und Switch ON/OFF praktisch prüfen; Lauter/Leiser
+  halten und kontrollieren, dass die Wiederholung beim Loslassen stoppt.
+- Fehlenden ioBroker-Empfang unabhängig davon weiter eingrenzen: .116:1883 ist
+  online, neue Objekte sind erlaubt, keine ignorierten Topics; Tastendaten fehlen.
 - Ein konkretes Stream-Deck-Modell prüfen: Erkennung, Freigabe,
   Drücken/Loslassen/Halten, Icons und Helligkeit.
 - Weitere Medientasten prüfen, insbesondere Play/Pause und Titelsprung.
@@ -12,9 +16,9 @@
   Belegungen sowie MQTT-Wiederverbindung prüfen.
 - Drei reale MQTT-Broker anschließen, Ausfall eines Brokers prüfen und HA-Discovery
   sowie Display-Rückmeldungen mit der tatsächlichen HA-Installation testen.
-- ioBroker-Adapter für HA-Discovery praktisch prüfen: Werden die MQTT-
-  Geräteauslöser (`device_automation`) übernommen? Identische Topics und Payloads
-  an Produktiv- und Testbroker sind bereits lokal protokollseitig bestätigt.
+- HA-Binärsensor für den Switch-Zustand sowie gefilterte Press/Release-Auslöser
+  mit Discovery praktisch prüfen. IOB-Discovery bleibt aus: hass-mqtt meldete
+  `device_automation` als nicht unterstützt.
 - Webdienst per CLI beenden und bestätigen, dass die Geräte weiterarbeiten und
   Port 8098 geschlossen ist. Anschließend erneut starten.
 - Ein tatsächlich verwendetes Marketplace-Iconpack mit eigener gültiger Lizenz

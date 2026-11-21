@@ -7,7 +7,9 @@ import time
 from . import __version__
 from .hardware import Hardware
 from .mqtt import Brokers
-from .storage import atomic_json, home, load_config, validate, status_path
+from .storage import atomic_json, home, load_config, validate, status_path, canonical_control
+from .learning import current as learning_lease
+from .keymap import VOLUME_KEYS
 
 LOG = logging.getLogger(__name__)
 
@@ -22,6 +24,10 @@ class Core:
         self.running = True
         self.pressed = {}
         self.repeats = {}
+        self.repeat_due = {}
+        self.learning = {}
+        self.learning_releases = set()
+        self.sequence = 0
         self.started = time.time()
 
     def enqueue(self, device, control, gesture, value=1):
@@ -62,20 +68,67 @@ class Core:
         if not self.config["devices"].get(device, {}).get("enabled"):
             return
         now = time.monotonic()
+        control = canonical_control(control)
         key = (device, control)
+        learning = self.learning if self.learning.get("expires", 0) > time.time() else {}
+        suppressed = learning.get("device") == device or key in self.learning_releases
+        if suppressed:
+            self.pressed.pop(key, None)
+            self.repeat_due.pop(key, None)
+            if gesture == "press":
+                self.learning_releases.add(key)
+            elif gesture == "release":
+                self.learning_releases.discard(key)
+            report = {"delivered": 0, "matched": 0, "reason": "learning", "transmissions": []}
+        else:
+            report = None
         if gesture == "repeat":
             if now - self.repeats.get(key, 0) < 0.15:
                 return
             self.repeats[key] = now
-        if gesture == "press":
+        if gesture == "press" and not suppressed:
             self.pressed[key] = (now, False)
+            row = next((k for k in self.config.get("keys", []) if k["device"] == device and k["control"] == control and k.get("enabled", True)), {})
+            if row.get("repeat") and control in VOLUME_KEYS:
+                self.repeat_due[key] = now + row.get("repeat_delay", 500) / 1000
         elif gesture == "release":
             self.pressed.pop(key, None)
             self.repeats.pop(key, None)
-        report = self.brokers.send_report(device, control, gesture, value)
+            self.repeat_due.pop(key, None)
+        report = report or self.brokers.send_report(device, control, gesture, value)
+        self.sequence += 1
         self.events.appendleft({"time": time.time(), "device": device, "control": control,
                                 "gesture": gesture, "value": value, "delivered": report["delivered"],
-                                "delivery": report})
+                                "delivery": report, "sequence": self.sequence,
+                                "learning_id": learning.get("id") if suppressed else None})
+
+    def tick(self, now=None):
+        now = time.monotonic() if now is None else now
+        self.brokers.flush_resets(now)
+        for key, due in list(self.repeat_due.items()):
+            if key not in self.pressed:
+                self.repeat_due.pop(key, None)
+                continue
+            if now - self.pressed[key][0] >= 30:
+                self.release_key(key)
+                continue
+            if now >= due:
+                row = next((k for k in self.config.get("keys", []) if (k["device"], k["control"]) == key), {})
+                self.brokers.send_report(*key, "press", 1, repeat_key=True)
+                self.repeat_due[key] = now + row.get("repeat_interval", 150) / 1000
+
+    def release_key(self, key):
+        # Administrative cleanup clears only the new switch state. It must not
+        # invent physical release actions for existing individual bindings.
+        self.brokers.send_report(*key, "release", 0, switch_only=True)
+        self.pressed.pop(key, None)
+        self.repeat_due.pop(key, None)
+        self.repeats.pop(key, None)
+
+    def release_all(self, device=None):
+        for key in list(self.pressed):
+            if device is None or key[0] == device:
+                self.release_key(key)
 
     def status(self):
         return {"version": __version__, "pid": __import__("os").getpid(), "updated": time.time(),
@@ -91,6 +144,10 @@ class Core:
         try:
             while self.running:
                 now = time.monotonic()
+                lease = learning_lease()
+                if lease.get("id") != self.learning.get("id") and lease:
+                    self.release_all(lease["device"])
+                self.learning = lease
                 if now >= reload_at:
                     reload_at = now + 1
                     try:
@@ -98,14 +155,16 @@ class Core:
                         if updated != self.config:
                             old = self.config
                             # Validate native TLS setup before closing existing clients.
-                            if updated["brokers"] != old["brokers"] or updated["bindings"] != old["bindings"] or updated["devices"] != old["devices"] or updated["default_targets"] != old["default_targets"]:
+                            if updated["brokers"] != old["brokers"] or updated["bindings"] != old["bindings"] or updated.get("keys", []) != old.get("keys", []) or updated["devices"] != old["devices"] or updated["default_targets"] != old["default_targets"]:
                                 replacement = Brokers(updated, self.receive, start=False)
+                                self.release_all()
                                 self.brokers.cleanup_removed(updated)
                                 self.brokers.close()
                                 self.brokers = replacement
                                 self.brokers.start()
                             self.config = updated
                             self.pressed.clear()
+                            self.repeat_due.clear()
                             self.hardware.config = updated
                             self.hardware.refresh_decks()
                             scan_at = 0
@@ -116,6 +175,8 @@ class Core:
                     try:
                         self.hardware.scan(self.config)
                         present = {d["id"] for d in self.hardware.inventory}
+                        for device in {key[0] for key in self.pressed if key[0] not in present}:
+                            self.release_all(device)
                         self.pressed = {key: value for key, value in self.pressed.items() if key[0] in present}
                     except Exception:
                         LOG.exception("USB-Erkennung fehlgeschlagen")
@@ -136,10 +197,12 @@ class Core:
                     if not fired and now - since >= 0.7:
                         self.pressed[key] = (since, True)
                         self.event(*key, "hold", 1)
+                self.tick(now)
                 if now >= status_at:
                     status_at = now + 2
                     atomic_json(status_path(), self.status())
         finally:
+            self.release_all()
             self.hardware.close()
             self.brokers.close()
             snapshot = self.status()

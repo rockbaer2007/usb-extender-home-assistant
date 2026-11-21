@@ -131,7 +131,8 @@ def validate(c):
             raise ValueError("Unbekannte Eingabeart")
         if any(x in b.get("topic", "") for x in ("#", "+", "\x00")):
             raise ValueError("Sende-Topic darf keine Wildcards enthalten")
-    return c
+    from .keymap import validate_keys
+    return validate_keys(c)
 
 
 def save_config(c):

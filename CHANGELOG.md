@@ -1,5 +1,20 @@
 # Änderungen
 
+## 0.1.3 – 21. November 2026
+
+- Anlernmodus mit 15-Sekunden-Lease pro Gerät; unterdrückt dessen MQTT-Aktionen,
+  erfasst neue Tasten ohne Duplikate und übernimmt sie erst nach bewusster Auswahl.
+- Kompakte Tastenliste mit Name, Aktivierung, Press-/Release-/Switch-Topics,
+  Plus-Checkboxen, Iconwahl und Brokerwahl pro Zeile. Altbelegungen bleiben erhalten.
+- Press/Release senden `press`/`release`; Switch sendet `ON`/`OFF`. Plus setzt nur
+  seinen Aktionswert nach 50 ms leer zurück, auch bei schnell folgenden Eingaben.
+- Lauter/Leiser mit begrenzter Wiederholung beim Halten; beendet bei Release,
+  Geräteverlust, Konfigurationswechsel und spätestens nach 30 Sekunden.
+- HA-Discovery für neue Press-/Release-Auslöser mit Payloadfilter und Switch als
+  Binärsensor. Kein retained Versand und keine Wiederholung von Offline-Eingaben.
+- Neues ZIP mit unverändertem Update-/Sicherungsweg. Physischer Pi-Nachtest und
+  ioBroker-Empfang bleiben ausdrücklich offen.
+
 ## 0.1.2 – 21. November 2026
 
 - Lokale Discovery-Fehler werden abgefangen und in der Diagnose angezeigt;

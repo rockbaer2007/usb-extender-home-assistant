@@ -2,7 +2,7 @@
 
 **USB-Geräte und Stream Decks über MQTT verbinden – für Raspberry Pi.**
 
-Version **0.1.2** · Privates Projekt · Stand 21. November 2026
+Version **0.1.3** · Privates Projekt · Stand 21. November 2026
 
 Ein Raspberry Pi 4 wird zur USB-/MQTT-Brücke: Tastaturen, Medientasten,
 Makropads und unterstützte physische Stream Decks liefern Eingaben an bis zu
@@ -13,6 +13,8 @@ Eigenständiges Projekt, keine offizielle Software von Home Assistant oder Elgat
 
 ## Im Paket
 
+- Anlernmodus pro USB-Gerät mit editierbarer Tastenliste: Press, Release,
+  Switch ON/OFF, optionale Leer-Rücksetzung und Lautstärkewiederholung.
 - Installer mit neun sichtbaren Schritten und Paketprüfung. Fehlende apt- und
   Python-Pakete werden installiert; bestehende Konfiguration wird gesichert.
 - Drei getrennte MQTT-Verbindungen mit Benutzer/Passwort, optional TLS und
@@ -31,6 +33,53 @@ Eigenständiges Projekt, keine offizielle Software von Home Assistant oder Elgat
 - Passwortgeschützte Konfiguration; atomare Speicherung und zehn automatische
   Konfigurationssicherungen. MQTT-Passwörter werden nicht an den Browser zurückgeliefert.
 
+## Tasten anlernen (ab 0.1.3)
+
+1. Unter **USB-Geräte** das Gerät freigeben, seine Zielbroker wählen und speichern.
+2. Unter **Tasten & Anzeigen** das Gerät wählen und **Anlernen starten** drücken.
+3. Gewünschte Tasten nacheinander drücken und loslassen. Jede neue Taste erscheint
+   einmal als Listenzeile; bereits vorhandene Belegungen werden nicht verdoppelt.
+4. **Anlernen beenden**, dann **Tasten übernehmen** und **Speichern**.
+   Alternativ die neue Liste verwerfen. Erst gespeicherte Zeilen senden MQTT.
+5. Name, Aktivierung, Topics und Icon direkt in der Liste anpassen. **Bearbeiten**
+   öffnet die Brokerwahl und bei Lauter/Leiser die Wiederholungszeiten.
+
+Während des Anlernens sendet das gewählte Gerät keine Aktionen; andere Geräte
+laufen weiter. Bei geschlossener oder unerreichbarer Weboberfläche endet diese
+Pause spätestens nach 15 Sekunden. Anlernentwürfe liegen bis zur Übernahme nur
+im Browser; vorhandene Einstellungen und Einzelbelegungen bleiben erhalten.
+
+| Kanal | Nachricht | Vorgabe |
+| --- | --- | --- |
+| Press | `press` beim Drücken | an |
+| Release | `release` beim Loslassen | an |
+| Switch | `ON` beim Drücken, `OFF` beim Loslassen | an |
+| Press+ | Press danach nach 50 ms leer zurücksetzen | aus |
+| Release+ | Release danach nach 50 ms leer zurücksetzen | aus |
+
+Die Plus-Optionen gelten für das jeweilige Press-/Release-Topic. Ihre Leer-
+Nachricht ist kein physisches Loslassen. Switch wird niemals leer zurückgesetzt.
+Beispieltopic: `ugso/usbhub/2/<geraete-id>/key_volumeup/press`; daneben gibt es
+`release` und `switch`. Leere Topicfelder nutzen den Präfix des Zielbrokers,
+explizite Topics werden unverändert an alle gewählten Broker gesendet.
+Alle Tastenmeldungen bleiben QoS 0 und nicht retained; Offline-Eingaben werden
+nicht nachgesendet. Die Anzeige „übergeben“ bestätigt die lokale MQTT-Übergabe,
+nicht den Empfang oder die Entitätsanlage im Zielsystem.
+
+**Lauter/Leiser:** `KEY_VOLUMEUP` und `KEY_VOLUMEDOWN` starten beim Anlernen mit
+Wiederholung an: nach 500 ms alle 150 ms eine weitere Press-Nachricht. Zeiten sind
+einstellbar; Release, Switch und vorhandene Einzelbelegungen werden dadurch nicht
+wiederholt. Loslassen, Abziehen und eine Konfigurationsübernahme beenden die
+Wiederholung. Nach 30 Sekunden greift ein Sicherheitsstopp. Das Gerät muss
+Drücken und Loslassen zuverlässig melden. Den Lautstärkeschritt und die
+Zielaktion legt die HA-Automation bzw. ioBroker-Logik fest.
+
+Bei aktivierter HA-Discovery werden Press/Release als Geräteauslöser mit passendem
+Payloadfilter und Switch als MQTT-Binärsensor angemeldet. Der Binärsensor zeigt
+die gedrückte Taste an; zum Steuern anderer Geräte ist eine Zuordnung/Automation
+erforderlich. Für ioBroker Discovery ausgeschaltet lassen und die MQTT-Topics
+verwenden. Der tatsächliche ioBroker-Tastenempfang ist noch separat zu klären.
+
 ## Installation auf dem Raspberry Pi
 
 Empfohlen: **Raspberry Pi OS Lite 64 Bit, Bookworm oder neuer**, Raspberry Pi 4,
@@ -45,8 +94,8 @@ Installationspaket, kein vollständig offline installierbares ARM-Abbild.
    ```bash
    # Falls unzip noch nicht vorhanden ist:
    sudo apt-get update && sudo apt-get install -y unzip
-   unzip USB-Extender-Home-Assistant-0.1.2-Raspi4.zip
-   cd USB-Extender-Home-Assistant-0.1.2
+   unzip USB-Extender-Home-Assistant-0.1.3-Raspi4.zip
+   cd USB-Extender-Home-Assistant-0.1.3
    sudo bash install.sh
    ```
 

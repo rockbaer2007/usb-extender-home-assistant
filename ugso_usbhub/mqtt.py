@@ -3,8 +3,10 @@ import hashlib
 import logging
 import ssl
 import threading
+import time
 import paho.mqtt.client as mqtt
 from .storage import canonical_control, home, atomic_json, read_json
+from .keymap import all_bindings
 
 LOG = logging.getLogger(__name__)
 
@@ -23,6 +25,7 @@ class Brokers:
         self.states = {}
         self.discovery_errors = {}
         self.lock = threading.Lock()
+        self.pending_resets = {}
         for broker in config["brokers"]:
             if not broker.get("enabled"):
                 continue
@@ -71,7 +74,7 @@ class Brokers:
             client.subscribe(broker["prefix"] + "/display/+/set")
             if broker.get("discovery"):
                 client.subscribe("homeassistant/status")
-            for binding in self.config["bindings"]:
+            for binding in all_bindings(self.config):
                 device = self.config["devices"].get(binding["device"], {})
                 if device.get("receive_broker") == ident and binding.get("state_topic"):
                     client.subscribe(binding["state_topic"])
@@ -81,6 +84,8 @@ class Brokers:
     def _disconnected(self, ident):
         def callback(client, userdata, flags, reason, properties):
             self.states[ident] = "offline"
+            with self.lock:
+                self.pending_resets = {k: v for k, v in self.pending_resets.items() if k[0] != ident}
         return callback
 
     def _message(self, broker):
@@ -98,6 +103,8 @@ class Brokers:
         return callback
 
     def event_topic(self, broker, binding):
+        if binding.get("key_topic"):
+            return binding.get("topic") or f"{broker['prefix']}/{binding['key_topic']}"
         return binding.get("topic") or f"{broker['prefix']}/event/{binding['device']}/{binding['id']}"
 
     def sync_discovery(self, broker):
@@ -134,15 +141,28 @@ class Brokers:
         client = self.clients[broker["id"]]
         desired = {}
         if broker.get("discovery"):
-            for b in self.config["bindings"]:
+            for b in all_bindings(self.config):
                 if broker["id"] not in resolve_targets(self.config, b["device"], b):
+                    continue
+                if b.get("key_mode") == "switch":
+                    if b["gesture"] != "press":
+                        continue
+                    topic = f"homeassistant/binary_sensor/ugso_{self.config['hub_id']}_{b['key_id']}/config"
+                    desired[topic] = json.dumps({"name": b.get("text") or b["control"],
+                        "unique_id": f"ugso_{self.config['hub_id']}_{b['key_id']}_switch",
+                        "state_topic": self.event_topic(broker, b), "payload_on": "ON", "payload_off": "OFF",
+                        "availability_topic": broker["prefix"] + "/availability",
+                        "device": {"identifiers": [f"ugso_{self.config['hub_id']}_{b['device']}"],
+                                   "name": self.config["devices"].get(b["device"], {}).get("name") or b["device"]}})
                     continue
                 kind = {"press": "button_short_press", "release": "button_short_release", "hold": "button_long_press"}.get(b["gesture"], b["gesture"])
                 payload = {"automation_type": "trigger", "topic": self.event_topic(broker, b),
-                           "type": kind, "subtype": canonical_control(b["control"]).replace(":", "_"),
+                           "type": kind, "subtype": (b.get("key_mode", "") + "_" if b.get("key_mode") else "") + canonical_control(b["control"]).replace(":", "_"),
                            "device": {"identifiers": [f"ugso_{self.config['hub_id']}_{b['device']}"],
                                       "name": self.config["devices"].get(b["device"], {}).get("name") or b["device"],
                                       "manufacturer": "UGSo", "model": "USB Hub"}}
+                if b.get("key_mode"):
+                    payload["payload"] = b["payload"]
                 desired[self.discovery_topic(b)] = json.dumps(payload)
         endpoint = hashlib.sha256(json.dumps([broker["host"], broker["port"], broker.get("username", "")]).encode()).hexdigest()
         with self.lock:
@@ -163,12 +183,16 @@ class Brokers:
     def send(self, device, control, gesture, value=1):
         return self.send_report(device, control, gesture, value)["delivered"]
 
-    def send_report(self, device, control, gesture, value=1):
+    def send_report(self, device, control, gesture, value=1, repeat_key=False, switch_only=False):
         control = canonical_control(control)
         delivered = 0
         matched = 0
         transmissions = []
-        for binding in self.config["bindings"]:
+        for binding in all_bindings(self.config):
+            if switch_only and binding.get("key_mode") != "switch":
+                continue
+            if repeat_key and binding.get("key_mode") != "press":
+                continue
             if (binding["device"], canonical_control(binding["control"]), binding["gesture"]) != (device, control, gesture):
                 continue
             matched += 1
@@ -185,17 +209,33 @@ class Brokers:
                 transmissions.append(transmission)
                 if client and client.is_connected():
                     # QoS 0 + explicit connectivity check: no replay of offline key presses.
+                    with self.lock:
+                        pending = self.pending_resets.pop((broker["id"], self.event_topic(broker, binding)), None)
+                        if pending:
+                            client.publish(self.event_topic(broker, binding), "", qos=0, retain=False)
                     result = client.publish(self.event_topic(broker, binding), payload, qos=0, retain=False)
                     transmission["state"] = "sent" if result.rc == mqtt.MQTT_ERR_SUCCESS else "failed"
                     if result.rc == mqtt.MQTT_ERR_SUCCESS:
                         delivered += 1
+                        if binding.get("reset"):
+                            with self.lock:
+                                self.pending_resets[(broker["id"], self.event_topic(broker, binding))] = (time.monotonic() + 0.05, client)
         reason = "sent" if delivered else "no_binding" if not matched else "no_targets" if not transmissions else "not_connected"
         return {"delivered": delivered, "matched": matched, "reason": reason, "transmissions": transmissions}
 
+    def flush_resets(self, now=None):
+        now = time.monotonic() if now is None else now
+        with self.lock:
+            ready = [(key, value) for key, value in self.pending_resets.items() if value[0] <= now]
+            for key, (_, client) in ready:
+                del self.pending_resets[key]
+                if client.is_connected():
+                    client.publish(key[1], "", qos=0, retain=False)
+
     def cleanup_removed(self, replacement):
-        new = {b["id"]: b for b in replacement.get("bindings", [])}
+        new = {b["id"]: b for b in all_bindings(replacement)}
         new_brokers = {b["id"]: b for b in replacement["brokers"]}
-        for binding in self.config["bindings"]:
+        for binding in all_bindings(self.config):
             for broker in self.config["brokers"]:
                 client = self.clients.get(broker["id"])
                 old_target = broker.get("discovery") and broker["id"] in resolve_targets(self.config, binding["device"], binding)

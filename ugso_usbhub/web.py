@@ -58,8 +58,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         route = urlsplit(self.path).path
-        if route in ("/", "/app.js", "/style.css"):
-            file = STATIC / {"/": "index.html", "/app.js": "app.js", "/style.css": "style.css"}[route]
+        if route in ("/", "/app.js", "/keylist.js", "/style.css"):
+            file = STATIC / {"/": "index.html", "/app.js": "app.js", "/keylist.js": "keylist.js", "/style.css": "style.css"}[route]
             self.reply(200, file.read_bytes(), {".html": "text/html", ".js": "text/javascript", ".css": "text/css"}[file.suffix])
             return
         if not self.authorized():
@@ -125,6 +125,9 @@ class Handler(BaseHTTPRequestHandler):
                     config = merge_public(body, load_config())
                     save_config(config)
                     self.reply(200, {"ok": True})
+                elif route == "/api/learning":
+                    from .learning import command
+                    self.reply(200, command(body, load_config()))
                 elif route == "/api/logout":
                     jar = cookies.SimpleCookie(self.headers.get("Cookie", ""))
                     self.server.sessions.pop(jar["ugso_session"].value, None)
