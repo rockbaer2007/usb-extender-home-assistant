@@ -2,6 +2,8 @@
 
 ## 0.1.2 – 21. November 2026
 
+- Lokale Discovery-Fehler werden abgefangen und in der Diagnose angezeigt;
+  MQTT-Daten werden unabhängig davon weitergesendet.
 - Discovery pro Broker ausdrücklich wählbar: **Aus – nur MQTT-Daten senden**
   oder **Home Assistant – Geräteauslöser anmelden**. Neue Konfigurationen starten
   ohne Discovery; vorhandene Einstellungen bleiben erhalten.

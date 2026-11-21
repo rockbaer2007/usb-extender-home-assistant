@@ -21,6 +21,7 @@ class Brokers:
         self.receive = receive
         self.clients = {}
         self.states = {}
+        self.discovery_errors = {}
         self.lock = threading.Lock()
         for broker in config["brokers"]:
             if not broker.get("enabled"):
@@ -74,7 +75,7 @@ class Brokers:
                 device = self.config["devices"].get(binding["device"], {})
                 if device.get("receive_broker") == ident and binding.get("state_topic"):
                     client.subscribe(binding["state_topic"])
-            self.discovery(broker)
+            self.sync_discovery(broker)
         return callback
 
     def _disconnected(self, ident):
@@ -89,7 +90,7 @@ class Brokers:
                     LOG.warning("Zu großer MQTT-Anzeigeauftrag verworfen")
                     return
                 if message.topic == "homeassistant/status" and message.payload == b"online":
-                    self.discovery(broker)
+                    self.sync_discovery(broker)
                 else:
                     self.receive(broker["id"], message.topic, message.payload.decode("utf-8"))
             except Exception:
@@ -98,6 +99,15 @@ class Brokers:
 
     def event_topic(self, broker, binding):
         return binding.get("topic") or f"{broker['prefix']}/event/{binding['device']}/{binding['id']}"
+
+    def sync_discovery(self, broker):
+        try:
+            self.discovery(broker)
+            self.discovery_errors.pop(broker["id"], None)
+        except Exception as exc:
+            # Discovery must never kill the MQTT network loop or stop key events.
+            self.discovery_errors[broker["id"]] = str(exc)
+            LOG.exception("Discovery fehlgeschlagen; MQTT-Daten bleiben aktiv")
 
     def discovery_topic(self, binding):
         return f"homeassistant/device_automation/ugso_{self.config['hub_id']}_{binding['id']}/config"

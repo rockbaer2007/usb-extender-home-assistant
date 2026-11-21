@@ -11,7 +11,7 @@
   `control: KEY_TAB`, `event_type: press`, `value: 1`.
 - 0.1.2 normalisiert Tastenkennungen, bietet Discovery ausdrücklich als Aus/HA-Auswahl,
   räumt bekannte eigene Discovery-Ankündigungen auf und zeigt MQTT-Ziele sowie Sendestatus.
-- 34 lokale automatisierte Prüfungen erfolgreich. Vollständige Linux-CI und
+- 35 lokale automatisierte Prüfungen erfolgreich. Vollständige Linux-CI und
   Installation des neuen Pakets auf dem Raspi stehen noch aus.
 
 Auf dem Raspi ist noch 0.1.0 mit den Live-Korrekturen aktiv. Der Empfang am

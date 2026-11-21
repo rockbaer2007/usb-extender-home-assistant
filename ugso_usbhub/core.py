@@ -80,7 +80,9 @@ class Core:
     def status(self):
         return {"version": __version__, "pid": __import__("os").getpid(), "updated": time.time(),
                 "started": self.started, "devices": self.hardware.inventory,
-                "brokers": dict(self.brokers.states), "errors": dict(self.hardware.errors), "events": list(self.events)}
+                "brokers": dict(self.brokers.states),
+                "errors": {**self.hardware.errors, **{"Discovery " + key: value for key, value in self.brokers.discovery_errors.items()}},
+                "events": list(self.events)}
 
     def run(self):
         for sig in (signal.SIGINT, signal.SIGTERM):

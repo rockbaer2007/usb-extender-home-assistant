@@ -2,11 +2,13 @@
 
 ## 0.1.2 – MQTT-Versand und Discovery pro Broker
 
-**34 lokale Prüfungen erfolgreich.** Zusätzliche lokale TCP-/Paho-Prüfungen:
+**35 lokale Prüfungen erfolgreich.** Zusätzliche lokale TCP-/Paho-Prüfungen:
 
 - Neue Profile starten mit Discovery aus; Daten erreichen trotzdem alle drei Broker.
 - Ohne vorherige Discovery werden weder HA-Ankündigungen veröffentlicht noch
   `homeassistant/status` abonniert.
+- Ein absichtlich ausgelöster lokaler Discovery-Fehler unterbricht den MQTT-
+  Netzwerkprozess nicht; Eingaben erreichen weiterhin alle drei Testbroker.
 - Ausschalten auf einem verbundenen Broker nimmt dessen eigene retained Konfiguration
   zurück; die anderen Broker bleiben davon unberührt.
 - Nach Wiederverbindung werden alte eigene Konfigurationen anhand des lokalen

@@ -246,6 +246,17 @@ class MqttTests(TemporaryHome):
             self.assertFalse(any(m[0].startswith("homeassistant/") for m in server.messages))
             self.assertNotIn("homeassistant/status", server.subscriptions)
 
+    def test_discovery_error_does_not_stop_mqtt_data(self):
+        self.pool.close()
+        for server in self.servers:
+            server.messages.clear()
+        with patch.object(Brokers, "discovery", side_effect=ValueError("Simulierter Discovery-Fehler")):
+            with self.assertLogs("ugso_usbhub.mqtt", level="ERROR"):
+                self.pool = Brokers(self.config, lambda *x: None)
+                wait_for(lambda: len(self.pool.discovery_errors) == 3)
+            self.assertEqual(self.pool.send("deck", "key:0", "press"), 3)
+            wait_for(lambda: all(any("/event/" in m[0] for m in server.messages) for server in self.servers))
+
     def test_discovery_off_removes_own_retained_configs_after_reconnect(self):
         self.restart_without_discovery()
         for server in self.servers:
