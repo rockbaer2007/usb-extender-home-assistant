@@ -70,26 +70,36 @@ function brokers() {
     field(c,'Gespeichertes Passwort löschen',false,v=>b.clear_password=v,'checkbox');
     field(c,'TLS mit Zertifikatsprüfung',b.tls,v=>b.tls=v,'checkbox');
     field(c,'Eigene CA-Datei auf dem Raspi (optional)',b.ca_file,v=>b.ca_file=v);
-    field(c,'Home-Assistant MQTT-Geräteauslöser melden',b.discovery,v=>b.discovery=v,'checkbox');
+    field(c,'Discovery',b.discovery?'ha':'off',v=>b.discovery=v==='ha','select',[['off','Aus – nur MQTT-Daten senden'],['ha','Home Assistant – Geräteauslöser anmelden']]);
+    c.append(el('p','Für ioBroker „Aus“ wählen. Die MQTT-Datenübertragung bleibt aktiv. Beim Abschalten werden bekannte eigene Discovery-Ankündigungen zurückgenommen.','muted'));
   });
   const c=card('Vorgabe für neue Geräte');routes(c,config.default_targets,v=>config.default_targets=v);c.append(el('p','Tastendrücke werden nicht gespeichert oder nach einer Verbindungsunterbrechung nachgesendet. MQTT-Rückmeldungen zur Anzeige kommen je Gerät von genau einem ausgewählten Broker.'));
 }
 function bindings() {
-  const learn=card('Taste drücken und übernehmen');learn.append(el('p','Gerät zuerst freigeben und speichern. Hier erscheinen nur Ereignisse freigegebener Geräte. „Gedrückt halten“ löst zusätzlich nach 0,7 Sekunden aus.'));
+  const learn=card('Taste drücken und übernehmen');learn.append(el('p','Gerät zuerst freigeben und speichern. Mit „Übernehmen“ wird der tatsächliche Tastenname eingetragen. Danach die Belegung speichern. Erst passende Belegungen senden MQTT. „Gedrückt halten“ löst zusätzlich nach 0,7 Sekunden aus.'));
   const recent=el('div');learn.append(recent);renderEvents(recent,true);
   button(learn,'Leere Belegung hinzufügen',()=>addBinding());
   config.bindings.forEach((b,index)=>{
     const c=card();const row=el('div',undefined,'row spread');row.append(el('span','BELEGUNG '+(index+1),'binding-number'));button(row,'Entfernen',()=>{config.bindings.splice(index,1);dirty();render();},'danger');c.append(row);
     const f=el('div',undefined,'fields');c.append(f);
-    field(f,'Gerät',b.device,v=>b.device=v,'select',Object.keys(config.devices).map(id=>[id,config.devices[id].name||id]));
-    field(f,'Taste / Steuerelement',b.control,v=>b.control=v);
+    field(f,'Gerät',b.device,v=>{b.device=v;refreshPreview();},'select',Object.keys(config.devices).map(id=>[id,config.devices[id].name||id]));
+    const control=field(f,'Taste / Steuerelement',b.control,v=>b.control=v);
+    control.placeholder='KEY_TAB (Tastatur) oder key:0 (Stream Deck)';
     field(f,'Ereignis',b.gesture,v=>b.gesture=v,'select',[['press','Drücken'],['release','Loslassen'],['hold','Gedrückt halten'],['repeat','Wiederholen'],['rotate_left','Links drehen'],['rotate_right','Rechts drehen'],['touch','Touch']]);
     field(f,'Text auf der Stream-Deck-Taste',b.text,v=>b.text=v);
     field(f,'Icon',b.icon,v=>b.icon=v,'select',[['','Kein Icon'],...iconList.map(i=>[i.id,i.collection+' · '+i.name])]);
     const inherit=field(f,'Geräteziele übernehmen',b.targets==null,v=>{b.targets=v?null:[];render();},'checkbox');
-    if(b.targets!=null){c.append(el('div','An diese Broker senden','route-title'));routes(c,b.targets,v=>b.targets=v);}
+    if(b.targets!=null){c.append(el('div','An diese Broker senden','route-title'));routes(c,b.targets,v=>{b.targets=v;refreshPreview();});}
+    const topicInput=field(c,'Sende-Topic (leer = automatisch)',b.topic,v=>{b.topic=v;refreshPreview();});
+    topicInput.placeholder='z. B. haus/usb/tab';
+    c.append(el('div','Tatsächliche MQTT-Ziele nach dem Speichern','route-title'));
+    const preview=el('div');c.append(preview);
+    function refreshPreview(){preview.replaceChildren();const targets=b.targets??config.devices[b.device]?.targets??config.default_targets;
+      if(!targets.length){preview.append(el('p','Kein MQTT-Ziel ausgewählt.','warning'));return;}
+      targets.forEach(id=>{const broker=config.brokers.find(x=>x.id===id);if(broker){const row=el('p');row.append(el('strong',broker.name+(broker.enabled?'':' (deaktiviert)')+' → '),el('code',b.topic||broker.prefix+'/event/'+b.device+'/'+b.id));preview.append(row);}});
+    }refreshPreview();
     const more=el('details');more.append(el('summary','MQTT-Topic, Nutzdaten & Zustandsanzeige'));c.append(more);const advanced=el('div',undefined,'fields');more.append(advanced);
-    [['Eigenes Sende-Topic (leer = automatisch)','topic'],['Payload (leer = Ereignis als JSON)','payload'],['Zustands-Topic für Rückmeldung','state_topic'],['JSON-Feld, z. B. state (optional)','state_path'],['Wert für aktives Icon','on_value']].forEach(([name,key])=>field(advanced,name,b[key],v=>b[key]=v));
+    [['Payload (leer = Ereignis als JSON)','payload'],['Zustands-Topic für Rückmeldung','state_topic'],['JSON-Feld, z. B. state (optional)','state_path'],['Wert für aktives Icon','on_value']].forEach(([name,key])=>field(advanced,name,b[key],v=>b[key]=v));
     field(advanced,'Aktives Icon',b.on_icon,v=>b.on_icon=v,'select',[['','Kein Icon'],...iconList.map(i=>[i.id,i.name])]);
     more.append(el('p','Rückmeldungen benötigen einen Empfangsbroker am Gerät. Home Assistant muss den Zustand auf das gewählte MQTT-Topic veröffentlichen.'));
   });
@@ -104,8 +114,13 @@ function addBinding(event) {
 function renderEvents(parent,learn=false) {
   parent.replaceChildren();const events=status.events.slice(0,learn?5:20);
   if(!events.length){parent.append(el('p','Noch keine Eingaben.'));return;}
-  const wrap=el('div',undefined,'table-wrap'),t=el('table'),head=el('tr');['Zeit','Gerät','Taste','Ereignis',learn?'':'Gesendet'].forEach(x=>head.append(el('th',x)));t.append(head);
-  events.forEach(event=>{const row=el('tr');[new Date(event.time*1000).toLocaleTimeString(),config.devices[event.device]?.name||event.device,event.control,event.gesture].forEach(v=>row.append(el('td',v)));const action=el('td');if(learn)button(action,'Übernehmen',()=>addBinding(event));else action.textContent=String(event.delivered);row.append(action);t.append(row);});wrap.append(t);parent.append(wrap);
+  const wrap=el('div',undefined,'table-wrap'),t=el('table'),head=el('tr');['Zeit','Gerät','Taste','Ereignis','MQTT',...(learn?['']:[])].forEach(x=>head.append(el('th',x)));t.append(head);
+  events.forEach(event=>{const row=el('tr');[new Date(event.time*1000).toLocaleTimeString(),config.devices[event.device]?.name||event.device,event.control,event.gesture].forEach(v=>row.append(el('td',v)));
+    const delivery=el('td'),report=event.delivery;
+    if(report){const labels={no_binding:'Keine passende gespeicherte Belegung',no_targets:'Kein MQTT-Ziel ausgewählt',not_connected:'Ziel deaktiviert oder nicht verbunden',sent:report.delivered+'× an MQTT übergeben'};delivery.append(el('div',labels[report.reason]||report.reason));
+      (report.transmissions||[]).forEach(tx=>{const line=el('div');line.append(el('small',tx.name+' · '+({sent:'gesendet',offline:'offline',disabled:'deaktiviert',failed:'fehlgeschlagen'}[tx.state]||tx.state)+' · '+tx.topic));delivery.append(line);});
+    }else delivery.textContent=event.delivered?event.delivered+'× an MQTT übergeben':'Nicht gesendet';
+    row.append(delivery);if(learn){const action=el('td');button(action,'Übernehmen',()=>addBinding(event));row.append(action);}t.append(row);});wrap.append(t);parent.append(wrap);
 }
 function icons() {
   const c=card('Eigene Bilder und Elgato-Iconpacks');c.append(el('p','PNG, JPG, SVG, GIF und WebP; bei Animationen wird das erste Bild verwendet. ZIP und .streamDeckIconPack lokal hochladen. Es findet kein automatischer Marketplace-Download statt.'));
@@ -120,7 +135,7 @@ function system() {
   c.append(el('pre','sudo ugso-usbhub web start    # jetzt starten\nsudo ugso-usbhub web stop     # jetzt abschalten\nsudo ugso-usbhub web status   # Status\nsudo ugso-usbhub web enable   # mit Autostart\nsudo ugso-usbhub web disable  # stoppen, ohne Autostart\nsudo ugso-usbhub backup       # Einstellungen und Icons sichern\nsudo journalctl -u ugso-usbhub -n 50'));
   c.append(el('p','Die Oberfläche verwendet HTTP im lokalen Netz. Nicht ins Internet freigeben. Für fremde Netze VPN oder einen HTTPS-Reverse-Proxy verwenden.','warning'));
   const d=card('Geräte- und Verbindungsdiagnose');Object.entries(status.errors||{}).forEach(([k,v])=>d.append(el('p',k+': '+v,'warning')));if(!Object.keys(status.errors||{}).length)d.append(el('p','Keine Gerätefehler gemeldet.'));
-  const e=card('Letzte Eingaben (nur im Arbeitsspeicher)');renderEvents(e);
+  const e=card('Letzte Eingaben (nur im Arbeitsspeicher)'),log=el('div');log.id='event-log';e.append(log);renderEvents(log);
   const f=card('Datenspeicherung');f.append(el('p','Einstellungen, Zugangsdaten und Icons liegen auf dem Raspi unter /var/lib/ugso-usbhub. Die letzten zehn Konfigurationsstände werden automatisch gesichert. Passwörter werden in der Oberfläche nicht zurückgeliefert. Geräte ohne Seriennummer werden über ihren USB-Port zugeordnet.'));
 }
 async function enter() { config=await api('config'); status=await api('status');iconList=await api('icons');$('#login').hidden=true;$('#workspace').hidden=false;$('#logout').hidden=false;$('#error').hidden=true;render(); }
@@ -129,6 +144,6 @@ $('#login-form').onsubmit=async e=>{e.preventDefault();try{await api('login',{pa
 $('#logout').onclick=async()=>{if(changed&&!confirm('Ungespeicherte Änderungen verwerfen?'))return;await api('logout',{});changed=false;showLogin();};
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{page=b.dataset.page;render();});
 $('#save').onclick=async()=>{try{await api('config',config);config=await api('config');changed=false;$('#save').disabled=true;$('#dirty').textContent='Gespeichert';$('#error').hidden=true;render();notice('Gespeichert. Der USB-/MQTT-Dienst übernimmt die Einstellungen innerhalb weniger Sekunden.');}catch(e){error(e);}};
-setInterval(async()=>{if(!config)return;try{status=await api('status');$('#connection').textContent=serviceAlive()?'● USB-/MQTT-Dienst aktiv':'○ Dienst nicht aktiv';if(page==='bindings'){const target=$('#content article:first-child > div');if(target)renderEvents(target,true);} }catch(e){error(e);}},2500);
+setInterval(async()=>{if(!config)return;try{status=await api('status');$('#connection').textContent=serviceAlive()?'● USB-/MQTT-Dienst aktiv':'○ Dienst nicht aktiv';if(page==='bindings'){const target=$('#content article:first-child > div');if(target)renderEvents(target,true);}if(page==='system'&&$('#event-log'))renderEvents($('#event-log')); }catch(e){error(e);}},2500);
 window.addEventListener('beforeunload',e=>{if(changed){e.preventDefault();e.returnValue='';}});
 enter().catch(()=>{});

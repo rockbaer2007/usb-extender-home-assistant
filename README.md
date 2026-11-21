@@ -2,7 +2,7 @@
 
 **USB-Geräte und Stream Decks über MQTT verbinden – für Raspberry Pi.**
 
-Version **0.1.1** · Privates Projekt · Stand 21. November 2026
+Version **0.1.2** · Privates Projekt · Stand 21. November 2026
 
 Ein Raspberry Pi 4 wird zur USB-/MQTT-Brücke: Tastaturen, Medientasten,
 Makropads und unterstützte physische Stream Decks liefern Eingaben an bis zu
@@ -45,8 +45,8 @@ Installationspaket, kein vollständig offline installierbares ARM-Abbild.
    ```bash
    # Falls unzip noch nicht vorhanden ist:
    sudo apt-get update && sudo apt-get install -y unzip
-   unzip USB-Extender-Home-Assistant-0.1.1-Raspi4.zip
-   cd USB-Extender-Home-Assistant-0.1.1
+   unzip USB-Extender-Home-Assistant-0.1.2-Raspi4.zip
+   cd USB-Extender-Home-Assistant-0.1.2
    sudo bash install.sh
    ```
 
@@ -101,6 +101,19 @@ TLS prüft Zertifikate; eine eigene CA-Datei kann auf dem Pi hinterlegt werden.
 Ein leer gelassenes Passwortfeld erhält ein bereits gespeichertes Passwort.
 Die separate Checkbox löscht es ausdrücklich.
 
+**Discovery ist von der Datenübertragung getrennt.** Für jeden Broker gibt es
+die Auswahl **Aus – nur MQTT-Daten senden** oder **Home Assistant – Geräteauslöser
+anmelden**. Für ioBroker zunächst **Aus** wählen; MQTT-Ereignisse werden trotzdem
+gesendet. Die verwendete HA-Discovery-Komponente `device_automation` wird nicht
+von jedem ioBroker-Discovery-Adapter unterstützt. Neue Profile starten mit Discovery aus;
+bestehende Profile werden nicht ungefragt umgestellt.
+
+Beim Abschalten nimmt der Extender bekannte eigene retained Discovery-Ankündigungen
+zurück. Bereits bekannte Namen bleiben lokal in `discovery.json` gespeichert,
+damit die Bereinigung bei einem Verbindungsabbruch wiederholt werden kann.
+Für den Wechsel von 0.1.0/0.1.1 werden eigene Zuordnungen aus den letzten zehn
+Konfigurationssicherungen berücksichtigt. Fremde Discovery-Topics werden nicht gelöscht.
+
 Unter **Vorgabe für neue Geräte** die gewünschten Broker ankreuzen. Speichern.
 
 **Beispiel: ioBroker produktiv und Testsystem gleichzeitig.** Broker 1 mit dem
@@ -153,7 +166,12 @@ sechs pro Sekunde begrenzt. Es gibt derzeit keine Doppelklick-Erkennung.
 
 Normalerweise die Geräteziele übernehmen. Alternativ die Checkbox ausschalten
 und einzelne Zielbroker ankreuzen. Ein eigenes Topic und eine feste Payload sind
-optional. Ohne Vorgabe sendet der Dienst ein JSON-Ereignis auf:
+optional. Die tatsächlichen Zielbroker und vollständigen Sende-Topics werden direkt
+in der Belegung angezeigt. Für Tastaturen heißen die Steuerelemente beispielsweise
+`KEY_TAB`. Die Schreibweisen `key:tab` und `key_tab` werden beim Speichern
+vereinheitlicht. Bei Stream Decks bleibt die erste Taste `key:0`.
+
+Ohne Vorgabe sendet der Dienst ein JSON-Ereignis auf:
 
 ```text
 <Topic-Präfix>/event/<Geräte-ID>/<Belegungs-ID>
@@ -166,6 +184,13 @@ optional. Ohne Vorgabe sendet der Dienst ein JSON-Ereignis auf:
 Eingaben verwenden QoS 0, niemals retained. Bei nicht verbundenem Broker wird
 keine Eingabe für später gespeichert. Das ist keine Exactly-once-Zustellung.
 Zwei vorhandene Brokerverbindungen arbeiten weiter, wenn die dritte ausfällt.
+
+In der Ereignistabelle zeigt die Spalte **MQTT** den Sendestatus und die Ziele.
+Bei **Keine passende gespeicherte Belegung** die passende Eingabe übernehmen und
+speichern. Bei **Kein MQTT-Ziel ausgewählt** mindestens einen Broker ankreuzen.
+Bei **Ziel deaktiviert oder nicht verbunden** die Brokerverbindung prüfen.
+**An MQTT übergeben** bestätigt die lokale Übergabe an den MQTT-Client (QoS 0);
+ein Empfang im MQTT Explorer bestätigt zusätzlich die Ankunft am Broker.
 
 ### 4. Mit Home Assistant verbinden
 

@@ -72,9 +72,10 @@ class Core:
         elif gesture == "release":
             self.pressed.pop(key, None)
             self.repeats.pop(key, None)
-        sent = self.brokers.send(device, control, gesture, value)
+        report = self.brokers.send_report(device, control, gesture, value)
         self.events.appendleft({"time": time.time(), "device": device, "control": control,
-                                "gesture": gesture, "value": value, "delivered": sent})
+                                "gesture": gesture, "value": value, "delivered": report["delivered"],
+                                "delivery": report})
 
     def status(self):
         return {"version": __version__, "pid": __import__("os").getpid(), "updated": time.time(),

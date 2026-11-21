@@ -29,7 +29,5 @@
 - Eigenständiges Tablet-Deck als separater Dienst. Dafür muss eine Oberfläche
   während der Tablet-Nutzung erreichbar bleiben; Stream Deck Mobile wird dadurch
   nicht automatisch mit dem Pi kompatibel.
-- Persistente Discovery-Bereinigung auch für Belegungen, die bei einem längeren
-  Broker-Ausfall entfernt werden.
 
 Erledigte Implementierungsschritte stehen im Changelog und nicht als offene Aufgaben hier.

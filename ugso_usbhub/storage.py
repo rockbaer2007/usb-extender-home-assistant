@@ -21,6 +21,12 @@ def status_path():
 def canonical_control(value):
     """evdev can return alias tuples/lists; store a single actual key name."""
     if isinstance(value, str):
+        import re
+        value = value.strip()
+        if re.fullmatch(r"key:[a-zA-Z_][a-zA-Z_0-9]*", value, re.I):
+            return "KEY_" + value.split(":", 1)[1].upper()
+        if value.upper().startswith(("KEY_", "BTN_", "REL_")):
+            return value.upper()
         return value
     if isinstance(value, (tuple, list)) and value and all(isinstance(x, str) for x in value):
         return next((x for x in value if x not in {"KEY_MIN_INTERESTING", "KEY_MAX", "KEY_CNT", "BTN_MISC", "BTN_MOUSE", "BTN_GAMEPAD"}), value[0])
@@ -72,7 +78,7 @@ def defaults():
             "brokers": [{"id": f"broker{i}", "name": f"MQTT {i}", "enabled": False,
                          "host": "", "port": 1883, "username": "", "password": "",
                          "tls": False, "ca_file": "", "prefix": f"ugso/usbhub/{i}",
-                         "discovery": True} for i in range(1, 4)],
+                         "discovery": False} for i in range(1, 4)],
             "default_targets": ["broker1"], "devices": {}, "bindings": []}
 
 
@@ -146,6 +152,8 @@ def public_config(c):
     for b in result["brokers"]:
         b["password_set"] = bool(b.get("password"))
         b["password"] = ""
+    for binding in result.get("bindings", []):
+        binding["control"] = canonical_control(binding["control"])
     return result
 
 

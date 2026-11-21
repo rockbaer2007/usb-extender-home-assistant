@@ -60,5 +60,5 @@ jobs:
         run: python tools/package.py
       - uses: actions/upload-artifact@v4
         with:
-          name: USB-Extender-Home-Assistant-0.1.1-Raspi4
+          name: USB-Extender-Home-Assistant-0.1.2-Raspi4
           path: dist/*

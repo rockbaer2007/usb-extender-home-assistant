@@ -1,5 +1,39 @@
 # Prüfungen
 
+## 0.1.2 – MQTT-Versand und Discovery pro Broker
+
+**34 lokale Prüfungen erfolgreich.** Zusätzliche lokale TCP-/Paho-Prüfungen:
+
+- Neue Profile starten mit Discovery aus; Daten erreichen trotzdem alle drei Broker.
+- Ohne vorherige Discovery werden weder HA-Ankündigungen veröffentlicht noch
+  `homeassistant/status` abonniert.
+- Ausschalten auf einem verbundenen Broker nimmt dessen eigene retained Konfiguration
+  zurück; die anderen Broker bleiben davon unberührt.
+- Nach Wiederverbindung werden alte eigene Konfigurationen anhand des lokalen
+  Discovery-Verzeichnisses zurückgenommen; keine neuen Definitionen bei Discovery aus.
+- Migration von 0.1.0/0.1.1 über Konfigurationssicherungen ebenfalls geprüft.
+- `key:tab` und `key_tab` werden zu `KEY_TAB`, `key:0` bleibt eine Stream-Deck-Kennung.
+- Diagnose unterscheidet erfolgreiche MQTT-Übergabe, fehlende Belegung, fehlende
+  Ziele und getrennten Broker und enthält die tatsächlichen Topics.
+
+Live auf dem Raspi mit noch installierter 0.1.0:
+
+1. Gespeicherte Belegung enthielt `key:tab`; Eingabetabelle zeigte `KEY_TAB`.
+2. Auf `KEY_TAB` korrigiert, gespeichert; automatische Konfigurationssicherung.
+3. Discovery nur im Brokerplatz IOB ausgeschaltet und gespeichert.
+4. Nutzer drückte dreimal Tab auf der Trust-Tastatur.
+5. Offener MQTT Explorer am HA-Broker zeigte genau drei Nachrichten auf
+   `ugso/usbhub/1/event/145f-02c9-378b5b8d2956/847173d76d5d524f4a4c0210961fbacf`.
+
+Bestätigte Payload:
+
+```json
+{"device":"145f-02c9-378b5b8d2956","control":"KEY_TAB","event_type":"press","value":1}
+```
+
+Der Empfang direkt im ioBroker-Broker und das vollständige 0.1.2-Update auf dem
+Raspi sind noch nicht bestätigt. Der ioBroker-Brokerplatz wird als online angezeigt.
+
 ## 0.1.1 – Tastaturberechtigungen und Statusanzeige
 
 Lokaler Gesamtlauf: **28 Prüfungen erfolgreich**, einschließlich Statusprüfung mit abweichender

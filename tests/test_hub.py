@@ -39,6 +39,7 @@ class ConfigTests(TemporaryHome):
     def test_three_slots_and_validation(self):
         c = defaults()
         validate(c)
+        self.assertFalse(any(b["discovery"] for b in c["brokers"]))
         c["brokers"].append(copy.deepcopy(c["brokers"][0]))
         with self.assertRaises(ValueError):
             validate(c)
@@ -94,6 +95,16 @@ class ConfigTests(TemporaryHome):
         with self.assertRaises(ValueError):
             canonical_control({"not": "a key"})
 
+    def test_keyboard_spelling_and_streamdeck_number(self):
+        self.assertEqual(canonical_control("key:tab"), "KEY_TAB")
+        self.assertEqual(canonical_control("key:volumeup"), "KEY_VOLUMEUP")
+        self.assertEqual(canonical_control("key_tab"), "KEY_TAB")
+        self.assertEqual(canonical_control("key:0"), "key:0")
+        config = defaults()
+        config["bindings"] = [{"id": "tab", "device": "keyboard", "control": "key:tab", "gesture": "press"}]
+        self.assertEqual(public_config(config)["bindings"][0]["control"], "KEY_TAB")
+        self.assertEqual(validate(config)["bindings"][0]["control"], "KEY_TAB")
+
 
 def png():
     out = io.BytesIO()
@@ -144,12 +155,13 @@ class IconTests(TemporaryHome):
             self.assertEqual(image.getpixel((128, 128))[:3], (255, 0, 0))
 
 
-class MqttTests(unittest.TestCase):
+class MqttTests(TemporaryHome):
     def setUp(self):
+        super().setUp()
         self.servers = [Broker() for _ in range(3)]
         c = self.config = defaults()
         for b, server in zip(c["brokers"], self.servers):
-            b.update(enabled=True, host="127.0.0.1", port=server.port)
+            b.update(enabled=True, host="127.0.0.1", port=server.port, discovery=True)
         c["default_targets"] = [b["id"] for b in c["brokers"]]
         c["devices"]["deck"] = {"enabled": True, "receive_broker": "broker2"}
         c["bindings"] = [{"id": "lamp", "device": "deck", "control": "key:0", "gesture": "press", "state_topic": "test/state"}]
@@ -161,6 +173,7 @@ class MqttTests(unittest.TestCase):
         self.pool.close()
         for server in self.servers:
             server.close()
+        super().tearDown()
 
     def test_three_real_paho_connections_and_no_retained_presses(self):
         self.assertEqual(self.pool.send("deck", "key:0", "press"), 3)
@@ -209,6 +222,66 @@ class MqttTests(unittest.TestCase):
         replacement["bindings"] = []
         self.pool.cleanup_removed(replacement)
         wait_for(lambda: all(any(m[0].startswith("homeassistant/") and m[1] == b"" and m[2] for m in s.messages) for s in self.servers))
+
+    def restart_without_discovery(self, fresh=False, legacy=False):
+        wait_for(lambda: all(any(m[0].startswith("homeassistant/") for m in s.messages) for s in self.servers))
+        self.pool.close()
+        if legacy:
+            atomic_json(home() / "backups" / "legacy.json", copy.deepcopy(self.config))
+        if fresh or legacy:
+            (home() / "discovery.json").unlink(missing_ok=True)
+        for server in self.servers:
+            server.messages.clear()
+            server.subscriptions.clear()
+        for broker in self.config["brokers"]:
+            broker["discovery"] = False
+        self.pool = Brokers(self.config, lambda *x: None)
+        wait_for(lambda: all(s == "online" for s in self.pool.states.values()))
+        self.assertEqual(self.pool.send("deck", "key:0", "press"), 3)
+        wait_for(lambda: all(any("/event/" in m[0] for m in s.messages) for s in self.servers))
+
+    def test_discovery_off_sends_data_without_ha_announcements(self):
+        self.restart_without_discovery(fresh=True)
+        for server in self.servers:
+            self.assertFalse(any(m[0].startswith("homeassistant/") for m in server.messages))
+            self.assertNotIn("homeassistant/status", server.subscriptions)
+
+    def test_discovery_off_removes_own_retained_configs_after_reconnect(self):
+        self.restart_without_discovery()
+        for server in self.servers:
+            cleanup = [m for m in server.messages if m[0].startswith("homeassistant/")]
+            self.assertTrue(cleanup)
+            self.assertTrue(all(m[1] == b"" and m[2] for m in cleanup))
+            self.assertTrue(all(f"ugso_{self.config['hub_id']}_lamp" in m[0] for m in cleanup))
+
+    def test_legacy_discovery_is_cleaned_from_config_backup(self):
+        self.restart_without_discovery(legacy=True)
+        for server in self.servers:
+            cleanup = [m for m in server.messages if m[0].startswith("homeassistant/")]
+            self.assertTrue(cleanup)
+            self.assertTrue(all(m[1] == b"" and m[2] for m in cleanup))
+
+    def test_turning_off_discovery_cleans_connected_broker(self):
+        replacement = copy.deepcopy(self.config)
+        replacement["brokers"][0]["discovery"] = False
+        self.pool.cleanup_removed(replacement)
+        wait_for(lambda: any(m[0].startswith("homeassistant/") and m[1] == b"" for m in self.servers[0].messages))
+        self.assertFalse(any(m[0].startswith("homeassistant/") and m[1] == b"" for m in self.servers[1].messages))
+
+    def test_delivery_diagnostics_and_keyboard_alias(self):
+        self.config["bindings"][0]["control"] = "key:tab"
+        report = self.pool.send_report("deck", "KEY_TAB", "press")
+        self.assertEqual((report["reason"], report["delivered"]), ("sent", 3))
+        self.assertTrue(all(tx["state"] == "sent" and "/event/deck/lamp" in tx["topic"] for tx in report["transmissions"]))
+        self.assertEqual(self.pool.send_report("deck", "KEY_A", "press")["reason"], "no_binding")
+        self.config["bindings"][0]["targets"] = []
+        self.assertEqual(self.pool.send_report("deck", "KEY_TAB", "press")["reason"], "no_targets")
+        self.config["bindings"][0]["targets"] = ["broker1"]
+        self.pool.clients["broker1"].disconnect()
+        wait_for(lambda: self.pool.states["broker1"] == "offline")
+        report = self.pool.send_report("deck", "KEY_TAB", "press")
+        self.assertEqual(report["reason"], "not_connected")
+        self.assertEqual(report["transmissions"][0]["state"], "offline")
 
 
 class WebTests(TemporaryHome):
