@@ -1,0 +1,29 @@
+[Unit]
+Description=UGSo USB Hub - USB inputs and MQTT
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ugso-usbhub
+Group=ugso-usbhub
+Environment=UGSO_USB_HOME=/var/lib/ugso-usbhub
+Environment=UGSO_USB_STATUS=/run/ugso-usbhub/status.json
+RuntimeDirectory=ugso-usbhub
+RuntimeDirectoryMode=0750
+WorkingDirectory=/opt/ugso-usbhub/current
+ExecStart=/opt/ugso-usbhub/current/.venv/bin/ugso-usbhub daemon
+Restart=on-failure
+RestartSec=5
+UMask=0027
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/ugso-usbhub
+ReadWritePaths=/run/ugso-usbhub
+PrivateTmp=true
+TimeoutStopSec=15
+MemoryMax=384M
+
+[Install]
+WantedBy=multi-user.target

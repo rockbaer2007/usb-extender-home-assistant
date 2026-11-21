@@ -1,0 +1,6 @@
+# Tested Python dependencies. evdev is Linux-only and built locally for the Pi.
+paho-mqtt==2.2.0
+Pillow==13.0.0
+streamdeck==0.10.0
+CairoSVG==2.9.1
+evdev==1.9.2; sys_platform == 'linux'

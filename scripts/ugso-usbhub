@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ $EUID -ne 0 && $(id -un) != ugso-usbhub ]]; then
+  printf 'Bitte mit sudo ugso-usbhub aufrufen.\n' >&2
+  exit 1
+fi
+export UGSO_USB_HOME=/var/lib/ugso-usbhub
+export UGSO_USB_STATUS=/run/ugso-usbhub/status.json
+if [[ $EUID -eq 0 && ${1:-} != web && ${1:-} != password ]]; then
+  exec runuser -u ugso-usbhub -- env UGSO_USB_HOME="$UGSO_USB_HOME" UGSO_USB_STATUS="$UGSO_USB_STATUS" /opt/ugso-usbhub/current/.venv/bin/ugso-usbhub "$@"
+fi
+exec /opt/ugso-usbhub/current/.venv/bin/ugso-usbhub "$@"

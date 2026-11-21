@@ -1,0 +1,31 @@
+name: Linux checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Native libraries
+        run: sudo apt-get update && sudo apt-get install -y libhidapi-libusb0 libcairo2 libffi-dev python3-dev
+      - name: Python dependencies
+        run: python -m pip install -r requirements.txt && python -m pip install --no-deps .
+      - name: Unit and local protocol tests
+        run: python -m unittest discover -v
+      - name: SVG rendering
+        run: python -c 'from ugso_usbhub.icons import raster; assert raster(b"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\"><rect width=\"10\" height=\"10\" fill=\"red\"/></svg>", ".svg").startswith(b"\x89PNG")'
+      - name: Syntax checks
+        run: |
+          bash -n install.sh scripts/ugso-usbhub
+          node --check ugso_usbhub/static/app.js
+          git diff --check
+      - name: Build installation ZIP
+        run: python tools/package.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: USB-Extender-Home-Assistant-0.1.0-Raspi4
+          path: dist/*
