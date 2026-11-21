@@ -1,6 +1,6 @@
 # Aktueller Stand
 
-## USB Extender für Home Assistant 0.1.2 in Prüfung
+## USB Extender für Home Assistant 0.1.2
 
 - Ursache des fehlenden Versands im Browser gefunden: Belegung `key:tab`,
   tatsächliche Eingabe `KEY_TAB`. Auf dem Raspi auf `KEY_TAB` geändert und gespeichert;
@@ -11,8 +11,13 @@
   `control: KEY_TAB`, `event_type: press`, `value: 1`.
 - 0.1.2 normalisiert Tastenkennungen, bietet Discovery ausdrücklich als Aus/HA-Auswahl,
   räumt bekannte eigene Discovery-Ankündigungen auf und zeigt MQTT-Ziele sowie Sendestatus.
-- 35 lokale automatisierte Prüfungen erfolgreich. Vollständige Linux-CI und
-  Installation des neuen Pakets auf dem Raspi stehen noch aus.
+- 35 lokale automatisierte Prüfungen und die vollständige Linux-CI erfolgreich:
+  [Prüflauf für 49a96c0](https://github.com/rockbaer2007/usb-extender-home-assistant/actions/runs/44894647551).
+  Installation des neuen Pakets auf dem Raspi steht noch aus.
+
+Der zusätzliche lokale Browsertest der neuen Oberfläche wurde von der
+Computersteuerung wegen nicht verlässlich bestimmbarer Browser-URL abgebrochen.
+Der vorherige Live-Nachweis im MQTT Explorer bleibt bestätigt.
 
 Auf dem Raspi ist noch 0.1.0 mit den Live-Korrekturen aktiv. Der Empfang am
 ioBroker-Broker selbst wurde nicht separat beobachtet; sein Brokerplatz ist online.

@@ -36,6 +36,13 @@ Bestätigte Payload:
 Der Empfang direkt im ioBroker-Broker und das vollständige 0.1.2-Update auf dem
 Raspi sind noch nicht bestätigt. Der ioBroker-Brokerplatz wird als online angezeigt.
 
+Die [Linux-CI für 49a96c0](https://github.com/rockbaer2007/usb-extender-home-assistant/actions/runs/44894647551)
+ist vollständig grün: 35 Prüfungen, native SVG-Verarbeitung, Installer, systemd,
+Webstart/-stopp und ZIP-Erstellung. Ein zusätzlicher lokaler Browsertest der neuen
+Discovery-Auswahl wurde von der Computersteuerung abgebrochen, weil sie die
+aktuelle URL nicht verlässlich erkennen konnte. Für die neue Oberfläche wird
+deshalb kein erfolgreicher visueller Nachtest behauptet.
+
 ## 0.1.1 – Tastaturberechtigungen und Statusanzeige
 
 Lokaler Gesamtlauf: **28 Prüfungen erfolgreich**, einschließlich Statusprüfung mit abweichender
