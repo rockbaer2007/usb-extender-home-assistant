@@ -9,6 +9,7 @@ w.fetch=async(path,options)=>{
   if(path==='/api/config'){if(body)config=structuredClone(body);else result=config;}
   if(path==='/api/status')result=snapshot;
   if(path==='/api/icons')result=[{id:'a'.repeat(32),name:'Light',collection:'Own',tags:[]}];
+  if(path==='/api/icons/catalog')result={items:[{id:'a'.repeat(32),name:'Light',collection:'Own',tags:[]}],licenses:{}};
   if(path==='/api/deck/preview'){previews++;result={image:'fake-test-image'};}
   return {ok:true,json:async()=>structuredClone(result)};
 };
@@ -26,7 +27,9 @@ function input(label,value,event='input'){
   assert.equal(w.document.querySelectorAll('.deck-key').length,6);
   assert.ok(w.document.querySelector('.deck-columns-3'));
   assert.equal(config.bindings.length,1);
-  input('Beschriftung','Kitchen');input('Hintergrundfarbe','#224466','change');input('Icon / Vordergrundbild','a'.repeat(32),'change');
+  input('Beschriftung','Kitchen');input('Hintergrundfarbe','#224466','change');
+  async function chooseIcon(label){const trigger=w.document.querySelector('.icon-picker-trigger[aria-label="'+label+'"]');trigger.click();await settle();const pack=w.document.querySelector('.icon-picker-package');pack.open=true;await new Promise(r=>setTimeout(r,20));w.document.querySelector('.icon-picker-tile').click();await settle();await click('Übernehmen');}
+  await chooseIcon('Icon / Vordergrundbild');
   await click('Speichern');
   assert.equal(config.devices.deck.deck_keys['0'].text,'Kitchen');
   assert.equal(config.devices.deck.deck_keys['0'].background,'#224466');
@@ -35,7 +38,7 @@ function input(label,value,event='input'){
   assert.equal(config.keys.length,6,'All deck keys receive standard channels');
   assert.equal(config.keys[0].press_topic,'office-key-0/press');
   assert.equal(config.keys[0].button_plus_topic,'office-key-0/button-plus');
-  input('Icon bei gedrückter Taste','a'.repeat(32),'change');
+  await chooseIcon('Icon bei gedrückter Taste');
   const check=label=>[...w.document.querySelectorAll('label.check')].find(l=>l.textContent===label).querySelector('input');
   check('Hintergrundfarbe gedrückt verwenden').click();await settle();
   input('Hintergrundfarbe gedrückt','#556677','change');

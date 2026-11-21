@@ -9,7 +9,7 @@ w.fetch=async(path,options)=>{
   const body=options?.body&&JSON.parse(options.body);let result={ok:true};
   if(path==='/api/config'){if(body){config=structuredClone(body);snapshot.mobile.active=config.mobile.enabled;}else result=config;}
   if(path==='/api/status')result=snapshot;
-  if(path==='/api/icons')result=[];
+  if(path==='/api/icons'||path==='/api/icons/catalog')result=[];
   if(path==='/api/mobile/qr')result={url:'https://streamdeck.elgato.com/c/?w=test&av2=127.0.0.1:28198',qr:'test'};
   if(path==='/api/mobile/control')commands.push(body);
   return {ok:true,json:async()=>structuredClone(result)};

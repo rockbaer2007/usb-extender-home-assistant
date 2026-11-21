@@ -1,5 +1,72 @@
 # Aktueller Stand
 
+## Tagesabschluss – 21. November 2026
+
+Arbeitsstand: 0.1.24, ausschließlich lokal. Quellcode, lokale Git-Historie,
+Programm-ZIP einschließlich SHA256, die 147 Farb-ZIPs und ausgewählte Prüfberichte
+werden als Tagesabschluss unter `M:\repos\_backups\ugso-usb-hub\` gesichert.
+
+Fortsetzung: zuerst den Stand hier und die Roadmap lesen. Kein Import oder Update
+auf .112 ohne neuen Auftrag. Die Farbsets sollen später nach Freigabe als
+Open-Source-Downloads angeboten werden. Aktuell nichts veröffentlichen/pushen.
+Alle lokalen Testserver wurden beendet; vorhandene Benutzereinstellungen bleiben erhalten.
+
+Programm: `M:\icons\USB-Extender-Home-Assistant-0.1.24-Raspi4.zip`.
+Farbsets: `M:\icons\HA-MDI-Favoriten-0.1.23\Pakete\`.
+Vorschau: `M:\icons\Iconauswahl-0.1.24.png`.
+
+## 0.1.24 – Grafische Iconauswahl und Miniaturcache (nur lokal)
+
+Sicherung einschließlich der noch unveröffentlichten 0.1.23:
+`M:\repos\_backups\ugso-usb-hub\before-visual-icon-picker-20261121-213459.zip`.
+
+- Iconbuttons öffnen ein kompaktes Fenster mit Paketen, Suche und 48×48-Raster.
+  Gemeinsame Auswahl für normal, gedrückt, Hintergrund und MQTT-Rückmeldung.
+- Keine tausenden Selectoptionen beim Formularaufbau; Index einmal je geladener
+  Bibliothek. Pro geöffnetem Paket höchstens 96 Kacheln mit Seitenwechsel.
+- Lazy-Laden nur sichtbarer/naher Miniaturen. Separater atomarer PNG-Cache unter
+  `icons/.cache/thumbnails/`, kein Vollbild-/Animationscache für die Auswahl.
+  Authentifizierte Thumbnailroute mit privatem Browsercache; API weiter no-store.
+- Kompakter Katalog überträgt wiederholte Paketlizenztexte einmal; alte API bleibt
+  kompatibel. Lokaler Vergleich für 40 echte Favoriten: 583.391 auf 37.739 Bytes
+  (93,5 % weniger), ohne Änderung der gespeicherten Lizenzangaben.
+- Lokaler Chrome-Einzelvergleich mit 6.862 synthetischen Iconmetadaten:
+  Editoraufbau 93,7 auf 6,5 ms; Selectoptionen 27.466 auf 14. PC-Werte, kein Pi-Test.
+- 152 Python-Tests und sieben Node-/DOM-Prüfläufe bestanden. Miniaturgröße,
+  erstes Animationsbild, Cache-Wiederverwendung/Parallelzugriff, Fehlerwiederholung,
+  private HTTP-Header und Kataloginvalidierung geprüft.
+- Chrome: echte 48px-PNGs, 56 Browsercache-Treffer, Pakete, Abbrechen ohne Änderung,
+  gedrücktes Icon speichern/neuladen, Escape und schmale Ansicht erfolgreich.
+- Ein bestehender MQTT-Test prüfte den asynchronen Plus-Reset zu früh. Er wartet
+  nun auf dessen Empfang; keine MQTT-Funktionsänderung. Gesamtsuite danach grün.
+- Nur lokal getestet. .112 und Benutzereinstellungen unverändert; nichts veröffentlicht.
+
+## 0.1.23 – MDI-Favoriten und CSS-Farbsets (nur lokal)
+
+Sicherung vor Beginn:
+`M:\repos\_backups\ugso-usb-hub\before-mdi-favorites-20261121-211710.zip`.
+
+- 20 Ein-/Aus-Paare aus MDI 7.4.47 für übliche HA-Entitäten; 147 gelieferte
+  CSS-Farben als Hintergrund, kontrastierende schwarze/weiße Symbole, 48×48 SVG.
+- 147 Farb-ZIPs / 5.880 Icons und entpackte Ordner unter
+  `M:\icons\HA-MDI-Favoriten-0.1.23`, mit Vorschau, Prüfsummen und Paketlizenzen.
+- Quellen unverändert abgelegt, erzeugte SVGs ohne Stylesheet: CSS-Füllung wird
+  als statisches SVG-Attribut übernommen. Keine Lockerung der SVG-Importprüfung.
+- Optionales mitgeliefertes SteelBlue-Paket (40 Icons) per Button in Iconbibliothek.
+  Kein automatischer Import; erneutes Hinzufügen erhält IDs und bestehende Zuordnungen.
+- 143 Python-Tests und sechs Node-/DOM-Prüfläufe erfolgreich. Alle Farbarchive,
+  SVG-Validierung, Ein-/Aus-Metadaten und Lizenztexte geprüft. Helle/dunkle Varianten
+  gerendert und visuell kontrolliert. Python-Wheel enthält das unveränderte Archiv.
+- Lokaler Chrome-Test: Favoriten-Button, 40 Vorschauen, echtes rotes Farb-ZIP,
+  Wiederimport, Neuladen und schmale Ansicht; bestehende Konfiguration unverändert.
+- Kein Zugriff/Import/Update auf .112. Nutzer möchte die Sets später als
+  Open-Source-Downloads bereitstellen; noch nichts veröffentlicht oder gepusht.
+
+Die gemeldete Rückkehr zur Anmeldung beim früheren großen Import ist als Ursache
+nicht abschließend geklärt. Der Code begrenzt Sitzungen auf eine Stunde; nach
+Einspielen von 0.1.22 meldete der Nutzer wieder funktionierenden Import. Der
+vollständige Abschluss der 6.862 Icons wurde noch nicht ausdrücklich bestätigt.
+
 ## Veröffentlichung 0.1.22 – 21. November 2026
 
 Nutzerfreigabe zur Veröffentlichung von Quellcode, ZIP, Changelog, README und

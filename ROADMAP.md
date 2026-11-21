@@ -2,6 +2,14 @@
 
 ## Als Nächstes: Praxisprüfung auf dem Raspberry Pi 4
 
+- Nach Nutzerfreigabe: 0.1.24-Auswahl mit großer Bibliothek auf dem Pi testen;
+  erstmalige/wiederholte Miniaturen, Suche, Paketwechsel und Speicherung prüfen.
+  Lokale 6.862-Einträge-/Cache-Prüfung ist abgeschlossen; .112 blieb unverändert.
+
+- 0.1.23 bleibt lokal: MDI-Farbsets später nach Nutzerfreigabe als Open-Source-
+  Downloads veröffentlichen. Bis dahin nicht auf .112 importieren. Zuordnung von
+  normal/gedrückt beziehungsweise MQTT-Rückmeldung später mit ausgewähltem Set prüfen.
+
 - Nach Ende des laufenden Imports: 0.1.22 auf dem Pi prüfen, großes reales Paket
   mit einem Indexcommit, Vorschauen bei Bedarf und Erhalt vorhandener Tastenzuordnungen.
 

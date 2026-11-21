@@ -2,7 +2,42 @@
 
 **Connect USB input devices and Stream Decks through MQTT — for Raspberry Pi.**
 
-Version **0.1.22** · Public test release · [Deutsch](README.md) · **English** · [Published releases](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/latest)
+Version **0.1.24** · Local test package, not published · [Deutsch](README.md) · **English** · [Published releases](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/latest)
+
+**Visual icon selection:** Icon buttons in the Stream Deck editor, key list and
+MQTT feedback open a compact picker instead of a long dropdown. Expand packages,
+search names/files/tags, select an icon and choose **Übernehmen** (or double-click).
+**Abbrechen** and Escape preserve the previous selection. Use **Speichern** afterwards.
+
+The picker loads **48×48 PNG thumbnails only**, using the first frame of animations.
+It never decodes all GIF/WebP frames just for selection. Thumbnails are generated
+on demand in `icons/.cache/thumbnails/` and reused on the Pi and in the authenticated
+browser. Only visible tiles load images; each open package displays at most 96
+tiles per page. Full images and animations for the actual deck are unchanged.
+Library metadata transfers repeated package licence text once.
+
+![Visual icon selection with 48×48 thumbnails – local demo](docs/screenshots/icon-picker.png)
+
+**MDI favourites:** In **Iconbibliothek**, **MDI-Favoriten hinzufügen · 40 Icons**
+imports the bundled offline SteelBlue pack: 20 on/off pairs for common HA entities.
+Nothing is imported automatically and existing assignments are unchanged. Reimport
+preserves IDs and mappings. Assign normal/pressed icons or MQTT feedback yourself;
+the images do not automatically bind to HA states.
+
+147 separate colour packs were also generated from the supplied CSS colour icons,
+each containing 40 contrasting black/white symbols as 48×48 SVGs. Import individual
+colour ZIPs, not the entire output directory containing both ZIPs and extracted copies.
+Readable filenames and German/English/MDI search tags are included in a compact grid. Door/window/cover
+pairs mean open/closed; locks mean locked/unlocked; media means play/pause.
+Licences: Pictogrammers MDI 7.4.47 (Apache-2.0), Crafty Lime CSS Color Icons (MIT).
+Sources and licence texts live in `tools/mdi-favorites-source/`. Rebuild offline:
+
+```bash
+python tools/build_mdi_favorites.py --output /new/folder/HA-MDI-Favorites
+```
+
+Existing output directories are never overwritten. Only the default pack is bundled
+with the Python application; the other colours need not occupy the Pi's SD card.
 
 **Faster imports:** ZIPs and folders commit the icon index once at the end. Browser
 folders are bundled locally into one ZIP upload. Originals are checked and stored;
@@ -146,8 +181,8 @@ The ZIP is an installation package, not an offline firmware image.
 
 ```bash
 sudo apt-get update && sudo apt-get install -y unzip
-unzip USB-Extender-Home-Assistant-0.1.22-Raspi4.zip
-cd USB-Extender-Home-Assistant-0.1.22
+unzip USB-Extender-Home-Assistant-0.1.24-Raspi4.zip
+cd USB-Extender-Home-Assistant-0.1.24
 sudo bash install.sh
 ```
 

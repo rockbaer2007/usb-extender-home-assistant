@@ -44,6 +44,7 @@ jobs:
           node tests/streamdeck-ui.test.cjs
           node tests/mobile-ui.test.cjs
           node tests/icons-ui.test.cjs
+          node tests/icon-picker-ui.test.cjs
       - name: Installer smoke test on isolated Linux runner
         run: |
           sudo bash install.sh </dev/null
@@ -76,5 +77,5 @@ jobs:
         run: python tools/package.py
       - uses: actions/upload-artifact@v4
         with:
-          name: USB-Extender-Home-Assistant-0.1.22-Raspi4
+          name: USB-Extender-Home-Assistant-0.1.24-Raspi4
           path: dist/*

@@ -11,6 +11,8 @@ w.fetch=async(path,options)=>{
   if(path==='/api/config')result=config;
   if(path==='/api/status')result={active:true,devices:[],events:[],brokers:{},errors:{},storage:{free:2*1024**3,total:8*1024**3}};
   if(path==='/api/icons')result=library;
+  if(path==='/api/icons/catalog')result={items:library,licenses:{}};
+  if(path==='/api/icons/favorites'){library=[{id:'favorite',name:'Licht · Ein',filename:'licht-on--lightbulb.svg',collection:'HA MDI Favoriten · steelblue',package_folder:'ha-mdi-favoriten-steelblue.sdIconPack',tags:['light','on']}];result={imported:40,skipped:[]};}
   if(path==='/api/icons/remove'){library=library.filter(i=>(i.package_folder||i.collection)!==body.package);result={ok:true,backup:'test-backup.zip'};}
   if(path==='/api/icons/upload'){
     uploads.push(body);
@@ -46,6 +48,11 @@ async function run(files,folder){
   assert.equal(uploads.length,4);
   await run([fake('huge.png','Huge/huge.png',97*1024*1024)],true);
   assert.equal(uploads.length,4);assert.match(w.document.querySelector('#error').textContent,/Importlimit/);
+  assert.equal(JSON.stringify(config),original);
+  [...w.document.querySelectorAll('button')].find(b=>b.textContent==='MDI-Favoriten hinzufügen · 40 Icons').click();
+  for(let i=0;i<20;i++)await settle();
+  assert.match(w.document.querySelector('#notice').textContent,/40 MDI-Favoriten/);
+  assert.match(w.document.querySelector('.icon-package summary').textContent,/HA MDI Favoriten/);
   assert.equal(JSON.stringify(config),original);
   await run([fake('b.svg','IconPacks/fluentui-system-icons-filled.sdIconPack/icons/b.svg'),
     {name:'manifest.json',webkitRelativePath:'IconPacks/fluentui-system-icons-filled.sdIconPack/manifest.json',size:100,arrayBuffer:async()=>new TextEncoder().encode(JSON.stringify({Name:'Fluent UI System Icons (Filled)',Author:'Example',License:'MIT'})).buffer}],true);

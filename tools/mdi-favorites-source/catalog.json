@@ -1,0 +1,22 @@
+[
+  {"id":"licht","name":"Licht","tags":["light"],"on":"lightbulb","off":"lightbulb-off"},
+  {"id":"schalter","name":"Schalter","tags":["switch"],"on":"toggle-switch","off":"toggle-switch-off"},
+  {"id":"steckdose","name":"Steckdose","tags":["socket","plug"],"on":"power-plug","off":"power-plug-off"},
+  {"id":"ventilator","name":"Ventilator","tags":["fan"],"on":"fan","off":"fan-off"},
+  {"id":"heizung","name":"Heizung","tags":["heating","climate"],"on":"radiator","off":"radiator-off"},
+  {"id":"kuehlung","name":"Kühlung","tags":["cooling","climate"],"on":"snowflake","off":"snowflake-off"},
+  {"id":"temperatur","name":"Temperatur","tags":["temperature","sensor"],"on":"thermometer","off":"thermometer-off"},
+  {"id":"wasser","name":"Wasser","tags":["water","moisture"],"on":"water","off":"water-off"},
+  {"id":"tuer","name":"Tür","tags":["door","open","closed"],"on":"door-open","off":"door-closed"},
+  {"id":"fenster","name":"Fenster","tags":["window","open","closed"],"on":"window-open","off":"window-closed"},
+  {"id":"rollladen","name":"Rollladen","tags":["cover","shutter","open","closed"],"on":"window-shutter-open","off":"window-shutter"},
+  {"id":"schloss","name":"Schloss","tags":["lock","locked","unlocked"],"on":"lock","off":"lock-open"},
+  {"id":"bewegung","name":"Bewegung","tags":["motion","binary_sensor"],"on":"motion-sensor","off":"motion-sensor-off"},
+  {"id":"anwesenheit","name":"Anwesenheit","tags":["presence","person"],"on":"account","off":"account-off"},
+  {"id":"alarm","name":"Alarm","tags":["alarm_control_panel","security"],"on":"shield-home","off":"shield-off-outline"},
+  {"id":"lautstaerke","name":"Lautstärke","tags":["volume","mute"],"on":"volume-high","off":"volume-off"},
+  {"id":"wiedergabe","name":"Wiedergabe","tags":["media_player","play","pause"],"on":"play","off":"pause"},
+  {"id":"fernseher","name":"Fernseher","tags":["tv","media_player"],"on":"television","off":"television-off"},
+  {"id":"wlan","name":"WLAN","tags":["wifi","network"],"on":"wifi","off":"wifi-off"},
+  {"id":"strom","name":"Strom","tags":["energy","power"],"on":"flash","off":"flash-off"}
+]

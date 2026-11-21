@@ -6,7 +6,7 @@ import subprocess
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.1.22"
+VERSION = "0.1.24"
 NAME = f"USB-Extender-Home-Assistant-{VERSION}"
 FILES = ["README.md", "README.en.md", "STAND.md", "ROADMAP.md", "CHANGELOG.md", "TESTBERICHT.md", "pyproject.toml", "requirements.txt", "install.sh", ".gitattributes", ".gitignore"]
 FOLDERS = ["ugso_usbhub", "systemd", "scripts", "tests", "tools", "docs"]
@@ -24,7 +24,7 @@ def build(output):
         for file in sorted(files):
             relative = file.relative_to(ROOT).as_posix()
             data = file.read_bytes()
-            if file.suffix.lower() not in (".png", ".jpg", ".jpeg"):
+            if file.suffix.lower() in {".md", ".py", ".js", ".cjs", ".css", ".html", ".json", ".toml", ".txt", ".sh", ".svg", ".service", ".rules"} or file.name in (".gitattributes", ".gitignore"):
                 data = data.replace(b"\r\n", b"\n")
             info = zipfile.ZipInfo(NAME + "/" + relative, date_time=(2026, 11, 21, 0, 0, 0))
             info.create_system = 3

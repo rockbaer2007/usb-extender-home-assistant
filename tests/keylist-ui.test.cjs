@@ -17,6 +17,7 @@ w.fetch=async(path,options)=>{
   if(path==='/api/config'){if(body)config=JSON.parse(JSON.stringify(body));else result=config;}
   if(path==='/api/status')result=snapshot;
   if(path==='/api/icons')result=[];
+  if(path==='/api/icons/catalog')result={items:[],licenses:{}};
   if(path==='/api/learning'){
     if(body.action==='start')lease={id:'session',device:body.device,topic_name:'trust-keyboard',expires:Date.now()/1000+15};
     if(body.action==='stop'){

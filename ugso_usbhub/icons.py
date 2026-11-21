@@ -17,10 +17,40 @@ from .storage import home, atomic_json, read_json
 
 LOCK = threading.Lock()
 CACHE_LOCK = threading.Lock()
+THUMBNAIL_LOCK = threading.Lock()
 MAX_FILE = 8 * 1024 * 1024
 MAX_TOTAL = 96 * 1024 * 1024
 EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"}
 MAX_FRAMES = 120
+
+
+def thumbnail_path(ident):
+    """Small static picker image; never decode animation frames or full previews."""
+    if not re.fullmatch(r"[0-9a-f]{32}", str(ident)):
+        raise ValueError("Ungültige Bild-ID")
+    folder = home() / "icons"
+    target = folder / ".cache" / "thumbnails" / (ident + ".png")
+    with THUMBNAIL_LOCK:
+        if target.is_file():
+            return target
+        entry = source_entry(ident)
+        source = folder / entry["original_path"] if entry else _cache_path(ident)
+        if not source.resolve().is_relative_to(folder.resolve()) or not source.is_file():
+            raise FileNotFoundError("Icon nicht gefunden")
+        if shutil.disk_usage(folder).free < 1024 * 1024:
+            raise ValueError("Zu wenig Speicher für die Miniatur")
+        data = raster(source.read_bytes(), source.suffix, size=48)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(dir=target.parent, suffix=".tmp", delete=False) as stream:
+                temporary = Path(stream.name)
+                stream.write(data)
+            os.replace(temporary, target)
+        finally:
+            if temporary:
+                temporary.unlink(missing_ok=True)
+        return target
 
 
 def _cache_path(ident, suffix=".png"):
@@ -133,6 +163,26 @@ def library():
     return read_json(home() / "icons" / "index.json", [])
 
 
+@lru_cache(maxsize=2)
+def _catalog(path, stamp):
+    items, licenses, refs = [], {}, {}
+    for item in read_json(Path(path), []):
+        key = item.get("package_folder") or item.get("collection") or "Eigene Icons"
+        text = item.get("license", "")
+        reference = (key, text)
+        if reference not in refs:
+            licenses.setdefault(key, []).append(text)
+            refs[reference] = len(licenses[key]) - 1
+        items.append({**{k:v for k,v in item.items() if k != "license"}, "license_ref":refs[reference]})
+    return {"items":items, "licenses":licenses}
+
+
+def catalog():
+    """Compact wire format: a repeated package licence is transferred once."""
+    path = home() / "icons" / "index.json"
+    return _catalog(str(path), path.stat().st_mtime_ns) if path.is_file() else {"items":[], "licenses":{}}
+
+
 def remove_package(package, config):
     """Remove only unused indexed icons after creating a full library backup."""
     with LOCK:
@@ -178,6 +228,7 @@ def remove_package(package, config):
             for suffix in (".png", ".webp", ".animation.json"):
                 for base in (folder, folder / ".cache"):
                     (base / (ident+suffix)).unlink(missing_ok=True)
+            (folder / ".cache" / "thumbnails" / (ident + ".png")).unlink(missing_ok=True)
             frames = cached_path(ident, ".frames")
             if frames.exists() and not frames.is_symlink() and frames.resolve().is_relative_to(folder.resolve()):
                 shutil.rmtree(frames)
@@ -201,20 +252,20 @@ def validate_svg(data):
                 raise ValueError("Externe SVG-Ressourcen sind nicht erlaubt")
 
 
-def raster(data, suffix):
+def raster(data, suffix, size=256):
     if len(data) > MAX_FILE:
         raise ValueError("Icon ist größer als 8 MB")
     if suffix.lower() == ".svg":
         validate_svg(data)
         import cairosvg
-        data = cairosvg.svg2png(bytestring=data, output_width=256, output_height=256)
+        data = cairosvg.svg2png(bytestring=data, output_width=size, output_height=size)
     with Image.open(io.BytesIO(data)) as source:
         if source.width * source.height > 16_000_000:
             raise ValueError("Icon-Abmessungen zu groß")
         source.seek(0)  # Static preview for animated packs.
-        image = ImageOps.contain(source.convert("RGBA"), (256, 256))
-        canvas = Image.new("RGBA", (256, 256))
-        canvas.alpha_composite(image, ((256 - image.width) // 2, (256 - image.height) // 2))
+        image = ImageOps.contain(source.convert("RGBA"), (size, size))
+        canvas = Image.new("RGBA", (size, size))
+        canvas.alpha_composite(image, ((size - image.width) // 2, (size - image.height) // 2))
         out = io.BytesIO()
         canvas.save(out, format="PNG")
         return out.getvalue()
@@ -295,6 +346,12 @@ def add(data, name, collection="Eigene Icons", tags=None, author="", license_tex
         old.update(record)
     _batch.changed = True
     return ident
+
+
+def import_favorites():
+    """Opt-in, offline import; never modify device/broker assignments."""
+    pack = Path(__file__).parent / "bundled" / "ha-mdi-favorites.streamDeckIconPack"
+    return import_archive(pack.read_bytes(), pack.name)
 
 
 def import_archive(data, name, progress=None):

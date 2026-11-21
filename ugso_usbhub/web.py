@@ -40,12 +40,13 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", kind + ("; charset=utf-8" if kind.startswith("text/") else ""))
         self.send_header("Content-Length", str(len(data)))
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", (headers or {}).get("Cache-Control", "no-store"))
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'")
         self.send_header("Referrer-Policy", "no-referrer")
         for key, value in (headers or {}).items():
-            self.send_header(key, value)
+            if key != "Cache-Control":
+                self.send_header(key, value)
         self.end_headers()
         self.wfile.write(data)
 
@@ -82,8 +83,20 @@ class Handler(BaseHTTPRequestHandler):
             self.reply(200, snapshot)
         elif route == "/api/icons":
             self.reply(200, icons.library())
+        elif route == "/api/icons/catalog":
+            self.reply(200, icons.catalog())
         elif route == "/api/icons/progress":
             self.reply(200, self.server.icon_progress)
+        elif route.startswith("/thumbnails/"):
+            name = route.removeprefix("/thumbnails/")
+            if Path(name).suffix != ".png" or name != Path(name).name:
+                self.reply(404, {"error":"Miniatur nicht gefunden"})
+                return
+            try:
+                path = icons.thumbnail_path(Path(name).stem)
+                self.reply(200, path.read_bytes(), "image/png", {"Cache-Control":"private, max-age=31536000, immutable"})
+            except (ValueError, OSError, ImportError) as exc:
+                self.reply(404, {"error":str(exc)[:300]})
         elif route.startswith("/icons/"):
             name = route.removeprefix("/icons/")
             if Path(name).suffix in (".png", ".webp") and len(Path(name).stem) == 32 and all(c in "0123456789abcdef" for c in Path(name).stem) and name == Path(name).name:
@@ -177,6 +190,8 @@ class Handler(BaseHTTPRequestHandler):
                     jar = cookies.SimpleCookie(self.headers.get("Cookie", ""))
                     self.server.sessions.pop(jar["ugso_session"].value, None)
                     self.reply(200, {"ok": True}, headers={"Set-Cookie": "ugso_session=; Max-Age=0; Path=/; HttpOnly; SameSite=Strict"})
+                elif route == "/api/icons/favorites":
+                    self.reply(200, icons.import_favorites())
                 elif route == "/api/icons/folder":
                     self.reply(200, icons.import_folder(str(body["path"])))
                 elif route == "/api/icons/remove":

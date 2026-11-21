@@ -1,5 +1,25 @@
 # Änderungen
 
+## 0.1.24 – 21. November 2026 (lokales ZIP, nicht veröffentlicht)
+
+- Grafische Iconauswahl statt langer Selectlisten: Pakete, Suche, 48×48-Raster,
+  Einzelvorschau, Übernehmen/Abbrechen, Escape und direkte Übernahme per Doppelklick.
+- Normal, gedrückt, Hintergrund und MQTT-Rückmeldung nutzen dieselbe Auswahl.
+- Höchstens 96 Kacheln pro Paketseite; Bildabruf nur im sichtbaren Bereich.
+- Getrennter atomarer Miniaturcache auf dem Pi und privater Browsercache. Auswahl
+  rendert nur das erste Bild und erzeugt weder Vollbild- noch Animationscache.
+- Kompakter Bibliothekskatalog überträgt gleiche Paketlizenzen nur einmal.
+- Bestehender asynchroner MQTT-Test wartet auch auf den Empfang der Plus-Rücksetzung.
+
+## 0.1.23 – 21. November 2026 (lokales ZIP, nicht veröffentlicht)
+
+- Optionales Offline-Favoritenpaket: 20 MDI-Ein-/Aus-Paare in SteelBlue, direkt aus
+  der Iconbibliothek hinzufügen; gespeicherte Zuordnungen bleiben erhalten.
+- 147 einzeln importierbare Farbsets aus gelieferten CSS-SVG-Hintergründen,
+  40 Icons je Farbe in 48×48 mit kontrastierenden Symbolen, Namen und Suchbegriffen.
+- Reproduzierbarer Offline-Generator, Originalquellen, Paketlizenzen und Vorschau.
+- ZIP-Erstellung behandelt eingebettete Iconarchive als Binärdateien.
+
 ## 0.1.22 – 21. November 2026 (öffentliches Testrelease)
 
 - Paket-/Ordnerimport sammelt den Index im Speicher und speichert einmal am Ende.

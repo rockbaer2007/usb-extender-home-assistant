@@ -85,8 +85,8 @@ function drawKeyList(parent, rows, draft=false) {
       });
       if(group[0]==='switch'&&k.switch_mode==='momentary')td.append(el('small','Kompatibilität: bisheriger Switch folgt Drücken/Loslassen. Umschaltung unter Bearbeiten wählen.'));
     });
-    const icon=cell();if(k.icon){const image=el('img');image.src='/icons/'+k.icon+'.png';image.alt=k.name;image.className='key-icon';icon.append(image);}
-    field(icon,'Icon',k.icon,v=>k.icon=v,'select',[['','Kein Icon'],...iconList.map(i=>[i.id,i.name])]);
+    const icon=cell();
+    iconField(icon,'Icon',k.icon,v=>k.icon=v);
     button(icon,'Bearbeiten',()=>{const details=tr.nextElementSibling;details.hidden=!details.hidden;});table.append(tr);
     const detailRow=el('tr');detailRow.hidden=true;const details=el('td');details.colSpan=8;detailRow.append(details);table.append(detailRow);
     field(details,'Switch-Verhalten',k.switch_mode||'toggle',v=>k.switch_mode=v,'select',[['toggle','Umschalter: Drücken ON, nächstes Drücken OFF'],['momentary','Kompatibilität: Drücken ON, Loslassen OFF']]);

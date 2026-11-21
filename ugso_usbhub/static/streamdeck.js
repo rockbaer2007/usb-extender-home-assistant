@@ -111,17 +111,15 @@ function streamdeck() {
   if(d.deck.visual){
     const fields=el('div',undefined,'fields');editor.append(fields);
     field(fields,'Beschriftung',style.text||'',v=>edit('text',v)).maxLength=80;
-    const choices=[['','Kein Bild'],...iconList.map(i=>[i.id,i.collection+' · '+i.name])];
-    field(fields,'Icon / Vordergrundbild',style.icon||'',v=>edit('icon',v),'select',choices);
-    field(fields,'Hintergrundbild',style.background_image||'',v=>edit('background_image',v),'select',choices);
+    iconField(fields,'Icon / Vordergrundbild',style.icon||'',v=>edit('icon',v),'Kein Bild');
+    iconField(fields,'Hintergrundbild',style.background_image||'',v=>edit('background_image',v),'Kein Bild');
     field(fields,'Hintergrundfarbe',style.background||'#000000',v=>edit('background',v),'color');
     field(fields,'Schriftfarbe',style.text_color||'#ffffff',v=>edit('text_color',v),'color');
     const font=field(fields,'Schriftgröße (bei 72 px)',style.font_size??14,v=>edit('font_size',v),'number');font.min=8;font.max=32;
     field(fields,'Textposition',style.text_position||'bottom',v=>edit('text_position',v),'select',[['top','Oben'],['center','Mitte'],['bottom','Unten']]);
     field(fields,'Vordergrundbild anpassen',style.fit||'contain',v=>edit('fit',v),'select',[['contain','Vollständig einpassen'],['cover','Fläche füllen / zuschneiden']]);
     const pressedFields=el('div',undefined,'fields');editor.append(el('h3','Gedrückt'),pressedFields);
-    field(pressedFields,'Icon bei gedrückter Taste',style.pressed_icon||'',v=>edit('pressed_icon',v),'select',
-      [['','Normales Icon übernehmen'],...iconList.map(i=>[i.id,i.collection+' · '+i.name])]);
+    iconField(pressedFields,'Icon bei gedrückter Taste',style.pressed_icon||'',v=>edit('pressed_icon',v),'Normales Icon übernehmen');
     for(const [name,label,fallback] of [['background','Hintergrundfarbe gedrückt','#000000'],['text_color','Schriftfarbe gedrückt','#ffffff']]){
       field(pressedFields,label+' verwenden',!!style['pressed_'+name],v=>{edit('pressed_'+name,v?(style[name]||fallback):'');render();},'checkbox');
       const color=field(pressedFields,label,style['pressed_'+name]||style[name]||fallback,v=>edit('pressed_'+name,v),'color');
@@ -151,7 +149,7 @@ function streamdeck() {
     field(feedback,'Zustands-Topic',b.state_topic||'',v=>b.state_topic=v);
     field(feedback,'JSON-Feld (optional)',b.state_path||'',v=>b.state_path=v);
     field(feedback,'Aktiver Wert',b.on_value??'ON',v=>b.on_value=v);
-    field(feedback,'Aktives Icon',b.on_icon||'',v=>b.on_icon=v,'select',[['','Kein aktives Icon'],...iconList.map(i=>[i.id,i.name])]);
+    iconField(feedback,'Aktives Icon',b.on_icon||'',v=>b.on_icon=v,'Kein aktives Icon');
     feedback.append(el('small','Der gewählte Empfangsbroker liefert den Zustand. Bei Rückmeldungen erscheint der empfangene Wert als Text.'));
     button(box,'Diese MQTT-Aktion entfernen',()=>{config.bindings.splice(config.bindings.indexOf(b),1);dirty();render();},'danger');
   });

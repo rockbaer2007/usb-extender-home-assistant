@@ -434,7 +434,7 @@ class MobileTests(hub.TemporaryHome):
             core.brokers.flush_resets(time.monotonic()+1)
             expected={'press':b'press','release':b'release','switch':b'ON','state':b'OFF','button':b'click','button-plus':b'click','click':b'click'}
             wait_for(lambda:all(any(t=='stream-deck-mobile-key-0/'+mode and p==payload for t,p,_ in broker.messages) for mode,payload in expected.items()))
-            self.assertTrue(any(t.endswith('/press-plus') and p==b'' for t,p,_ in broker.messages))
+            wait_for(lambda:any(t.endswith('/press-plus') and p==b'' for t,p,_ in broker.messages))
         finally:core.brokers.close();broker.close()
 
     def test_disabling_closes_connections_and_port_but_keeps_trust(self):

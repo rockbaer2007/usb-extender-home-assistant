@@ -2,7 +2,46 @@
 
 **USB-Geräte und Stream Decks über MQTT verbinden – für Raspberry Pi.**
 
-Version **0.1.22** · Öffentliches Testrelease · Stand 21. November 2026
+Version **0.1.24** · Lokales Testpaket, noch nicht veröffentlicht · Stand 21. November 2026
+
+**Grafische Iconauswahl:** Im Stream-Deck-Editor, in der Tastenliste und bei
+MQTT-Rückmeldungen öffnet der Iconbutton ein kompaktes Auswahlfenster statt einer
+langen Dropdownliste. Pakete aufklappen, nach Name/Dateiname/Schlagwort suchen,
+Icon markieren und **Übernehmen** wählen (oder doppelklicken). **Abbrechen** und
+Escape behalten die bisherige Auswahl. Anschließend oben **Speichern**.
+
+Es werden ausschließlich **48×48-PNG-Miniaturen** für die Auswahl geladen, bei
+Animationen nur das erste Bild. Kein Decodieren aller GIF-/WebP-Bilder für den
+Auswahldialog. Miniaturen entstehen bei Bedarf unter `icons/.cache/thumbnails/`
+und werden auf dem Pi sowie im angemeldeten Browser wiederverwendet. Nur sichtbare
+Kacheln werden geladen; pro geöffnetem Paket stehen höchstens 96 Kacheln je Seite.
+Die Vollbilder und Animationen für das tatsächliche Deck bleiben unverändert.
+Die Bibliotheksdaten übertragen gleiche Paketlizenztexte nur einmal.
+
+![Grafische Iconauswahl mit 48×48-Miniaturen – lokale Demo](docs/screenshots/icon-picker.png)
+
+**MDI-Favoriten:** Unter **Iconbibliothek** übernimmt **MDI-Favoriten hinzufügen ·
+40 Icons** ein mitgeliefertes Offline-Paket in SteelBlue: 20 Ein-/Aus-Paare für
+übliche HA-Entitäten. Kein automatischer Import und keine Änderung der Belegungen.
+Erneutes Hinzufügen erhält IDs und Zuordnungen. Im Editor selbst als normal/gedrückt
+oder über MQTT-Rückmeldung zuweisen; die Bilder erzeugen keine HA-Zustandsbindung.
+
+Zusätzlich wurden 147 Farbsets mit den gelieferten CSS-Farben erstellt, jeweils
+40 SVGs in 48×48 mit kontrastierenden schwarzen/weißen Symbolen. Je Farb-ZIP
+einzeln importieren, nicht den gesamten Ausgabeordner samt entpackten Duplikaten.
+Die Ein-/Aus-Varianten haben lesbare Dateinamen und stehen kompakt in einem Raster. Bei Tür/Fenster/Rollladen
+bedeutet das offen/geschlossen, bei Schloss verriegelt/entriegelt und bei Medien
+Wiedergabe/Pause. Suche unterstützt deutsche/englische Begriffe und MDI-Namen.
+Paketlizenzen: Pictogrammers MDI 7.4.47 (Apache-2.0), CSS Color Icons von Crafty Lime
+(MIT). Originalquellen und Lizenztexte unter `tools/mdi-favorites-source/`.
+Reproduzierbar offline erzeugen:
+
+```bash
+python tools/build_mdi_favorites.py --output /neuer/ordner/HA-MDI-Favoriten
+```
+
+Vorhandene Ausgabeordner werden nicht überschrieben. Das Standardpaket wird auch
+im Python-Paket mitgeliefert; die übrigen Farben müssen nicht auf die SD-Karte.
 
 **Schneller Paketimport:** Ein ZIP bzw. ein Ordner schreibt den Iconindex nur einmal
 am Ende. Browser-Ordner werden lokal zu einem gemeinsamen ZIP gebündelt statt als
@@ -297,8 +336,8 @@ Installationspaket, kein vollständig offline installierbares ARM-Abbild.
    ```bash
    # Falls unzip noch nicht vorhanden ist:
    sudo apt-get update && sudo apt-get install -y unzip
-   unzip USB-Extender-Home-Assistant-0.1.22-Raspi4.zip
-   cd USB-Extender-Home-Assistant-0.1.22
+   unzip USB-Extender-Home-Assistant-0.1.24-Raspi4.zip
+   cd USB-Extender-Home-Assistant-0.1.24
    sudo bash install.sh
    ```
 

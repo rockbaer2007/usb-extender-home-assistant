@@ -334,6 +334,30 @@ class WebTests(TemporaryHome):
             self.assertEqual(r.status, 200)
         self.assertEqual(load_config()["brokers"][0]["name"], "Test MQTT")
 
+    def test_bundled_favorites_auth_and_settings_preserved(self):
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            self.request("/api/icons/favorites", {})
+        self.assertEqual(error.exception.code, 401)
+        self.login()
+        before = (home() / "config.json").read_bytes()
+        for _ in range(2):
+            with self.request("/api/icons/favorites", {}) as response:
+                self.assertEqual(json.load(response)["imported"], 40)
+            self.assertEqual(len(icons.library()), 40)
+        self.assertEqual((home() / "config.json").read_bytes(), before)
+
+    def test_thumbnail_auth_size_and_private_cache(self):
+        from tests.test_icon_picker import gif
+        ident=icons.add(gif(),'signal.gif')
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            self.request('/thumbnails/'+ident+'.png')
+        self.assertEqual(error.exception.code,401)
+        self.login()
+        with self.request('/thumbnails/'+ident+'.png') as response:
+            self.assertEqual(response.headers['Cache-Control'],'private, max-age=31536000, immutable')
+            with Image.open(io.BytesIO(response.read())) as image:self.assertEqual(image.size,(48,48))
+        with self.request('/api/config') as response:self.assertEqual(response.headers['Cache-Control'],'no-store')
+
     def test_cross_origin_rejected(self):
         self.login()
         with self.assertRaises(urllib.error.HTTPError) as error:
