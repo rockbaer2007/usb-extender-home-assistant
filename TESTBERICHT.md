@@ -1,5 +1,263 @@
 # Prüfungen
 
+## Importoptimierung 0.1.22
+
+Gesicherter alter Quellstand gegen aktuellen Stand, jeweils neue temporäre Ablage,
+dieselben unveränderten ZIP-Eingaben auf diesem Windows-PC. Einzelmessungen,
+keine kontrollierte Raspberry-Pi-Hardwaremessung und keine Laufzeitgarantie.
+
+| Datensatz | Vorher | Nachher | Indexschreibvorgänge vorher/nachher | Vorabrendern nachher |
+| --- | ---: | ---: | ---: | ---: |
+| Itsyhome, echte 240 PNGs | 4,262 s | 0,395 s | 240 / 1 | 0 |
+| Synthetische 6800 unterschiedliche 32×32-PNGs | 458,323 s | 10,464 s | 6800 / 1 | 0 |
+
+Die 6800er-Testdaten sind kein Abbild des unbekannten laufenden Nutzerpakets.
+Speicher direkt nach Import: 9.443.441 → 3.604.281 Bytes für den synthetischen
+Datensatz; spätere Anzeige erzeugt Cachedateien zusätzlich.
+
+- Unit: Index ein Commit, Metadaten im selben Commit, Originale erhalten,
+  bekannte ältere IDs und Einstellungen beim Wiederimport unverändert.
+- Simulierter finaler Schreibfehler: vorheriger Index und Einstellungen bleiben
+  erhalten. Fehlgeschlagene Vorschau kann ohne Verlust des Originals erneut entstehen.
+- Vier parallele Anfragen nach demselben Icon erzeugen genau eine Vorschau.
+- Chrome: 20 echte SVG-Dateien aus zwei Ordnerpaketen in einem komprimierten
+  Upload, lesbare Namen und Lizenz erhalten; Vorschaurendering erst bei Anzeige.
+- Chrome: Animation, Hover und reguläre Deckvorschau funktionieren weiterhin.
+- ZIP-Writer mit Python-Standardbibliothek auf UTF-8, CRC und Dekompression geprüft.
+
+## Importfortschritt und Paketmetadaten 0.1.21
+
+- Ordnerupload mit manifest.json: lesbarer Name, technischer Paketordner und Lizenz
+  getrennt übernommen; Metadaten nicht als fehlerhafte Bilddateien gemeldet.
+- Wiederimport benennt dieselben Originaldateien um, ohne neue Icon-IDs zu erzeugen.
+- Fortschrittszähler berücksichtigen unterstützte Bilder und fehlgeschlagene Bilder.
+- Status während laufendem Upload abrufbar, nicht angemeldeter Abruf abgewiesen.
+- Chrome: echter Itsyhome-ZIP-Upload, Ladebalken sichtbar, mehrere Zwischenstände
+  von 20 bis 235 der 240 Icons; danach erfolgreicher Abschluss und Balken ausgeblendet.
+
+## Itsyhome-Import 0.1.20
+
+- Original-ZIP nur lesend in temporäre Testablage importiert: vorher 0 Bilder,
+  nach Freigabe von imgs/ 240 Bilder, 14 Unterordner, 0 übersprungen.
+- Regressionsprüfung für binäre Plugin-Manifeste und imgs/actions/fan/ ergänzt.
+- Keine Plugin-JavaScript-Dateien übernommen oder ausgeführt, Originaldatei erhalten.
+
+## Paketlizenz/Kachelgröße 0.1.19
+
+- DOM: Lizenz einmal pro Paket, keine Lizenzdetails innerhalb der Iconkacheln,
+  bestehende Suche/Hover/Paketentfernung unverändert.
+- Chrome: 52×52-Kachelgröße, 48×48-Bildfläche, Animation im Hover und kompakte
+  Desktop-/Mobilansicht ohne horizontalen Seitenüberlauf geprüft.
+
+## Iconpakete, Animationen und Speicher 0.1.18
+
+- Isolierte Datenkopien: Originalnamen, Unterordner, mehrere Pakete, doppelte Bildinhalte
+  mit unterschiedlichen Dateinamen, alter Cache, GIF und animiertes WebP geprüft.
+- Bildzeiten und Framewechsel normal/gedrückt; statische Anzeige sendet nicht fortlaufend.
+- Reale lokale WebSocket-/NaCl-/LZ4-Verbindung überträgt wechselnde Frames und gedrücktes
+  Bild korrekt, Rückkehr nach Loslassen; kein Nachweis am physischen Tablet.
+- Browser-Vorschau tatsächlich animiert, Paket-/Unterordnerstruktur aus dem bereitgestellten
+  Home-Assistant-Plugin-ZIP, Suchfilter, Hover und schmale Ansicht in Chrome geprüft.
+- Paketentfernung nur unbenutzt, vorheriges ZIP-Backup, erhaltene gemeinsame Cachedateien,
+  Speicheranzeige und Abweisung bei vollem Laufwerk geprüft.
+
+## Kompakte Tastenliste 0.1.17
+
+- DOM: zunächst geschlossen, Wechsel schließt vorherige Taste, Name aktualisiert
+  die Zusammenfassung, geöffnete Taste bleibt bei erneutem Rendern erhalten.
+- Bestehende Anlern-, Speichern- und Bearbeiten-Abläufe erhalten.
+- Speichern/Abbrechen im Eintrag, Hinweis bei Änderungen und Erhalt anderer
+  Tastenedits beim Abbrechen geprüft. Chrome auf localhost: Öffnen/Wechseln,
+  Abbrechen, Speichern/Neuladen und Darstellung bei 1440/430 Pixeln erfolgreich.
+
+## Gedrückte Tastengestaltung 0.1.16
+
+- Mit isolierten Testeinstellungen: zweites Icon, Hintergrund- und Schriftfarben,
+  Speichern/Neuladen, Press/Release und Rücksetzen nach Trennung geprüft.
+- Normaldarstellung und MQTT-Anzeigetext werden beim Loslassen wiederhergestellt.
+- DOM-Workflows und echte Chrome-Vorschau auf localhost erfolgreich, einschließlich
+  Speichern/Neuladen und schmaler Ansicht ohne Seitenüberlauf.
+- Kein Live-Test auf .112; keine dortigen Einstellungen geändert, nichts veröffentlicht.
+
+## App-Raster/Keepalive 0.1.15
+
+103 Python-Tests, alle fünf Node-Prüfungen, Syntax und Diff erfolgreich.
+Chrome mit lokalem Testserver: native Rastermeldung aktualisiert 15 auf 24 Tasten,
+Textentwurf bleibt erhalten, Offline/Online unverändert stabil; kein X/Y-Element,
+Speichern und 390-px-Ansicht ohne Überlauf. Aufnahme `.state/streamdeck-grid-0.1.15.png`.
+
+- Echter WebSocket mit unabhängiger Gegenstelle und 10-Sekunden-Empfangswächter:
+  16,2 Sekunden ohne Datenpakete, mindestens drei leere Pings und bestätigte Pongs;
+  kein Receive-Timeout, keine neuen Bilder/Contexts, Tastendruck danach erfolgreich.
+- App-Raster 5×3 → 6×4 → 4×6 ohne Listener-/Verbindungstausch. Altes mobile_layout
+  bleibt gespeichert und wird ignoriert. Offline-Geometrie/Vertrauen nach Neustart
+  erhalten, erneute App-Meldung überschreibt den alten Stand.
+- DOM: keine X/Y-Übersteuerung, App-Raster trotz gespeichertem 8×8 korrekt; natives
+  Rasterupdate lässt dasselbe Eingabefeld und den Textentwurf bestehen.
+- Der Nutzer bestätigte receive timeout auf dem Tablet. Erneuter echter Android-
+  Dauertest mit dem korrigierten Keepalive steht noch aus.
+
+## Offline-Editor/Raster 0.1.14
+
+102 Python-Tests, alle fünf Node-Prüfungen und Diff-Prüfung erfolgreich.
+
+- Chrome mit isoliertem lokalem Testserver: Offline/Online wechselt nur Hinweis;
+  identische Editor-DOM und ungespeicherter Text bleiben bestehen. X+1/Y+1 ergibt
+  24 statt 15 Tasten, Speichern erhält den Text. 390-px-Viewport ohne Überlauf.
+  Aufnahmen `.state/streamdeck-offline-0.1.14.png` / `streamdeck-grid-0.1.14.png`.
+- DOM: Tab auch ohne verbundenes Gerät sichtbar, Auswahl und Editor bleiben bei
+  Trennung, Dienstpause und Wiederverbindung erhalten. Gespeichertes Raster nach
+  erneutem Laden offline angezeigt.
+- WebSocket: optionale Shortcut- und zukünftige Erweiterungsnachricht beendet
+  Sitzung nicht; Fehlerantwort für nicht unterstützte Anfrage, Tastendruck danach
+  weiterhin empfangen und keine zusätzliche Context-Aktualisierung.
+- Gespeichertes 4×6-Raster gewinnt vor Tablet-Meldung, Listener bleibt gleich.
+  Bekanntes Deck offline nach Trennung und Serverneustart erhalten; erneute
+  Verbindung mit gespeichertem Vertrauen und 24 Tasten erfolgreich.
+- Die Ursache der echten Tablet-Trennungen bleibt ohne neues Geräteprotokoll
+  unbestätigt; lokale Fehlerpfade und UI-Neuaufbau sind korrigiert.
+
+## Mobile-Farben/Topics 0.1.13
+
+100 Python-Tests sowie alle fünf Node-/DOM-Prüfungen erfolgreich; Diff sauber.
+
+- Verschlüsselte LZ4-Übertragung: BGRA-Bytes und dekodierte RGB-Pixel geprüft.
+- Wiederholte gleiche Konfiguration/Refresh: keine Pakete und unveränderte Bild-
+  sowie Context-Zähler. Änderungen/Resize/Decköffnung übertragen nötige Daten.
+- Automatische Tastenkanäle: elf Topicarten, mehrere Geräte mit gleichem Namen,
+  eigene Topics/ausgeschaltete Kanäle und Speicherung/Neuladen erhalten.
+- Web-API ergänzt 15 Tasten nach Freigabe, keine Duplikate beim zweiten Speichern;
+  vorhandene MQTT-Zugangsdaten erhalten.
+- Mobile-Tastendruck über echtes lokales WebSocket/Core/MQTT: Press, Release,
+  Umschalter ON, Tastenzustand OFF, Button/Klick und Plus-Leerrücksetzung empfangen.
+- DOM: automatische Zeilen, lesbare Topics, bestehende Einzelaktionen erhalten.
+- Kein eigener Tablet-Livetest: Farben, ruhiges Bild und Kanäle dort nachprüfen.
+
+## Mobile-Handshake 0.1.12
+
+97 Python-Tests und alle fünf Node-/DOM-Prüfungen erfolgreich; Syntax und Diff sauber.
+Ein bestehender Discovery-Test wartete nur auf „online“, nicht auf die drei
+initialen MQTT-Ankündigungen, und mischte alte/neue Gerätenamen. Seine Warte-
+bedingung korrigiert; keine Änderung am MQTT-Produktionscode. Erneuter Gesamtlauf grün.
+
+- Echtes lokales WebSocket: Hello.version erfüllt Desktop-Mindestversion 6.3,
+  echte Extender-Version bleibt getrennt in osVersion vorhanden.
+- Text „Licht ÄÖÜ 42“ oben/mittig/unten in 8/32 px: aktualisierte Icons empfangen,
+  identischer Listener, gleiches virtuelles Gerät und gespeichertes Vertrauen;
+  anschließender Tastendruck weiterhin empfangen.
+- Keine Behauptung eines erfolgreichen erneuten Android-/Pi-Livetests.
+
+## Iconimport 0.1.11
+
+- DOM: einzelne/mehrere Icons, Ordner mit Unterordnern, Sammlungsname, übersprungene
+  Fremdformate/defekte Bilder und Größenlimit vor Upload geprüft.
+- HTTP: Bild abrufbar, Sammlung gespeichert, wiederholter Import ohne Duplikat,
+  ungültiger Sammlungsname abgewiesen und Konfiguration unverändert.
+
+## Icon-Aktualisierung 0.1.10
+
+96 Python-Tests und alle vier Node-/DOM-Tests erfolgreich; git diff --check sauber.
+Gerenderte Textpositionen optisch geprüft (`.state/text-position-0.1.10.png`).
+
+- Textbereich oben/unten, unveränderte mittige Überlagerung, vollflächiger
+  Hintergrund und Icon ohne Text: Pixeltests für contain/cover in 32/72/144 px.
+
+- Echter lokaler verschlüsselter WebSocket: sechs initiale Icons, zehn identische
+  Größenmeldungen ohne Refresh; erneuter allgemeiner Refresh ohne Bildpakete.
+- Eine Hintergrundänderung: genau ein Icon, LZ4-Pixelwerte geprüft. Erneuter
+  Refresh ohne Daten. Echte Größenänderung: alle sechs Icons in neuer Größe;
+  erneute Decköffnung: vollständige Übertragung wieder möglich.
+- Nutzer bestätigt importiertes Icon auf dem Android-Tablet; kein eigener neuer
+  Pi-/Android-Livetest. Rasterabweichung weiterhin praktisch nachzuprüfen.
+
+## Raster/Verbindung 0.1.9
+
+94 Python-Tests erfolgreich; Stream-Deck-, Mobile- und Anlern-DOM sowie Diff-Prüfung erfolgreich.
+
+- Gemeldetes Tablet-Raster 5×3 führt zu 15 Editor-Tasten, 3 Zeilen hoch/5 Spalten
+  breit. Adapter, Inventar und Context verwenden dieselben Abmessungen.
+- Servervorgabe ändern behält denselben Listener und dieselbe Client-Verbindung;
+  geöffnete Decks müssen nicht neu ausgewählt werden. Clientgemeldete Raster haben
+  Vorrang. Auch spätere Tablet-Updates werden ohne Verbindungstrennung übernommen.
+- Regression für Context-Timing direkt nach OpenVirtualDevice: Änderung geht
+  nicht mehr durch nachträgliches Zurücksetzen der Sendemarkierung verloren.
+- DOM: neuer Mobile-Client öffnet Editor automatisch, schmutziger Entwurf verhindert
+  Umschaltung bis zum Speichern. Kein wiederholtes Zurückspringen beim Navigieren,
+  keine automatische MQTT-Aktivierung.
+- Chrome mit echter lokaler WebSocket-Gegenstelle: automatische 15-Tasten-Ansicht,
+  Vorgabe auf 4×4 ändern, Tablet-Raster bleibt 5×3, Verbindung und Deck bleiben offen.
+  Prüfaufnahme `.state/mobile-auto-editor-5x3.png`. Kein neuer Test auf .112.
+
+## Kopplungsbestätigung 0.1.8
+
+91 Python-Tests erfolgreich; Mobile-DOM, JavaScript-Syntax und Diff-Prüfung ohne Befund.
+
+- Nutzerbild belegt in 0.1.7 den wartenden Client SM-T580 ohne Bestätigungsanzeige;
+  kein Beleg einer abgeschlossenen Kopplung oder funktionierender Tasten.
+- Regression: Client sendet Hello und wartet. Status zeigt nun bereits seinen
+  Prüfabdruck und die Bestätigung. Browsercode stimmt mit Client-Schlüssel überein.
+- Manuelle Freigabe vor Authenticate liefert die verschlüsselte Geräteliste;
+  spätere Anfrage 42 bekommt Ok mit genau dieser ID und anschließend Geräteliste.
+- Vorherige Reihenfolge Authenticate → Freigabe weiterhin erfolgreich.
+- Ablehnung des Hello-Clients speichert kein Vertrauen und erzeugt keine Eingabe.
+  ClientCapabilities vor der Freigabe autorisiert keine Tastendrücke.
+- Echter lokaler WebSocket-Client plus Chrome bestätigt den vollständigen Ablauf
+  einschließlich des sichtbaren Buttons. Prüfbild `.state/mobile-pairing-fixed.png`.
+- Kein neuer Zugriff auf .112 und kein abgeschlossener Android-Praxistest behauptet.
+
+## Mobile-Server 0.1.7 – lokale Protokoll- und Webprüfungen
+
+Gesamtergebnis: 88 Python-Tests sowie Tastenlisten-, Stream-Deck- und Mobile-DOM-
+Abläufe erfolgreich. JavaScript-Syntax und Diff-Prüfung ohne Befund.
+
+- Loopback-WebSocket mit unabhängiger PyNaCl-Box-Gegenstelle: Klartextbegrüßung,
+  gemeinsame Schlüssel, verschlüsselte Anmeldung und Web-Bestätigung.
+- QR-Bild ist ein lesbares PNG; Server-ID und Adresse/Port entsprechen den
+  konfigurierten Werten. Kein echter Kamerascan durchgeführt.
+- Unbekannter Client bei geschlossenem Fenster abgelehnt. Ablehnung und manipulierte
+  Pakete erzeugen keine Eingaben. Nachrichtenlimits und Größenbegrenzung implementiert.
+- Virtuelles Deck öffnen, Hardwareadapter nutzen, sechs Icons empfangen und LZ4-
+  Bilddaten pixelgenau gegen die konfigurierte Farbe prüfen.
+- Verschlüsselter Tastendruck führt über Core und Paho zum lokalen MQTT-Testbroker:
+  `probe/mobile/press` mit Nutzdaten `ON`. Doppelte Press-Nachricht wird unterdrückt;
+  Loslassen und Trennung werden weitergegeben bzw. Zustände zurückgesetzt.
+- 15 Server-Tasten ohne gesetztes Pro-Flag mit Simulator geprüft; keine Aussage
+  über die sichtbare Tastenanzahl in der tatsächlichen Android-App.
+- Serverneustart erhält Schlüssel, Vertrauen und Deck-ID. Ausschalten schließt den
+  Port und Client, erhält Vertrauen und beendet nicht den USB-/MQTT-Prozess.
+- Echter separater Core-Prozess und HTTP-Weboberfläche: Aktivierung speichern,
+  Status aktiv, QR abrufen, Anfrage erlauben, deaktivieren; MQTT-Passwort/Hub-ID erhalten.
+- Chrome Desktop 1440 px und Mobil 430 px: Aktivierung, echter QR-Code, Deaktivierung,
+  keine Browserfehler und kein horizontaler Seitenüberlauf. Prüfaufnahmen lokal unter
+  `.state/mobile-server-desktop.png` und `.state/mobile-server-phone.png`.
+
+Grenze: Alle neuen Laufzeitnachweise sind lokal mit einem Protokollsimulator.
+Keine Installation auf Pi/Android, kein Test mit der laufenden Elgato-App, keine
+vollständig bestätigte Android-Interoperabilität und keine neue Veröffentlichung.
+
+## Stream-Deck-Tab 0.1.6 – lokal, simulierte Geräte
+
+Ergebnis: 72 Python-Tests erfolgreich, beide DOM-Abläufe und Tastenlisten-Test
+erfolgreich, JavaScript-Syntax und `git diff --check` ohne Befund. Chrome-Prüfung
+mit echtem lokalem HTTP-Server und temporärer Konfiguration ebenfalls erfolgreich.
+
+- Vorherige Quell- und lokale Einstellungsstände vollständig gesichert; nur
+  temporäre Konfigurationen und lokale Testserver verwendet.
+- Mini-Raster aus Treibermetadaten; MK.2 mit 15 Tasten im echten Chrome geprüft.
+- Tab ohne Gerät verborgen, bei Anschließen sichtbar, bei Abziehen und inaktivem
+  Dienst wieder verborgen. Gestaltungsdaten bleiben erhalten. Pedal ohne Bildeditor.
+- Beschriftung, Hintergrundfarbe, Icon und zusätzliche MQTT-Aktion gespeichert;
+  nach Neuladen wieder vorhanden, bestehendes MQTT-Topic und Payload unverändert.
+- Preview-API erfordert Anmeldung, ändert keine Konfiguration und liefert dieselben
+  Pixel wie der Hardware-Renderer. Übergrößen, ungültige Farben und Bild-IDs abgelehnt.
+- Hintergrund/Alpha und Text in nativen BMP-Tastendaten geprüft; Neuladen rendert
+  auch unbelegte Tasten neu. MQTT-Zustand wählt aktives bzw. gestaltetes Basis-Icon;
+  Nachrichten eines nicht zugeordneten Empfangsbrokers werden nicht dargestellt.
+- Chrome Desktop 1440 px und Mobil 430 px ohne seitlichen Seitenüberlauf.
+  Lokale Prüfaufnahmen unter `.state/streamdeck-desktop.png` und `streamdeck-mobile.png`.
+- Keine physische USB- oder Pi-Prüfung: die Geräte wurden simuliert. Kein Live-
+  Nachweis neuer Stream-Deck-Funktionen oder einer bestimmten Modellkompatibilität.
+
 ## Nutzerbilder 0.1.5 – Praxisempfang bestätigt
 
 Neun vom Nutzer gelieferte Screenshots zeigen die installierte 0.1.5 und die

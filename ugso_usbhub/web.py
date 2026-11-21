@@ -6,6 +6,7 @@ import json
 import logging
 from pathlib import Path
 import secrets
+import shutil
 import threading
 import time
 from urllib.parse import urlsplit
@@ -24,6 +25,7 @@ class Server(ThreadingHTTPServer):
         self.sessions = {}
         self.failures = {}
         self.mutation_lock = threading.Lock()
+        self.icon_progress = {}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -58,8 +60,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         route = urlsplit(self.path).path
-        if route in ("/", "/app.js", "/keylist.js", "/style.css"):
-            file = STATIC / {"/": "index.html", "/app.js": "app.js", "/keylist.js": "keylist.js", "/style.css": "style.css"}[route]
+        if route in ("/", "/app.js", "/archive.js", "/keylist.js", "/streamdeck.js", "/mobile.js", "/streamdeck.css", "/style.css"):
+            file = STATIC / {"/": "index.html", "/app.js": "app.js", "/archive.js": "archive.js", "/keylist.js": "keylist.js", "/streamdeck.js": "streamdeck.js", "/mobile.js": "mobile.js", "/streamdeck.css": "streamdeck.css", "/style.css": "style.css"}[route]
             self.reply(200, file.read_bytes(), {".html": "text/html", ".js": "text/javascript", ".css": "text/css"}[file.suffix])
             return
         if not self.authorized():
@@ -72,15 +74,26 @@ class Handler(BaseHTTPRequestHandler):
             age = max(0, time.time() - snapshot.get("updated", 0))
             snapshot["age_seconds"] = age
             snapshot["active"] = bool(snapshot.get("updated") and age < 15 and not snapshot.get("stopped"))
+            try:
+                disk = shutil.disk_usage(home())
+                snapshot["storage"] = {"free":disk.free, "total":disk.total}
+            except OSError:
+                snapshot["storage"] = None
             self.reply(200, snapshot)
         elif route == "/api/icons":
             self.reply(200, icons.library())
+        elif route == "/api/icons/progress":
+            self.reply(200, self.server.icon_progress)
         elif route.startswith("/icons/"):
             name = route.removeprefix("/icons/")
-            if len(name) == 36 and name.endswith(".png") and all(c in "0123456789abcdef" for c in name[:-4]):
-                path = home() / "icons" / name
+            if Path(name).suffix in (".png", ".webp") and len(Path(name).stem) == 32 and all(c in "0123456789abcdef" for c in Path(name).stem) and name == Path(name).name:
+                try:
+                    path = icons.cached_path(Path(name).stem, Path(name).suffix)
+                except (ValueError, OSError, ImportError) as exc:
+                    self.reply(400, {"error":str(exc)[:300]})
+                    return
                 if path.is_file():
-                    self.reply(200, path.read_bytes(), "image/png")
+                    self.reply(200, path.read_bytes(), "image/webp" if name.endswith(".webp") else "image/png")
                     return
             self.reply(404, {"error": "Icon nicht gefunden"})
         else:
@@ -123,24 +136,66 @@ class Handler(BaseHTTPRequestHandler):
             with self.server.mutation_lock:
                 if route == "/api/config":
                     config = merge_public(body, load_config())
+                    snapshot = read_json(status_path(), {})
+                    if time.time()-snapshot.get("updated",0)<15 and not snapshot.get("stopped"):
+                        from .keymap import ensure_deck_keys
+                        ensure_deck_keys(config, snapshot.get("devices", []))
                     save_config(config)
                     self.reply(200, {"ok": True})
                 elif route == "/api/learning":
                     from .learning import command
                     self.reply(200, command(body, load_config()))
+                elif route == "/api/mobile/qr":
+                    from .mobile import pairing_info
+                    self.reply(200, pairing_info(load_config()))
+                elif route == "/api/mobile/control":
+                    from .mobile import control
+                    snapshot = read_json(status_path(), {})
+                    if not snapshot.get("mobile", {}).get("active") or time.time()-snapshot.get("updated",0)>15:
+                        raise ValueError("Mobile-Dienst noch nicht aktiv; Status prüfen")
+                    self.reply(200, control(body, load_config()))
+                elif route == "/api/deck/preview":
+                    import io
+                    from .deck import key_image, validate_artwork
+                    style = validate_artwork(body["style"])
+                    size = body.get("size", [72, 72])
+                    if not isinstance(size, list) or len(size) != 2 or any(type(n) is not int or not 16 <= n <= 256 for n in size):
+                        raise ValueError("Ungültige Vorschaugröße")
+                    out = io.BytesIO()
+                    pressed=body.get("pressed") is True
+                    icon=(style.get("pressed_icon") or style.get("icon", "")) if pressed else style.get("icon", "")
+                    durations=icons.animation(icon)
+                    frames=[key_image(tuple(size), style, style.get("icon", ""), style.get("text", ""),
+                                      pressed=pressed, frame_index=index) for index in range(len(durations) or 1)]
+                    kind="image/webp" if durations else "image/png"
+                    if durations:
+                        frames[0].save(out, format="WEBP", save_all=True, append_images=frames[1:], duration=durations, loop=0, lossless=True)
+                    else:
+                        frames[0].save(out, format="PNG")
+                    self.reply(200, {"image": base64.b64encode(out.getvalue()).decode(), "mime":kind})
                 elif route == "/api/logout":
                     jar = cookies.SimpleCookie(self.headers.get("Cookie", ""))
                     self.server.sessions.pop(jar["ugso_session"].value, None)
                     self.reply(200, {"ok": True}, headers={"Set-Cookie": "ugso_session=; Max-Age=0; Path=/; HttpOnly; SameSite=Strict"})
                 elif route == "/api/icons/folder":
                     self.reply(200, icons.import_folder(str(body["path"])))
+                elif route == "/api/icons/remove":
+                    self.reply(200, icons.remove_package(str(body["package"]), load_config()))
                 elif route == "/api/icons/upload":
                     data = base64.b64decode(body["data"], validate=True)
                     name = str(body["name"])
-                    if Path(name).suffix.lower() in (".zip", ".streamdeckiconpack"):
-                        result = icons.import_archive(data, name)
+                    ident = str(body.get("import_id", ""))[:80]
+                    def progress(current, total, filename):
+                        self.server.icon_progress = {"id":ident, "current":current, "total":total, "file":filename}
+                    progress(0, 0, name)
+                    if Path(name).suffix.lower() in (".zip", ".streamdeckiconpack", ".streamdeckplugin"):
+                        result = icons.import_archive(data, name, progress=progress)
                     else:
-                        result = {"imported": 1, "id": icons.add(data, name), "skipped": []}
+                        collection = body.get("collection", "Eigene Icons")
+                        if not isinstance(collection, str) or not 1 <= len(collection) <= 200:
+                            raise ValueError("Ungültiger Sammlungsname (1–200 Zeichen)")
+                        result = {"imported": 1, "id": icons.add(data, name, collection, author=str(body.get("author", ""))[:200], license_text=str(body.get("license", ""))[:32000], subfolder=str(body.get("subfolder", "")), package_folder=str(body.get("package_folder", ""))), "skipped": []}
+                        progress(1, 1, name)
                     self.reply(200, result)
                 else:
                     self.reply(404, {"error": "Nicht gefunden"})

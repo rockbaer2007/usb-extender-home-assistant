@@ -93,6 +93,8 @@ def load_config():
 def validate(c):
     if c.get("schema") != 1:
         raise ValueError("Unbekannte Konfigurationsversion")
+    from .mobile import validate_options
+    validate_options(c)
     brokers = c.get("brokers", [])
     ids = [b.get("id") for b in brokers]
     if len(brokers) != 3 or set(ids) != {"broker1", "broker2", "broker3"}:
@@ -114,6 +116,17 @@ def validate(c):
             raise ValueError("Ungültiger Empfangsbroker")
         if not 0 <= int(device.get("brightness", 30)) <= 100:
             raise ValueError("Helligkeit muss zwischen 0 und 100 liegen")
+        from .deck import validate_artwork
+        layout=device.get("mobile_layout")
+        if layout is not None and (not isinstance(layout,dict) or any(type(layout.get(axis)) is not int or not 1<=layout[axis]<=8 for axis in ("rows","columns"))):
+            raise ValueError("Mobile-Raster: 1–8 Spalten und Zeilen")
+        deck_keys = device.get("deck_keys", {})
+        if not isinstance(deck_keys, dict) or len(deck_keys) > 128:
+            raise ValueError("Maximal 128 gestaltete Tasten je Gerät")
+        for key, style in deck_keys.items():
+            if not isinstance(key, str) or not key.isascii() or not key.isdecimal() or str(int(key)) != key or not 0 <= int(key) < 128:
+                raise ValueError("Ungültige Stream-Deck-Taste")
+            validate_artwork(style)
     seen = set()
     for b in c.get("bindings", []):
         if not b.get("id") or b["id"] in seen or not b.get("device") or not b.get("control"):

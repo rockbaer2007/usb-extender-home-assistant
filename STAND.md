@@ -1,5 +1,250 @@
 # Aktueller Stand
 
+## Veröffentlichung 0.1.22 – 21. November 2026
+
+Nutzerfreigabe zur Veröffentlichung von Quellcode, ZIP, Changelog, README und
+DE-/EN-/FR-Dokumentation. Enthält die lokalen Fortschritte seit dem öffentlichen
+Stand 0.1.5. 134 Python-Tests, DOM-Abläufe und lokale Chrome-Prüfungen erfolgreich.
+Benchmarkwerte sind PC-Einzelmessungen, keine Pi-Messungen. Reale Mobile-/Hardware-
+Praxistests bleiben in der Roadmap offen. Kein Update des laufenden Imports auf .112.
+Die folgenden Abschnitte protokollieren die zuvor unveröffentlichten Arbeitsschritte.
+
+## 0.1.22 – Batchimport und Vorschauen bei Bedarf
+
+Sicherung: `M:\repos\_backups\ugso-usb-hub\before-lazy-import-20261121-202419.zip`.
+Ein Index-Commit pro Paket/Pi-Ordner. Browserordner als ein lokal erzeugtes ZIP,
+mit Paketmetadaten und UTF-8-Dateinamen. Originale bleiben mit Namen erhalten;
+Bild- und Animationscache entsteht bei erster Verwendung. Alte Cachedateien und
+vorhandene IDs mit Originalzuordnung bleiben kompatibel. Alte Einstellungen unverändert.
+Indexcommitfehler, Cachefehler/Wiederholung, parallele Vorschauanfragen und mehrere
+Paketordner lokal geprüft; SVG-Rendering und verschlüsselter Mobile-Pfad erhalten.
+Windows-Einzelvergleich: Itsyhome 240 = 4,262 → 0,395 s; synthetische 6.800 PNGs =
+458,323 → 10,464 s. Indexschreibvorgänge jeweils 240/6800 → 1, Vorabrendern → 0.
+Der neue 6800er-Import braucht direkt danach 3.604.281 statt 9.443.441 Bytes,
+bevor Icons tatsächlich angezeigt werden. Messungen auf dem PC, nicht auf dem Pi.
+Laufender Nutzerimport mit ca. 6800 Icons auf .112 unangetastet; kein Rollout,
+keine Veröffentlichung. Update erst nach Abschluss dieses Imports.
+
+## 0.1.21 – Lesbarer Paketname und Importfortschritt
+
+Sicherung: `M:\repos\_backups\ugso-usb-hub\before-package-progress-20261121-194855.zip`.
+Installierte Fluent-manifest.json nur lesend geprüft: Name „Fluent UI System Icons (Filled)“.
+Beim Browser-Ordnerupload bisher übergangene Metadaten werden jetzt gelesen,
+Paketordner und Originalnamen unverändert beibehalten. Wiederimport kann den
+Anzeigenamen aktualisieren; vorhandene IDs und Tastenzuordnungen bleiben erhalten.
+Ladebalken zeigt beim Archivimport echte Zähler über authentifizierten Statusabruf.
+Während Übertragung/Paketprüfung unbestimmter Balken, keine erfundenen Prozentwerte.
+Lokaler Chrome-Upload Itsyhome: 240 importiert; echte Zwischenstände 20,41,61,
+81,97,115,128,142,157,175,192,209,223,235 beobachtet. Nur lokale Testdaten,
+kein Eingriff auf .112 und keine Veröffentlichung.
+
+## 0.1.20 – Itsyhome-Import
+
+Vorher gesichert: `M:\repos\_backups\ugso-usb-hub\before-itsyhome-import-20261121-192431.zip`.
+Bereitgestelltes Itsyhome-1.2-mac.streamDeckPlugin in isolierter Testablage:
+vorher 0 Icons, Ursache Ordner imgs/ außerhalb des bisherigen Importfilters.
+Nach Korrektur 240/240 PNGs in 14 Unterordnern, keine ausgelassenen Bilder,
+Originalnamen und Ordner erhalten, keine JS-Dateien übernommen oder ausgeführt.
+Vorhandene Einstellungen unverändert; keine Änderungen auf .112 und keine Veröffentlichung.
+
+## 0.1.19 – Paketlizenz und kompakte Kacheln
+
+Sicherung: `M:\repos\_backups\ugso-usb-hub\before-compact-package-license-20261121-192230.zip`.
+Lizenzhinweis neben dem Paketnamen; vollständige Texte einmal im Paket aufklappbar,
+identische Texte zusammengefasst. Verschiedene Hinweise bleiben erhalten, auch bei
+gefilterter Iconsuche. Keine Lizenzdetails in einzelnen Kacheln. Kacheln 52×52,
+Bildfläche 48×48. Animationsinformationen nur im Popup. Vorhandene Dateien,
+Iconzuordnungen und Einstellungen unverändert; lokal geprüft, keine Veröffentlichung.
+
+## 0.1.18 – Pakete, Animationen und Speicheranzeige
+
+Vorher gesichert: `M:\repos\_backups\ugso-usb-hub\before-animated-library-20261121-190050.zip`.
+Originale in icons/IconPacks mit Paketordner/Unterordner/Dateiname erhalten.
+Cache getrennt, ältere Dateien/IDs weiter lesbar. Bibliothek zunächst geschlossen,
+Suche, Hover mit Name/Paket, Miniaturen 48×48. GIF/WebP normal und gedrückt animiert,
+maximal 120 Frames und 10 Bilder/s; statische Icons bleiben ohne Änderung ruhig.
+Paketentfernung sichert vorher und schützt verwendete IDs. Speicheranzeige nutzt
+das Dateisystem des Datenordners, nicht die Windows-PC-Platte bei einer Pi-Installation.
+Lokale Python-/DOM-/Chrome-Prüfungen mit dem bereitgestellten HA-Plugin-ZIP sowie
+verschlüsselter Mobile-Protokollprüfung erfolgreich. Reales Tablet/Pi noch offen.
+Vom Nutzer gelöschte Icons auf .112 nicht wiederhergestellt; keine dortigen Änderungen,
+keine Veröffentlichung.
+
+## 0.1.17 – Kompakte Tastenliste
+
+Sicherung: `M:\repos\_backups\ugso-usb-hub\before-key-accordion-20261121-182606.zip`.
+Tasten zunächst zugeklappt, nur Gerätename/Key/Name sichtbar. Höchstens eine
+Tastengruppe offen; bisherige Topics und Optionen bleiben erhalten.
+Speicherhinweis plus Speichern/Abbrechen direkt im Eintrag. Speichern nutzt den
+bestehenden Konfigurationsablauf; Abbrechen setzt nur diese Taste zurück.
+DOM- und Chrome-Prüfungen: exklusive Öffnung, Umbenennen, selektives Abbrechen,
+Speichern/Neuladen sowie schmale Ansicht ohne Seitenüberlauf erfolgreich.
+Öffnen/Schließen ist reiner Browserzustand und ändert keine MQTT-Konfiguration.
+Namensänderungen aktualisieren die Zeile sofort. Keine Änderung auf .112,
+keine Veröffentlichung. Installation und Praxisprüfung bleiben beim Nutzer.
+
+## 0.1.16 – Eigene Gestaltung während des Drückens
+
+Sicherung: `M:\repos\_backups\ugso-usb-hub\before-pressed-artwork-20261121-182131.zip`.
+Optionales zweites Icon sowie Text- und Hintergrundfarbe pro Taste. USB- und
+Mobile-Deck verwenden denselben Renderer. Loslassen stellt die normale Anzeige
+einschließlich vorheriger MQTT-Anzeigewerte wieder her. Wiederholte Press-Meldungen
+schalten nicht erneut um. Vorschau ohne MQTT-Aktion. Lokale Persistenz-, Rendering-,
+Ereignis- und DOM-Prüfungen sowie Chrome mit Speichern/Neuladen erfolgreich.
+Echter Tablet-Test offen. Nutzer meldet vorherigen Ausfall als Browserproblem.
+Keine Einstellungen auf .112 geändert und nichts veröffentlicht.
+
+## 0.1.15 – Android-Raster und rechtzeitiger Keepalive
+
+Sicherung: `M:\backups\usb-extender\before-android-grid-heartbeat-20261121-173815.zip`.
+Nutzer korrigiert Rasterhoheit und zeigt Trennungsgrund „received 1001 ... receive
+timeout“, 24 Bilder/1 Context. APK: M3/t$a startet Empfang unter Timeout aus M3/f.d;
+M3/t.g antwortet auf Ping mit leerem Pong. Unser 15-Sekunden-Ping war zu spät
+und verwendete zufällige Nutzdaten. Jetzt leere Pings alle fünf Sekunden,
+Pong-Überwachung getrennt von Bildern. Produktivbestätigung auf .112 noch offen.
+
+mobile_layout wird nicht mehr angewandt; alte Einstellung bleibt als inaktiver
+Wert erhalten. Kein Rastereingriff mehr im Editor oder Mobile-Server-Formular.
+App meldet Raster, Server/Editor übernehmen es ohne Trennung. Offline-Geometrie
+bleibt erhalten; Rasterwechsel bei Textentwurf ersetzt nur das Tastenraster.
+
+## 0.1.14 – dauerhafter Offline-Editor und X/Y-Raster
+
+Sicherung: `M:\backups\usb-extender\before-persistent-streamdeck-20261121-170237.zip`.
+Nutzer bestätigt Farben korrekt, meldet weiter Nachladen/verschwindenden Tab.
+Definite UI-Ursache: Tab an Live-Inventar gebunden, Statuswechsel erneuerte Formular
+und setzte Auswahl zurück. Jetzt dauerhafter Tab mit getrennt aktualisiertem
+Online/Offline-Hinweis; Geometrie bleibt gespeichert und Entwürfe unangetastet.
+Wiederkehrendes Mobile-Deck löst keine erneute Navigation mehr aus.
+
+Optionalbefehle führten bisher zur Sitzungstrennung. Nun kein Verbindungsabbruch
+für Shortcuts/lesbare unbekannte Erweiterungsnachrichten eines autorisierten Clients;
+keine Shortcut-Ausführung hinzugefügt. Malforme/unauthentifizierte Nachrichten
+werden weiter abgewiesen. Letzte Trennungen mit Grund sichtbar, keine Geheimnisse.
+Ob diese Nachrichten den konkreten Android-Abbruch auslösten, ist unbestätigt.
+
+X/Y-Schritte je Mobile-Deck 1–8, persistiert und ohne Listenerneustart übernommen.
+Editor-/Serverraster kann Androids natives sichtbares Raster nicht erzwingen.
+102 Python-Tests, fünf Node-Prüfungen und lokaler Chrome-Test erfolgreich.
+Kein neuer Zugriff auf .112, erneute Android-Dauerprüfung steht aus.
+
+## 0.1.13 – Mobile-Farben, Anzeigeupdates und automatische Tastenkanäle
+
+Sicherung: `M:\backups\usb-extender\before-mobile-colors-topics-20261121-163502.zip`.
+Nutzer: Rot/Blau vertauscht, Icon blinkt weiterhin; Tasteneingaben kommen an,
+aber fehlen gespeicherte Standardkanäle. LZ4-Pixel jetzt BGRA; gleiche Bildpixel
+und Context-Metadaten werden unterdrückt, veraltete Bildgrößen verworfen. Zähler
+zeigen tatsächlichen Bild-/Metadatenversand. Blinken auf Android noch bestätigen.
+
+Nach Freigabe/Speichern ergänzen Editor und Web-API fehlende Stream-Deck-Tasten
+mit allen elf benannten Kanälen. Vorhandene Tasten bleiben unverändert, individuelle
+Zusatzaktionen bleiben zusätzlich aktiv. Persistenz, Geheimniserhalt, eindeutige
+Gerätenamen und echtes lokales MQTT mit Mobile-WebSocket geprüft. Keine Eingriffe
+auf .112 und keine Veröffentlichung.
+
+## 0.1.12 – Android-Mindestversion beim Handshake
+
+Sicherung: `M:\backups\usb-extender\before-mobile-version-handshake-20261121-161715.zip`.
+Nutzer meldet grauen Server und „Streamdeck Version min. 6.3“. Im eigenen Hello
+wurde irrtümlich die Extender-Produktversion 0.1.x als Desktop-Version gesendet.
+APK-Befund: N3/i und N3/m$d enthalten Mindestversionsangabe 6.3. Die unabhängige
+Protokollimplementierung sendet jetzt die Kompatibilitätskennung 6.3.0; Produkt-
+version bleibt getrennt sichtbar. Keine Änderung von Clientkaufstatus/Identität.
+Lokaler verschlüsselter Test: Mindestversion und sechs Gestaltungsänderungen
+ohne neue Verbindung/Vertrauensänderung geprüft. Bestätigung auf Android offen.
+
+## 0.1.11 – Iconordner direkt vom PC importieren
+
+Sicherung: `M:\backups\usb-extender\before-icon-folder-import-20261121-160645.zip`.
+Browser-Ordnerauswahl lädt Bilder aus Unterordnern einzeln zum bestehenden
+geschützten Upload-Endpunkt. Ordnername als Sammlung, Fortschritt und Fehlerliste.
+Mehrfachauswahl für einzelne Dateien ergänzt; Raspi-Pfadimport bleibt erhalten.
+Keine Änderung bestehender Konfiguration oder MQTT-Belegungen.
+
+## 0.1.10 – unveränderte Mobile-Icons nicht erneut übertragen
+
+Text oben/unten verkleinert jetzt das Icon zugunsten eines separaten Textbereichs;
+Hintergrund bleibt vollflächig. Mittiger Text bleibt überlagert. Pixelprüfungen
+für contain/cover, drei Bildgrößen und ohne Beschriftung erfolgreich.
+
+Sicherung: `M:\backups\usb-extender\before-mobile-icon-refresh-20261121-160204.zip`.
+Unveränderte UpdateKeypadConfig.iconSize löste bisher immer refresh_required aus.
+Jetzt nur bei echter Größenänderung; zusätzlicher Bildvergleich pro Sitzung
+verhindert wiederholten Versand gleicher Bilder auch bei allgemeinen Refreshs.
+Neue Decköffnung und Größen-/Rasterwechsel leeren den Sendecache.
+
+Nutzer bestätigt Kopplung/Decköffnung und sichtbares importiertes Icon auf dem
+SM-T580. Gemeldete Rasterabweichung Tablet 3×5/Editor 5×5 noch nicht real verifiziert;
+der Screenshot zeigt noch keine Rasterherkunft aus 0.1.9. Kein Zugriff auf .112.
+Statische APK-Prüfung des Pro-Kaufstatus und Designfilters im Protokollbericht.
+
+## 0.1.9 – Tabletraster und Editor ohne Verbindungsabbruch
+
+Sicherung: `M:\backups\usb-extender\before-mobile-grid-20261121-154936.zip`.
+Neuer Standard 5 Spalten × 3 Zeilen; vorhandene Einstellungen erhalten. Ein vom
+Tablet gemeldetes Raster hat Vorrang und wird mit gleicher Ausrichtung im Editor
+angezeigt. Die Android-Ansicht selbst ist in der App einzustellen; Serverfelder
+sind jetzt ausdrücklich Rastervorgaben für Clients ohne eigene Meldung.
+
+Bei neuem Mobile-Deck öffnet sich der grafische Editor automatisch, ohne Entwürfe,
+Anlernen oder MQTT-Freigaben zu überschreiben. Nur Änderungen an Aktivierung,
+Bindeadresse oder Port erfordern einen Listener-Neustart. Rasteränderungen halten
+Verbindung und Deck offen. Timingfehler beim initialen Context-Versand behoben.
+Lokal mit WebSocket-Gegenstelle, DOM und Chrome geprüft; nicht auf .112 eingespielt.
+
+## 0.1.8 – fehlende Kopplungsbestätigung korrigiert
+
+Der Nutzer zeigte auf .112 einen verbundenen Client „SM-T580 · Kopplung ausstehend“,
+aber keinen Prüfcode/Bestätigungsbutton. 0.1.7 zeigte diese erst nach Authenticate.
+Jetzt wird der bekannte Client schon nach Hello zur manuellen Prüfung angezeigt;
+die Bestätigung kann vor oder nach seiner zusätzlichen Auth-Anfrage erfolgen.
+Ok-Antworten verwenden ausschließlich tatsächlich empfangene Anfrage-IDs.
+
+Sicherung: `M:\backups\usb-extender\before-mobile-pairing-fix-20261121-154051.zip`.
+Wartender Hello-Client lokal mit echter WebSocket-Gegenstelle und Chrome geprüft:
+Code stimmt überein, Button sichtbar, Freigabe und spätere Auth-Anfrage erfolgreich.
+Ohne Bestätigung keine Steuerung; Ablehnung und ungültige Pakete weiterhin gesperrt.
+Nutzereinstellungen erhalten. Neues ZIP 0.1.8 lokal; auf dem Pi noch nicht eingespielt.
+
+## 0.1.7 – optionaler Stream-Deck-Mobile-Server
+
+Sicherung vor Änderungen:
+`M:\backups\usb-extender\before-mobile-server-20261121-151403.zip`.
+Vorhandene 0.1.6-Arbeiten, Einstellungen und Bilder erhalten. Keine Software auf
+dem Pi oder Android installiert und keine Live-Broker verändert.
+
+Standard aus; unter Mobile-Server konfigurierbar. QR-Scan führt zum lokalen VSD2-
+WebSocket-Server, zusätzlich ist eine Web-Bestätigung des Client-Prüfabdrucks nötig.
+Schlüssel/Vertrauen/virtuelle Decks separat im Datenordner. Grafik-/MQTT-Zuordnung
+über den bestehenden Stream-Deck-Tab; Raster bis 64 Tasten, ohne Server-Pro-Stufe.
+Server läuft unabhängig von der abschaltbaren Weboberfläche. Einseitige Geräte-
+löschung aus Android wird nicht übernommen; Daten bleiben erhalten.
+
+88 Python-Tests erfolgreich, einschließlich echtem Loopback-WebSocket mit NaCl-Box-
+Gegenstelle, LZ4-Pixelprüfung, MQTT-Empfang, Web-Aktivierung/Bestätigung, Portkonflikt,
+Abschalten und Neustartpersistenz. DOM-Tests und Chrome Desktop/Mobil erfolgreich.
+Ein echter Android-/Pi-Praxistest steht aus; App-Beschränkungen und mögliche eigene
+Online-Prüfungen sind damit nicht bewertet. Technischer Befund in
+`docs/MOBILE-PROTOKOLL.md`. Lokales ZIP 0.1.7; nichts veröffentlicht.
+
+## 0.1.6 – grafischer Stream-Deck-Tab (lokales Paket)
+
+Vorher gesichert unter `M:\backups\usb-extender\before-streamdeck-20261121-143206.zip`.
+Keine Änderungen am Raspberry Pi, an Live-Brokern oder vorhandenen Einstellungen.
+Zusätzlicher bedingt sichtbarer Tab, treuer Modellraster, Tastenbildgestaltung,
+MQTT-Aktionen und Rückmeldungszuordnung umgesetzt. Eigenständige Implementierung
+auf dem vorhandenen StreamDeck-Treiber; kein Deck-Switch-Code übernommen.
+
+Chrome lokal mit simuliertem MK.2: 15 Tasten, echte authentifizierte PNG-Vorschau,
+Speichern/Neuladen, bestehendes Topic und Desktop-/Mobilansicht geprüft.
+Automatisierte Tests prüfen zusätzlich Mini-Layout, Pedal, Abziehen, stale Dienst,
+Bildausgabe im nativen Geräteformat, ungültige Gestaltung und Erhalt der Zugangsdaten.
+Ein physischer Stream-Deck-Test auf dem Pi steht aus. Neues ZIP 0.1.6 lokal,
+keine Veröffentlichung oder Website-Bereitstellung in diesem Arbeitsschritt.
+
+Abschluss: 72 Python-Tests, Tastenlisten-/Stream-Deck-DOM-Prüfungen und Chrome
+erfolgreich. Installations-ZIP im Downloads-Ordner, einschließlich Prüfsummendatei.
+
 ## Öffentliche Veröffentlichung und Nutzer-Praxistest 0.1.5
 
 Der Nutzer hat 0.1.5 inzwischen auf dem Raspberry Pi eingesetzt und neun

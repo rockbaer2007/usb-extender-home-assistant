@@ -2,6 +2,25 @@
 
 ## Als Nächstes: Praxisprüfung auf dem Raspberry Pi 4
 
+- Nach Ende des laufenden Imports: 0.1.22 auf dem Pi prüfen, großes reales Paket
+  mit einem Indexcommit, Vorschauen bei Bedarf und Erhalt vorhandener Tastenzuordnungen.
+
+- 0.1.18 auf dem Pi praktisch prüfen: Paketimport mit Originalnamen/Unterordnern,
+  Suche und Hover, GIF/WebP normal und gedrückt, statische Ruhe und Speicheranzeige.
+
+- Gedrückte Tastengestaltung 0.1.16 auf echtem Deck/Tablet prüfen: zweites Icon,
+  Text-/Hintergrundfarbe und Rückkehr beim Loslassen; im Leerlauf keine Bildwiederholung.
+
+- Experimentellen Mobile-Server 0.1.15 mit echter Android-App 2.1.2 weiter prüfen:
+  Rot/Blau korrekt, ruhige Iconanzeige und stehende Versandzähler ohne Änderungen,
+  alle automatischen Tastenkanäle nach Freigabe/Speichern, Übernahme des Android-
+  Rasters und dauerhaften Offline-Editor prüfen; fünfsekündigen Keepalive gegen
+  den gemeldeten Receive-Timeout praktisch nachtesten,
+  Iconfarben/-größe und MQTT-Tastendruck,
+  App-eigene Rastergrenzen und erneute Verbindung nach Pi-/App-Neustart.
+- Androidseitiges Löschen virtueller Decks und optionale Seiten-/Shortcut-Befehle
+  erst nach dem grundlegenden Mobile-Praxistest ergänzen.
+
 - Gespeicherte Tasten nach einem Pi-Neustart und USB-Wiederanstecken praktisch prüfen.
 - Press/Release, Plus-Rücksetzung und Switch ON/OFF praktisch prüfen; Lauter/Leiser
   halten und kontrollieren, dass die Wiederholung beim Loslassen stoppt.
@@ -10,6 +29,8 @@
 - Breite gruppierte Tastenliste zusätzlich auf Tablet prüfen; Desktop-Nutzerbilder liegen vor.
 - Ein konkretes Stream-Deck-Modell prüfen: Erkennung, Freigabe,
   Drücken/Loslassen/Halten, Icons und Helligkeit.
+- Neuen Stream-Deck-Tab 0.1.6 praktisch prüfen: richtiges Modellraster, Gestaltung
+  auf dem Gerät, MQTT-Zuordnung/-Rückmeldung, Abziehen/Wiederanstecken und Neustart.
 - Weitere Medientasten prüfen, insbesondere Play/Pause und Titelsprung.
   Tastatur press/release sowie Lautstärke− und Stumm wurden bereits live bestätigt.
 - USB-Geräte abziehen/wieder anstecken, den Pi neu starten und die gespeicherten
@@ -28,7 +49,7 @@
 ## Mögliche Erweiterungen nach der Praxisprüfung
 
 - Profil-/Seitenwechsel für Stream Decks.
-- Optionale Animationen und gestaltbare Stream-Deck-Plus-Touchscreen-Anzeigen.
+- Gestaltbare Stream-Deck-Plus-Touchscreen-Anzeigen.
 - Weitere USB-Adapter anhand konkret vorhandener Geräte, zum Beispiel serielle
   Bedienelemente. Eine allgemeine USB-Erkennung ersetzt keine Protokollanbindung.
 - Eigenständiges Tablet-Deck als separater Dienst. Dafür muss eine Oberfläche

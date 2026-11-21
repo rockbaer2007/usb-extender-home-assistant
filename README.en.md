@@ -2,7 +2,93 @@
 
 **Connect USB input devices and Stream Decks through MQTT — for Raspberry Pi.**
 
-Version **0.1.5** · [Deutsch](README.md) · **English** · [Download ZIP](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/latest)
+Version **0.1.22** · Public test release · [Deutsch](README.md) · **English** · [Published releases](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/latest)
+
+**Faster imports:** ZIPs and folders commit the icon index once at the end. Browser
+folders are bundled locally into one ZIP upload. Originals are checked and stored;
+previews and animation frames are generated on first display/use and then cached.
+Reimporting existing originals preserves their icon IDs and key mappings.
+
+Single-run comparison on this Windows PC: Itsyhome (240 images) **4.262 → 0.395 s**;
+6,800 synthetic PNG icons **458.323 → 10.464 s**. These are not Raspberry Pi results
+or a measurement of the user's currently importing 6,800-icon package. Let a running
+import finish before installing the update.
+
+Archive imports now show a progress bar with actual server counts, **x of y icons**.
+Transfer and initial inspection use an indeterminate bar. Folder uploads also read
+`manifest.json` for the readable package title, such as **Fluent UI System Icons
+(Filled)**. Folder names and original files remain unchanged. Reimport an existing
+package to update its display name without changing its icon IDs.
+
+Licence information is shown once in the package header, with the full text
+expandable within the package. Distinct notices are preserved together. Individual
+icons have no licence controls. Tiles are 52×52 pixels around 48×48 images;
+filenames and animation details remain available on hover or keyboard focus.
+
+The icon library now uses collapsed packages, search and hover/focus previews
+showing original filenames. Thumbnails are limited to 48×48 pixels. Original files
+keep their names and subfolders under `/var/lib/ugso-usbhub/icons/IconPacks/`;
+derived previews are stored separately in `icons/.cache/`. Existing IDs remain
+compatible internally. Removing unused packages creates a library backup first;
+packages used by saved keys are protected. The header shows free and total data
+filesystem space and highlights low space.
+
+GIF and animated WebP icons can animate normally and while pressed: up to 120
+frames, minimum frame duration 100 ms (maximum 10 fps). Static icons remain quiet
+until changed; backgrounds are static. Older imports discarded all but the first
+frame and must be reimported to recover animation. Real tablet testing is pending.
+
+Saved keys start collapsed, showing **Device – Key – Name**. Click a row to open
+its settings. Opening another key closes the previous one; click again to close.
+Switching entries preserves edits. Use Save at the top to persist them.
+Each expanded entry also has Save and Cancel buttons and an unsaved-change
+reminder. Save persists all pending settings; Cancel reverts only this key,
+preserving edits to other keys.
+
+Each Stream Deck key now supports a second icon and separate background and text
+colors while pressed. Releasing restores the normal appearance. Unspecified values
+inherit the normal appearance. The pressed preview sends no MQTT actions. Save to
+apply the artwork to USB or Mobile decks. Real tablet testing is still pending.
+
+The Stream Deck tab stays visible. Disconnecting shows **Offline** while keeping
+the editor, selected key and unsaved text. Status changes no longer rebuild the
+form. Saved device geometry allows later offline editing; Mobile keeps its last
+grid in the server registry too.
+
+Mobile: change rows/columns in the **Android app** only. Its reported grid is
+adopted without disconnecting. The incorrect editor override from 0.1.14 is removed;
+old values are retained but ignored. Offline retains the last app-reported grid.
+Empty WebSocket Pings every five seconds replace the too-late 15-second keepalive,
+without sending any extra images. Unsupported optional shortcut messages no longer
+disconnect the session. The Mobile page shows the latest disconnect reason.
+
+Mobile red/blue channels corrected. Identical pixels and display metadata are
+not retransmitted; the Mobile connection view shows actual transmission counts.
+Check on the tablet whether this also resolves the reported blinking.
+
+After enabling a Stream Deck and clicking **Speichern**, all missing key rows
+receive press/release, press-plus/release-plus, switch (toggle), state (down/up),
+button/button-plus, click/double-click/hold channels automatically. Example:
+`stream-deck-mobile-key-0/press`. Edit each row in the key list. Existing rows,
+custom topics and additional individual actions remain; individual actions send
+in addition to generated channels. Works for Mobile and physical decks.
+
+Mobile handshake: Android requires Stream Deck 6.3 or newer in the desktop-version
+field. We incorrectly sent our own product version. Since 0.1.12 this field
+advertises protocol compatibility 6.3.0; the UI retains the actual USB Extender
+version. This is still a limited interoperable server, not the full desktop app.
+After updating, fully close and reopen Android. Saved trust and settings remain.
+
+Icon library: **Dateien importieren** imports one or several images. Select
+**Ganzer Ordner auf diesem Computer**, then **Ordner importieren** to upload a
+PC folder including subfolders. Its name becomes the collection. Progress and
+skipped files are shown. Limits: 10,000 files/96 MB per selection, 8 MB per image.
+Existing icons/settings are preserved. Pi-local folder paths and ZIP/Elgato
+icon packs remain supported.
+
+Unchanged Mobile icons are no longer retransmitted repeatedly. Top/bottom text
+gets its own area and the foreground icon shrinks to fit. Center text continues
+to overlay the icon. This applies to previews, USB decks and Mobile.
 
 Illustrated documentation: [English](https://opensource.ugso-software.de/en/projects/usb-extender/)
 · [German](https://opensource.ugso-software.de/projects/usb-extender/)
@@ -33,7 +119,7 @@ permission are required before events become MQTT messages.
 | Physical Elgato Stream Decks | Dedicated HID driver, display and input features below | Implemented; no physical Stream Deck tested in this project yet |
 | Other LCD-key devices resembling a Stream Deck | Keyboard events may work through HID; displays require their own protocol/driver | No blanket compatibility claim |
 | Printers, cameras, storage, audio interfaces, serial devices and other controllers | Inventory listing; specific functionality needs a separate adapter | No general print/camera/audio/MIDI/serial forwarding |
-| Stream Deck Mobile / tablet app | Not a physical USB Stream Deck connected to the Pi | Not integrated |
+| Stream Deck Mobile / tablet app | Optional experimental VSD2 network server with QR pairing | User confirms pairing/deck opening and icon display; further practical checks pending |
 
 ### Stream Deck features
 
@@ -43,13 +129,13 @@ permission are required before events become MQTT messages.
 - On models with dials: rotation direction and dial presses as events.
 - On touchscreen models: touch events, **not** a freely designed touchscreen layout.
 - Local icon folders, individual images, ZIP files and locally obtained `.streamDeckIconPack` archives.
-  Respect each pack's licence; no Marketplace content is bundled. Animated images use the first frame.
+  Respect each pack's licence; no Marketplace content is bundled. GIF and animated WebP preserve frames.
 - Models without displays, such as Pedal, provide input but do not show display-key icons.
 
 The included `python-elgato-streamdeck` 0.10.0 driver supports models including
 Original/MK.2, Mini, XL, Neo, Pedal and Plus. This is a driver capability list,
 **not a hardware-tested list for this project**. There is one fixed key layout;
-profile/page switching and animated key icons are not implemented.
+profile/page switching is not implemented. Animated key icons are locally supported since 0.1.18.
 
 ## Installation and updates
 
@@ -60,8 +146,8 @@ The ZIP is an installation package, not an offline firmware image.
 
 ```bash
 sudo apt-get update && sudo apt-get install -y unzip
-unzip USB-Extender-Home-Assistant-0.1.5-Raspi4.zip
-cd USB-Extender-Home-Assistant-0.1.5
+unzip USB-Extender-Home-Assistant-0.1.22-Raspi4.zip
+cd USB-Extender-Home-Assistant-0.1.22
 sudo bash install.sh
 ```
 
@@ -130,7 +216,83 @@ Data messages use QoS 0, are not retained, and offline key events are not replay
 The UI's “passed to MQTT” indication confirms local publication acceptance, not
 broker receipt or the creation of a downstream entity.
 
-## Home Assistant and ioBroker
+## Optional Stream Deck Mobile server (0.1.7)
+
+**Experimental:** the user confirms pairing/deck opening and an imported icon
+on Android. Layout matching and full MQTT interaction still need practical checks.
+A local protocol peer tests encrypted pairing, image transmission, key events and MQTT.
+The server has no purchase/Pro tier and does not change the app's own restrictions.
+One page, configurable 1–8 columns/rows (up to 64 keys), default 5 columns × 3 rows
+from 0.1.9. Existing settings are preserved. When Android reports its layout, the
+editor follows it; server defaults do not change the Android app's own grid.
+
+1. Update using the new ZIP and `sudo bash install.sh`; settings are backed up and retained.
+2. Open **Mobile-Server** in the web UI. This feature is disabled by default.
+3. Enter the Pi's reachable IPv4 address or hostname (not `127.0.0.1` for a phone),
+   keep port **28198** or choose another free port. **Rastervorgabe** supplies a
+   fallback for clients without their own grid; change Android's grid in the app.
+4. Check **Stream-Deck-Mobile-Server aktivieren**, click the top **Speichern** button,
+   and wait for **Mobile-Dienst aktiv**. A port conflict leaves USB/MQTT running.
+5. Click **Kopplung starten · QR-Code** to allow pairing for two minutes. Choose
+   Add computer in Android and scan the QR code. Confirm the expected device and
+   six-character hexadecimal fingerprint with **Gerät vertrauen**, or reject it.
+6. Create/open a virtual deck in Android. Enable and save the new device under
+   **USB-Geräte** or **Stream Deck**, then assign artwork and MQTT actions. Existing
+   learned key rows and gestures can also be used. Scanning alone enables no actions.
+   Since 0.1.8, the confirmation is available as soon as the client greets the
+   server, including clients that send their Authenticate request later.
+   From 0.1.9 a new Mobile deck automatically opens the graphical editor when
+   there are no unsaved drafts or learning sessions to interrupt. MQTT inputs
+   still need explicit permission. Changing fallback grid settings keeps the
+   connection and opened deck alive, without selecting the deck again in Android.
+7. Uncheck the activation checkbox and save to close the Mobile port/connections;
+   USB and MQTT remain active. Configuration and trusted clients are retained.
+
+The server runs inside the core daemon, independently of the optional web UI.
+The UI is required for new pairing confirmations, and can be stopped afterwards.
+No Bonjour/cloud discovery server is implemented; pairing uses direct QR endpoints.
+The Android Pro status and its design filter were inspected statically; see
+`docs/MOBILE-PROTOKOLL.md`. Other online/purchase checks remain incompletely assessed. Android controls its own
+screen brightness. App-side deletion of virtual decks is not implemented; data is retained.
+
+Server identity, trusted clients, virtual devices and short-lived pairing controls
+are stored in `mobile-identity.json`, `mobile-trust.json`, `mobile-devices.json` and
+`mobile-control.json` inside the data directory. CLI backups include them; ZIPs do not.
+Private server keys are never returned to the browser. The protocol findings are
+recorded in [MOBILE-PROTOKOLL.md](docs/MOBILE-PROTOKOLL.md).
+
+## Graphical Stream Deck tab (0.1.6)
+
+The **Stream Deck** tab stays visible, including offline. Connect a device once
+to read its actual hardware metadata and keep its editor available afterwards.
+Enable the device and save first. Its driver then provides
+the actual model, key count and layout; USB permission errors are shown rather than
+guessing a layout.
+
+1. Select the device and click a key in its graphical layout.
+2. Pick a foreground icon and optional background image from the icon library.
+   **Bilder importieren …** opens the existing image importer.
+3. Set background colour, label, text colour, size and position. Contain keeps
+   the complete foreground image; Cover fills the key and crops its edges.
+4. Edit existing individual MQTT actions or add Press/Release/Hold actions with
+   a topic, payload and target brokers. Added actions run alongside existing ones.
+   Learned keys retain their channels under **Tasten & Anzeigen**.
+   Since 0.1.13, enabling/saving a deck automatically fills missing standard key
+   rows. No individual actions are needed for the eleven standard channels.
+5. For state feedback, choose the device's receive broker and set a state topic,
+   optional JSON field, active value and active icon on its action. Received values
+   remain the displayed text, as before.
+6. Click the top **Speichern** button to apply the changes to the USB/MQTT service.
+
+The preview shares the hardware image renderer and never publishes MQTT actions.
+Artwork is stored separately from mappings. Unplugging shows Offline and retains
+the tab, editor and settings for reconnection. A Pedal offers MQTT mappings but no image editor.
+Pages and a graphical touch-strip editor are not included.
+
+The new tab has automated simulated-device and local Chrome checks. Physical
+Stream Deck operation on a Pi still needs practical verification.
+
+## Home Assistant and ioBroker integration
 
 HA discovery groups all keys of a USB device under the same stable device
 identifier and selected device name. Actions are device triggers with payload

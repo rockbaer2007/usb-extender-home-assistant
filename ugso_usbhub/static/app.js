@@ -1,6 +1,7 @@
 'use strict';
-let config, status = {devices: [], events: [], brokers: {}, errors: {}}, iconList = [], page = 'overview', changed = false;
+let config, savedConfig, status = {devices: [], events: [], brokers: {}, errors: {}}, iconList = [], page = 'overview', changed = false;
 const $ = s => document.querySelector(s);
+const cloneConfig = value => JSON.parse(JSON.stringify(value));
 const el = (tag, text, cls) => { const e = document.createElement(tag); if(text !== undefined) e.textContent = text; if(cls) e.className = cls; return e; };
 async function api(path, data) {
   const r = await fetch('/api/' + path, data === undefined ? {} : {method:'POST', headers:{'Content-Type':'application/json','X-UGSo-Request':'1'},body:JSON.stringify(data)});
@@ -10,8 +11,16 @@ async function api(path, data) {
 }
 function error(e) { $('#error').textContent = e.message || String(e); $('#error').hidden = false; }
 function notice(text) { $('#notice').textContent = text; $('#notice').hidden = false; }
-function dirty() { changed = true; $('#save').disabled = !!learning; $('#dirty').textContent = 'Ungespeicherte Änderungen'; }
+function dirty() { changed = true; $('#save').disabled = !!learning; $('#dirty').textContent = 'Ungespeicherte Änderungen'; refreshKeyEditIndicators(); }
 function serviceAlive() { return typeof status.active === 'boolean' ? status.active : !!(status.updated && Math.abs(Date.now()/1000-status.updated)<15 && !status.stopped); }
+function renderStorage(){
+  const node=$('#storage-space');if(!node)return;
+  const disk=status.storage;
+  if(!disk||!Number.isFinite(disk.free)||!Number.isFinite(disk.total)||disk.total<=0){node.textContent='Speicherplatz derzeit nicht verfügbar';return;}
+  const size=bytes=>bytes>=1024**3?(bytes/1024**3).toLocaleString('de-DE',{maximumFractionDigits:2})+' GiB':(bytes/1024**2).toLocaleString('de-DE',{maximumFractionDigits:0})+' MiB';
+  node.textContent='Speicher frei: '+size(disk.free)+' von '+size(disk.total);
+  node.classList.toggle('storage-low',disk.free<Math.min(256*1024**2,disk.total*.05));
+}
 function card(title, parent=$('#content')) { const c=el('article',undefined,'card'); if(title)c.append(el('h2',title)); parent.append(c); return c; }
 function field(parent, label, value, change, type='text', choices=null) {
   const l=el('label', label), input=el(choices?'select':'input');
@@ -29,10 +38,12 @@ function button(parent, text, action, cls) { const b=el('button',text,cls); b.ty
 function empty(parent,title,text){const d=el('div',undefined,'empty');d.append(el('h2',title),el('p',text));parent.append(d);}
 function render() {
   if(!config)return;
+  renderStorage();
+  updateDeckTab();
   $('#content').replaceChildren(); $('#notice').hidden=true;
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
-  $('#page-title').textContent={overview:'Dein Hub im Überblick',devices:'USB-Geräte',bindings:'Tasten & Anzeigen',brokers:'Bis zu drei MQTT-Broker',icons:'Deine Iconbibliothek',system:'System & Betrieb'}[page];
-  ({overview,devices,bindings,brokers,icons,system})[page]();
+  $('#page-title').textContent={overview:'Dein Hub im Überblick',devices:'USB-Geräte',bindings:'Tasten & Anzeigen',streamdeck:'Stream Deck',mobile:'Stream Deck Mobile',brokers:'Bis zu drei MQTT-Broker',icons:'Deine Iconbibliothek',system:'System & Betrieb'}[page];
+  ({overview,devices,bindings,streamdeck,mobile,brokers,icons,system})[page]();
 }
 function overview() {
   const grid=el('div',undefined,'grid');$('#content').append(grid);
@@ -106,6 +117,8 @@ function bindings() {
   });
 }
 function addBinding(event) {
+  const deck=event&&status.devices.find(d=>d.id===event.device&&d.kind==='streamdeck'&&d.deck);
+  if(deck){ensureDeckKeys(deck);dirty();render();return;}
   const device=event?.device||Object.keys(config.devices)[0];
   if(!device)throw new Error('Zuerst unter USB-Geräte ein Gerät freigeben.');
   // getRandomValues also works on plain HTTP LAN addresses (randomUUID does not).
@@ -124,12 +137,100 @@ function renderEvents(parent,learn=false) {
     row.append(delivery);if(learn){const action=el('td');button(action,'Übernehmen',()=>addBinding(event));row.append(action);}t.append(row);});wrap.append(t);parent.append(wrap);
 }
 function icons() {
-  const c=card('Eigene Bilder und Elgato-Iconpacks');c.append(el('p','PNG, JPG, SVG, GIF und WebP; bei Animationen wird das erste Bild verwendet. ZIP und .streamDeckIconPack lokal hochladen. Es findet kein automatischer Marketplace-Download statt.'));
-  const tools=el('div',undefined,'toolbar');c.append(tools);const label=el('label','Bild oder Iconpaket'),file=el('input');file.type='file';file.accept='.zip,.streamDeckIconPack,.png,.jpg,.jpeg,.svg,.gif,.webp';label.append(file);tools.append(label);
-  button(tools,'Importieren',async()=>{if(!file.files[0])throw new Error('Bitte Datei auswählen.');const f=file.files[0];if(f.size>32*1024*1024)throw new Error('Datei ist größer als 32 MB.');const bytes=new Uint8Array(await f.arrayBuffer());let s='';for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode(...bytes.subarray(i,i+8192));const r=await api('icons/upload',{name:f.name,data:btoa(s)});iconList=await api('icons');render();notice(r.imported+' Icons importiert. '+(r.skipped?.length||0)+' übersprungen. '+JSON.stringify(r.skipped||[]));},'primary');
+  const c=card('Eigene Bilder und Elgato-Iconpacks');c.append(el('p','Pakete aufklappen oder durchsuchen. GIF und animiertes WebP werden mit Bildzeiten übernommen (maximal 10 Bilder/s). Originaldateien behalten ihre Namen und Unterordner. Plugincode wird nicht ausgeführt.'));
+  const tools=el('div',undefined,'toolbar');c.append(tools);const label=el('label','Einzelne Icons oder Iconpakete'),file=el('input');file.type='file';file.multiple=true;file.accept='.zip,.streamDeckIconPack,.streamDeckPlugin,.png,.jpg,.jpeg,.svg,.gif,.webp';label.append(file);tools.append(label);
+  const upload=button(tools,'Dateien importieren',()=>importFiles(file.files,false),'primary');
+  const local=el('div',undefined,'toolbar'),localLabel=el('label','Ganzer Ordner auf diesem Computer (mit Unterordnern)'),directory=el('input');directory.type='file';directory.multiple=true;directory.setAttribute('webkitdirectory','');localLabel.append(directory);local.append(localLabel);c.append(local);
+  const uploadFolder=button(local,'Ordner importieren',()=>importFiles(directory.files,true),'primary');
+  const progress=el('p');progress.setAttribute('role','status');
+  const bar=el('progress',undefined,'icon-import-progress');bar.hidden=true;bar.setAttribute('aria-label','Paketimport-Fortschritt');c.append(bar,progress);
+  async function importFiles(selection,isFolder){
+    const files=Array.from(selection||[]);
+    if(!files.length)throw new Error(isFolder?'Bitte Ordner auswählen.':'Bitte Datei auswählen.');
+    const supported=files.filter(f=>/\.(png|jpe?g|svg|gif|webp)$/i.test(f.name)||(!isFolder&&/\.(zip|streamdeckiconpack|streamdeckplugin)$/i.test(f.name)));
+    if(files.length>10000||supported.reduce((n,f)=>n+f.size,0)>96*1024*1024)throw new Error('Importlimit: maximal 10.000 Dateien / 96 MB.');
+    const isMetadata=f=>/^(manifest\.json|icons\.json|licen[cs]e(?:\.txt|\.md)?)$/i.test(f.name);
+    [file,directory,upload,uploadFolder].forEach(e=>e.disabled=true);
+    $('#error').hidden=true;$('#notice').hidden=true;
+    let imported=0;const skipped=files.filter(f=>!supported.includes(f)&&!(isFolder&&isMetadata(f))).map(f=>({file:f.webkitRelativePath||f.name,reason:'Nicht unterstütztes Format'}));
+    [file,directory,upload,uploadFolder].forEach(e=>e.disabled=true);
+    try{
+      let requests=supported;
+      if(isFolder){
+        const metadata=files.filter(f=>isMetadata(f)&&f.size<=(f.name.toLowerCase()==='icons.json'?8*1024*1024:256*1024));
+        const bytes=await iconFolderArchive([...supported,...metadata],(current,total)=>{bar.hidden=false;bar.max=total;bar.value=current;progress.textContent='Ordner vorbereiten: '+current+' von '+total+' Dateien';});
+        const root=(files[0]?.webkitRelativePath||'Eigene Icons').split('/')[0];
+        requests=[{name:root+'.zip',size:bytes.length,arrayBuffer:async()=>bytes.buffer}];
+      }
+      for(let index=0;index<requests.length;index++){
+        const f=requests[index];progress.textContent=(index+1)+' / '+requests.length+' · '+(f.webkitRelativePath||f.name);
+        bar.hidden=false;bar.max=requests.length;bar.value=index;
+        try{
+          const archive=/\.(zip|streamdeckiconpack|streamdeckplugin)$/i.test(f.name),limit=(archive?32:8)*1024*1024;
+          if(f.size>limit)throw new Error('Datei ist größer als '+(archive?32:8)+' MB.');
+          const bytes=new Uint8Array(await f.arrayBuffer());let s='';for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode(...bytes.subarray(i,i+8192));
+          const payload={name:f.name,data:btoa(s)};
+          payload.import_id=keyId();let polling=false;
+          if(archive){bar.removeAttribute('value');progress.textContent=f.name+' · Übertragen und Paket prüfen …';}
+          const timer=archive?setInterval(async()=>{
+            if(polling)return;polling=true;
+            try{const p=await api('icons/progress');if(p.id===payload.import_id&&p.total>0){bar.max=p.total;bar.value=p.current;progress.textContent=f.name+' · '+p.current+' von '+p.total+' Icons · '+p.file;}}catch{}finally{polling=false;}
+          },350):null;
+          try{const result=await api('icons/upload',payload);imported+=result.imported;skipped.push(...(result.skipped||[]));}
+          finally{if(timer!=null)clearInterval(timer);}
+          if(!archive){bar.max=requests.length;bar.value=index+1;}
+        }catch(e){skipped.push({file:f.webkitRelativePath||f.name,reason:e.message||String(e)});}
+      }
+      iconList=await api('icons');render();
+      notice(imported+' Icons importiert. '+skipped.length+' übersprungen.'+(skipped.length?' '+JSON.stringify(skipped.slice(0,10)):''));
+    }finally{[file,directory,upload,uploadFolder].forEach(e=>e.disabled=false);progress.textContent='';bar.hidden=true;}
+  }
   const folder=el('div',undefined,'toolbar'),l=el('label','Ordner auf dem Raspi (wird in die Bibliothek kopiert)'),input=el('input');input.placeholder='/home/pi/meine-icons';l.append(input);folder.append(l);button(folder,'Ordner einlesen',async()=>{const r=await api('icons/folder',{path:input.value});iconList=await api('icons');render();notice(r.imported+' Icons importiert. '+JSON.stringify(r.skipped||[]));});c.append(folder);
-  const search=el('input');search.placeholder='Icons nach Name, Sammlung oder Schlagwort suchen';c.append(search);const list=el('div',undefined,'icons');$('#content').append(list);
-  function draw(){list.replaceChildren();iconList.filter(i=>(i.name+' '+i.collection+' '+i.tags.join(' ')).toLowerCase().includes(search.value.toLowerCase())).forEach(i=>{const tile=el('article',undefined,'icon-card'),img=el('img');img.src='/icons/'+i.id+'.png';img.alt=i.name;img.loading='lazy';tile.append(img,el('strong',i.name),el('small',i.collection),el('small',i.author));const detail=el('details');detail.append(el('summary','Lizenz & ID'),el('p',i.license||'Keine Lizenzangabe im Paket'),el('code',i.id));tile.append(detail);list.append(tile);});} search.oninput=draw;draw();
+  const search=el('input');search.placeholder='Icons nach Name, Sammlung oder Schlagwort suchen';search.setAttribute('aria-label','Iconsuche');c.append(search);
+  const list=el('div',undefined,'icon-packages');$('#content').append(list);
+  const popup=el('div',undefined,'icon-hover');popup.hidden=true;popup.setAttribute('role','tooltip');$('#content').append(popup);
+  const opened=new Set();
+  function draw(){
+    popup.hidden=true;list.replaceChildren();const query=search.value.toLowerCase().trim(),packs=new Map();
+    iconList.filter(i=>[i.name,i.filename,i.collection,i.package_folder,i.subfolder,...(i.tags||[])].join(' ').toLowerCase().includes(query)).forEach(i=>{const name=i.package_folder||i.collection||'Eigene Icons';if(!packs.has(name))packs.set(name,[]);packs.get(name).push(i);});
+    for(const [name,items] of packs){
+      const pack=el('details',undefined,'icon-package'),summary=el('summary'),heading=el('span',undefined,'icon-package-heading');
+      const allItems=iconList.filter(i=>(i.package_folder||i.collection||'Eigene Icons')===name);
+      const licenses=[...new Set(allItems.map(i=>String(i.license||'').trim()).filter(Boolean))];
+      const authors=[...new Set(allItems.map(i=>i.author).filter(Boolean))];
+      const license=el('span',licenses.length>1?'Lizenzhinweise ('+licenses.length+')':licenses.length?'Lizenz: '+licenses[0].replace(/\s+/g,' '):'Keine Lizenzangabe','icon-package-license-label');
+      license.title=licenses.join('\n\n')||'Keine Lizenzangabe im Paket';
+      heading.append(el('span',(items[0].collection||name)+' ('+items.length+')','icon-package-name'),license);summary.append(heading);pack.append(summary);list.append(pack);
+      let drawn=false;
+      function populate(){if(drawn)return;drawn=true;
+        const legal=el('details',undefined,'icon-pack-license');legal.append(el('summary','Lizenz des Pakets'),el('pre',licenses.join('\n\n---\n\n')||'Keine Lizenzangabe im Paket'));
+        if(authors.length)legal.append(el('small',authors.join(' · ')));pack.append(legal);
+        const actions=el('div',undefined,'icon-pack-actions');pack.append(actions);
+        button(actions,'Paket entfernen',async()=>{
+          if(changed)throw new Error('Zuerst Änderungen speichern oder abbrechen.');
+          if(!confirm('Iconpaket „'+name+'“ entfernen? Vorher wird automatisch die Iconbibliothek gesichert. Verwendete Pakete bleiben geschützt.'))return;
+          const result=await api('icons/remove',{package:name});iconList=await api('icons');render();notice('Paket entfernt. Sicherung: '+result.backup);
+        },'danger');
+        const groups=new Map();items.forEach(i=>{const path=i.subfolder&&i.subfolder!=='.'?i.subfolder:'';if(!groups.has(path))groups.set(path,[]);groups.get(path).push(i);});
+        for(const [path,icons] of groups){
+          if(path)pack.append(el('h3',path,'icon-folder'));
+          const grid=el('div',undefined,'icons');pack.append(grid);
+          for(const i of icons){
+            const tile=el('article',undefined,'icon-card'),img=el('img');img.src='/icons/'+i.id+(i.animated?'.webp':'.png');img.alt=i.filename||i.name;img.loading='lazy';tile.tabIndex=0;
+            tile.append(img,el('strong',i.filename||i.name));tile.setAttribute('aria-label',(i.filename||i.name)+(i.animated?' · animiert':''));
+            tile.title=(i.filename||i.name)+' · '+name+(i.animated?' · animiert':'' );
+            const show=()=>{popup.replaceChildren();const preview=el('img');preview.src=img.src;preview.alt=img.alt;popup.append(preview,el('strong',i.filename||i.name),el('small',name+(path?' / '+path:'')));if(i.animated)popup.append(el('small','Animiert · '+i.frames+' Bilder'));popup.hidden=false;};
+            tile.onmouseenter=show;tile.onfocus=show;tile.onmouseleave=()=>popup.hidden=true;tile.onblur=()=>popup.hidden=true;
+            grid.append(tile);
+          }
+        }
+      }
+      pack.addEventListener('toggle',()=>{if(!pack.isConnected)return;if(pack.open){opened.add(name);populate();}else{opened.delete(name);popup.hidden=true;pack.querySelectorAll('img').forEach(img=>img.removeAttribute('src'));pack.querySelectorAll('.icons,.icon-folder,.icon-pack-actions,.icon-pack-license').forEach(n=>n.remove());drawn=false;}});
+      if(query||opened.has(name)){pack.open=true;populate();}
+    }
+    if(!packs.size)list.append(el('p',query?'Keine passenden Icons gefunden.':'Noch keine Icons importiert.'));
+  }
+  search.oninput=draw;draw();
 }
 function system() {
   const c=card('Weboberfläche nur bei Bedarf');c.append(el('p','Das Schließen dieses Browserfensters beendet den Webdienst nicht. Mit „web stop“ wird der HTTP-Listener beendet. USB und MQTT laufen unabhängig weiter.'));
@@ -139,13 +240,13 @@ function system() {
   const e=card('Letzte Eingaben (nur im Arbeitsspeicher)'),log=el('div');log.id='event-log';e.append(log);renderEvents(log);
   const f=card('Datenspeicherung');f.append(el('p','Einstellungen, Zugangsdaten und Icons liegen auf dem Raspi unter /var/lib/ugso-usbhub. Die letzten zehn Konfigurationsstände werden automatisch gesichert. Passwörter werden in der Oberfläche nicht zurückgeliefert. Geräte ohne Seriennummer werden über ihren USB-Port zugeordnet.'));
 }
-async function enter() { config=await api('config'); status=await api('status');iconList=await api('icons');$('#login').hidden=true;$('#workspace').hidden=false;$('#logout').hidden=false;$('#error').hidden=true;render(); }
+async function enter() { config=await api('config'); savedConfig=cloneConfig(config);keyEditBaseline.clear(); status=await api('status');iconList=await api('icons');$('#login').hidden=true;$('#workspace').hidden=false;$('#logout').hidden=false;$('#error').hidden=true;render(); }
 function showLogin(){config=null;$('#login').hidden=false;$('#workspace').hidden=true;$('#logout').hidden=true;}
 $('#login-form').onsubmit=async e=>{e.preventDefault();try{await api('login',{password:$('#password').value});$('#password').value='';await enter();}catch(e){error(e);}};
 $('#logout').onclick=async()=>{if(changed&&!confirm('Ungespeicherte Änderungen verwerfen?'))return;await endLearning();await api('logout',{});changed=false;learnedDraft=[];showLogin();};
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{if(learning){error(new Error('Anlernmodus zuerst beenden.'));return;}page=b.dataset.page;render();});
-$('#save').onclick=async()=>{try{if(learning||learnedDraft.length)throw new Error('Anlernen zuerst beenden und die Tasten übernehmen oder verwerfen.');await api('config',config);config=await api('config');changed=false;$('#save').disabled=true;$('#dirty').textContent='Gespeichert';$('#error').hidden=true;render();notice('Gespeichert. Der USB-/MQTT-Dienst übernimmt die Einstellungen innerhalb weniger Sekunden.');}catch(e){error(e);}};
+$('#save').onclick=async()=>{try{if(learning||learnedDraft.length)throw new Error('Anlernen zuerst beenden und die Tasten übernehmen oder verwerfen.');await api('config',config);config=await api('config');savedConfig=cloneConfig(config);keyEditBaseline.clear();changed=false;$('#save').disabled=true;$('#dirty').textContent='Gespeichert';$('#error').hidden=true;render();notice('Gespeichert. Der USB-/MQTT-Dienst übernimmt die Einstellungen innerhalb weniger Sekunden.');}catch(e){error(e);}};
 let polling=false;
-setInterval(async()=>{if(!config||polling)return;polling=true;try{status=await api('status');await pollLearning();$('#connection').textContent=serviceAlive()?'● USB-/MQTT-Dienst aktiv':'○ Dienst nicht aktiv';if(page==='bindings'&&$('#learn-events'))renderEvents($('#learn-events'),true);if(page==='system'&&$('#event-log'))renderEvents($('#event-log')); }catch(e){error(e);}finally{polling=false;}},2500);
+setInterval(async()=>{if(!config||polling)return;polling=true;try{const previousDecks=deckSignature(),previousPage=page;status=await api('status');renderStorage();updateDeckTab();if(page!==previousPage)render();else if(page==='streamdeck'&&previousDecks!==deckSignature()){if(changed)refreshDeckGrid();else render();}if(page==='streamdeck')renderDeckConnection();await pollLearning();$('#connection').textContent=serviceAlive()?'● USB-/MQTT-Dienst aktiv':'○ Dienst nicht aktiv';if(page==='bindings'&&$('#learn-events'))renderEvents($('#learn-events'),true);if(page==='system'&&$('#event-log'))renderEvents($('#event-log'));if(page==='mobile'&&$('#mobile-status'))renderMobileStatus($('#mobile-status')); }catch(e){error(e);}finally{polling=false;}},2500);
 window.addEventListener('beforeunload',e=>{if(changed||learning||learnedDraft.length){e.preventDefault();e.returnValue='';}});
 enter().catch(()=>{});

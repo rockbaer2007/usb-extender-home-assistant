@@ -120,7 +120,7 @@ class IconTests(TemporaryHome):
         self.assertEqual(icons.import_folder(folder)["imported"], 1)
         icons.import_folder(folder)
         self.assertEqual(len(icons.library()), 1)
-        with Image.open(home() / "icons" / (icons.library()[0]["id"] + ".png")) as image:
+        with Image.open(icons.cached_path(icons.library()[0]["id"])) as image:
             self.assertEqual(image.size, (256, 256))
 
     def test_official_pack_structure_and_license(self):
@@ -363,11 +363,22 @@ class WebTests(TemporaryHome):
     def test_icon_http_upload(self):
         self.login()
         import base64
+        before = copy.deepcopy(load_config())
         with self.request("/api/icons/upload", {"name": "test.png", "data": base64.b64encode(png()).decode()}) as r:
             ident = json.load(r)["id"]
         with self.request("/icons/" + ident + ".png") as r:
             self.assertEqual(r.headers["Content-Type"], "image/png")
             self.assertTrue(r.read().startswith(b"\x89PNG"))
+        upload = {"name": "subfolder.png", "data": base64.b64encode(png()).decode(), "collection": "Meine Icons"}
+        for _ in range(2):
+            with self.request("/api/icons/upload", upload) as r:
+                self.assertEqual(json.load(r)["id"], ident)
+        self.assertEqual(len([i for i in icons.library() if i["collection"] == "Meine Icons"]), 1)
+        self.assertEqual(load_config(), before)
+        upload["collection"] = {"invalid": True}
+        with self.assertRaises(urllib.error.HTTPError) as err:
+            self.request("/api/icons/upload", upload)
+        self.assertEqual(err.exception.code, 400)
 
     def test_logout_invalidates_session(self):
         self.login()

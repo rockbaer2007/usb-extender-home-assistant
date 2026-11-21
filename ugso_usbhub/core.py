@@ -21,6 +21,9 @@ class Core:
         self.events = deque(maxlen=100)
         self.queue = queue.Queue(maxsize=512)
         self.hardware = Hardware(self.enqueue)
+        from .mobile import MobileServer
+        self.mobile = MobileServer(self.enqueue)
+        self.hardware.mobile = self.mobile
         self.brokers = Brokers(self.config, self.receive)
         self.running = True
         self.pressed = {}
@@ -64,15 +67,23 @@ class Core:
                     value = json.loads(payload)
                     for part in b["state_path"].split("."):
                         value = value[part]
-                icon = b.get("on_icon") if str(value) == str(b.get("on_value", "ON")) else b.get("icon")
                 if b["control"].startswith("key:"):
+                    from .deck import artwork
+                    style = artwork(self.config, b["device"], int(b["control"].split(":")[1]))
+                    base_icon = style.get("icon", b.get("icon", ""))
+                    icon = (b.get("on_icon") or base_icon) if str(value) == str(b.get("on_value", "ON")) else base_icon
                     self.hardware.display(b["device"], int(b["control"].split(":")[1]), icon or "", str(value))
 
     def event(self, device, control, gesture, value):
+        if control == "_mobile_disconnect":
+            self.release_all(device)
+            return
         if not self.config["devices"].get(device, {}).get("enabled"):
             return
         now = time.monotonic()
         control = canonical_control(control)
+        if control.startswith("key:") and gesture in ("press", "release"):
+            self.hardware.set_pressed(device, int(control.split(":")[1]), gesture == "press")
         key = (device, control)
         was_down = key in self.pressed
         row = next((k for k in self.config.get("keys", []) if (k["device"], k["control"]) == key and k.get("enabled", True)), {})
@@ -151,6 +162,8 @@ class Core:
         # Clear momentary state, not the latched toggle. Do not invent physical
         # release actions for existing individual bindings.
         self.brokers.send_report(*key, "release", 0, switch_only=True)
+        if key[1].startswith("key:"):
+            self.hardware.set_pressed(key[0], int(key[1].split(":")[1]), False)
         self.buttons.cancel(key=key)
         self.pressed.pop(key, None)
         self.repeat_due.pop(key, None)
@@ -164,7 +177,8 @@ class Core:
 
     def status(self):
         return {"version": __version__, "pid": __import__("os").getpid(), "updated": time.time(),
-                "started": self.started, "devices": self.hardware.inventory,
+                "started": self.started, "devices": [d for d in self.hardware.inventory if d.get("connection") != "mobile"] + self.mobile.inventory(),
+                "mobile": self.mobile.status(),
                 "brokers": dict(self.brokers.states),
                 "errors": {**self.hardware.errors, **{"Discovery " + key: value for key, value in self.brokers.discovery_errors.items()}},
                 "events": list(self.events)}
@@ -174,6 +188,7 @@ class Core:
             signal.signal(sig, lambda *_: setattr(self, "running", False))
         scan_at = status_at = reload_at = 0
         try:
+            self.mobile.configure(self.config)
             while self.running:
                 now = time.monotonic()
                 lease = learning_lease()
@@ -198,6 +213,7 @@ class Core:
                             self.pressed.clear()
                             self.repeat_due.clear()
                             self.hardware.config = updated
+                            self.mobile.configure(updated)
                             self.hardware.refresh_decks()
                             scan_at = 0
                     except Exception:
@@ -213,6 +229,9 @@ class Core:
                     except Exception:
                         LOG.exception("USB-Erkennung fehlgeschlagen")
                 self.hardware.poll()
+                if self.mobile.refresh_required.is_set():
+                    self.mobile.refresh_required.clear()
+                    self.hardware.refresh_decks()
                 for _ in range(128):
                     try:
                         item = self.queue.get_nowait()
@@ -230,11 +249,13 @@ class Core:
                         self.pressed[key] = (since, True)
                         self.event(*key, "hold", 1)
                 self.tick(now)
+                self.hardware.animate()
                 if now >= status_at:
                     status_at = now + 2
                     atomic_json(status_path(), self.status())
         finally:
             self.release_all()
+            self.mobile.close()
             self.hardware.close()
             self.brokers.close()
             snapshot = self.status()

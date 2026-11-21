@@ -6,8 +6,8 @@ import select
 import sys
 import threading
 import time
-from PIL import Image, ImageDraw, ImageFont, ImageOps
-from .storage import home, canonical_control
+from .deck import artwork, key_image
+from .storage import canonical_control
 from .keymap import all_bindings
 
 LOG = logging.getLogger(__name__)
@@ -69,10 +69,14 @@ class Hardware:
         self.config = {"devices": {}, "bindings": []}
         self.lock = threading.RLock()
         self.errors = {}
+        self.mobile = None
+        self.pressed_keys = set()
+        self.display_contents = {}
+        self.animations = {}
 
     def scan(self, config):
         self.config = config
-        self.inventory = inventory()
+        self.inventory = inventory() + (self.mobile.inventory() if self.mobile else [])
         allowed = {d["id"]: d for d in self.inventory if config["devices"].get(d["id"], {}).get("enabled")}
         paths = {p: ident for ident, d in allowed.items() if d["kind"] == "input" for p in d["inputs"]}
         for path in list(self.inputs):
@@ -87,7 +91,13 @@ class Hardware:
                         self.errors.pop(path, None)
                     except OSError as exc:
                         self.errors[path] = str(exc)
-        self._scan_decks(allowed)
+        self._scan_decks({ident:d for ident,d in allowed.items() if d.get("connection") != "mobile"})
+        for device in self.inventory:
+            deck = self.decks.get(device["id"])
+            if deck:
+                device["deck"] = {"model": deck.deck_type(), "keys": deck.key_count(),
+                                  "layout": list(deck.key_layout()), "visual": deck.is_visual(),
+                                  "size": list(deck.key_image_format()["size"]) if deck.is_visual() else [72, 72]}
 
     def _scan_decks(self, allowed):
         added = False
@@ -124,43 +134,92 @@ class Hardware:
             self.refresh_decks()
 
     def refresh_decks(self):
-        for ident, deck in list(self.decks.items()):
+        decks = {**self.decks, **(self.mobile.decks() if self.mobile else {})}
+        for ident, deck in list(decks.items()):
             try:
                 deck.set_brightness(int(self.config["devices"].get(ident, {}).get("brightness", 30)))
-                for b in all_bindings(self.config):
-                    if b["device"] == ident and b["control"].startswith("key:"):
-                        self.display(ident, int(b["control"].split(":")[1]), b.get("icon", ""), b.get("text", ""))
+                bindings = all_bindings(self.config)
+                for key in range(deck.key_count()):
+                    style = artwork(self.config, ident, key)
+                    b = next((b for b in bindings if b["device"] == ident and b["control"] == f"key:{key}"), {})
+                    self.display(ident, key, style.get("icon", b.get("icon", "")), style.get("text", b.get("text", "")))
             except Exception as exc:
                 self.errors[ident] = str(exc)
 
     def display(self, ident, key, icon="", label="", brightness=None):
         with self.lock:
-            deck = self.decks.get(ident)
+            self.display_contents[(ident, key)] = (icon, label)
+            deck = self.decks.get(ident) or (self.mobile.decks().get(ident) if self.mobile else None)
             if not deck:
+                self.animations.pop((ident, key), None)
                 return
             if brightness is not None:
                 deck.set_brightness(max(0, min(100, int(brightness))))
             if not 0 <= key < deck.key_count() or not deck.is_visual():
                 return
             from StreamDeck.ImageHelpers import PILHelper
-            image = PILHelper.create_image(deck)
-            if len(icon) == 32 and all(c in "0123456789abcdef" for c in icon):
-                path = home() / "icons" / (icon + ".png")
-                if path.exists():
-                    with Image.open(path) as source:
-                        tile = ImageOps.contain(source.convert("RGBA"), image.size)
-                        image.paste(tile, ((image.width - tile.width) // 2, 0), tile)
-            if label:
-                draw = ImageDraw.Draw(image)
-                font = ImageFont.load_default(size=max(10, image.width // 7))
-                # Deliberately bounded text; no arbitrary font/file/URL access over MQTT.
-                label = str(label)[:24]
-                while label and draw.textbbox((0, 0), label, font=font)[2] > image.width - 4:
-                    label = label[:-1]
-                y = image.height - max(15, image.width // 5)
-                draw.rectangle((0, y, image.width, image.height), fill="black")
-                draw.text((image.width // 2, y), label, fill="white", anchor="mt", font=font)
+            style = artwork(self.config, ident, key)
+            from .icons import animation
+            pressed = (ident, key) in self.pressed_keys
+            selected = (style.get("pressed_icon") or icon) if pressed else icon
+            durations = animation(selected)
+            if durations:
+                self.animations[(ident, key)] = {"start":time.monotonic(), "durations":durations,
+                                                "index":0, "icon":icon, "label":label}
+            else:
+                self.animations.pop((ident, key), None)
+            image = key_image(deck.key_image_format()["size"], style, icon, label,
+                              pressed=(ident, key) in self.pressed_keys)
             deck.set_key_image(key, PILHelper.to_native_format(deck, image))
+
+    def animate(self, now=None):
+        now = time.monotonic() if now is None else now
+        with self.lock:
+            decks = {**self.decks, **(self.mobile.decks() if self.mobile else {})}
+            for (ident, key), job in list(self.animations.items()):
+                deck = decks.get(ident)
+                if not deck or not deck.connected() or key >= deck.key_count():
+                    self.animations.pop((ident, key), None)
+                    continue
+                elapsed = max(0, int((now-job["start"])*1000)) % sum(job["durations"])
+                index = 0
+                for duration in job["durations"]:
+                    if elapsed < duration:
+                        break
+                    elapsed -= duration; index += 1
+                if index == job["index"]:
+                    continue
+                try:
+                    from StreamDeck.ImageHelpers import PILHelper
+                    image = key_image(deck.key_image_format()["size"], artwork(self.config, ident, key),
+                                      job["icon"], job["label"], pressed=(ident,key) in self.pressed_keys,
+                                      frame_index=index)
+                    deck.set_key_image(key, PILHelper.to_native_format(deck, image))
+                    job["index"] = index
+                except Exception as exc:
+                    self.animations.pop((ident, key), None)
+                    self.errors[ident] = str(exc)
+
+    def set_pressed(self, ident, key, pressed):
+        with self.lock:
+            token = (ident, key)
+            if (token in self.pressed_keys) == pressed:
+                return
+            if pressed:
+                self.pressed_keys.add(token)
+            else:
+                self.pressed_keys.discard(token)
+            style = artwork(self.config, ident, key)
+            if not any(style.get(name) for name in ("pressed_icon", "pressed_background", "pressed_text_color")):
+                return
+            binding = next((b for b in all_bindings(self.config)
+                            if b["device"] == ident and b["control"] == f"key:{key}"), {})
+            icon, label = self.display_contents.get(token, (style.get("icon", binding.get("icon", "")),
+                                                           style.get("text", binding.get("text", ""))))
+            try:
+                self.display(ident, key, icon, label)
+            except Exception as exc:
+                self.errors[ident] = str(exc)
 
     def poll(self, timeout=0.05):
         if not self.inputs:
@@ -188,6 +247,7 @@ class Hardware:
                 device.close()
 
     def close(self):
+        self.animations.clear()
         for _, device in self.inputs.values():
             device.close()
         for deck in self.decks.values():

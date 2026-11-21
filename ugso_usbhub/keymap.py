@@ -1,5 +1,6 @@
 """Learned key rows, kept separate from existing individual bindings."""
 import re
+import hashlib
 import unicodedata
 from .storage import canonical_control
 
@@ -76,6 +77,42 @@ def validate_keys(config):
         if key.get("repeat") and key["control"] not in VOLUME_KEYS:
             raise ValueError("Wiederholung beim Halten ist für Lauter/Leiser vorgesehen")
     return config
+
+
+def ensure_deck_keys(config, devices):
+    """Fill missing key rows for enabled decks; never replace saved mappings."""
+    names = device_topic_names(config)
+    rows = config.setdefault("keys", [])
+    known = {(k["device"], k["control"]) for k in rows}
+    added = 0
+    for device in devices:
+        ident = device.get("id")
+        if device.get("kind") != "streamdeck" or not config.get("devices", {}).get(ident, {}).get("enabled"):
+            continue
+        count = device.get("deck", {}).get("keys", 0)
+        if type(count) is not int or not 1 <= count <= 128:
+            continue
+        info=device.get("deck", {})
+        layout=info.get("layout", [])
+        if len(layout)==2 and all(type(n) is int and 1<=n<=16 for n in layout) and layout[0]*layout[1]==count:
+            config["devices"][ident]["deck_info"]={"model":str(info.get("model","Stream Deck"))[:100],"keys":count,"layout":list(layout),"visual":bool(info.get("visual",True)),"size":info.get("size",[72,72])}
+            config["devices"][ident]["deck_connection"]=device.get("connection","usb")
+        for index in range(count):
+            control = f"key:{index}"
+            if (ident, control) in known:
+                continue
+            token = hashlib.sha256(f"{ident}/{control}".encode()).hexdigest()[:24]
+            row = {"id":"auto-deck-"+token, "device":ident, "control":control,
+                   "name":f"Taste {index+1}", "enabled":True, "topic_version":2,
+                   "device_topic":names[ident], "targets":None, "switch_mode":"toggle",
+                   "repeat":False, "double_ms":300, "hold_ms":700}
+            for mode in ("press", "release", "switch", "press_plus", "release_plus", *EXTRA_MODES):
+                row[mode] = True
+                row[mode+"_topic"] = names[ident]+"-"+topic_slug(control)+"/"+mode.replace("_", "-")
+            rows.append(row)
+            known.add((ident, control))
+            added += 1
+    return added
 
 
 def key_bindings(config):

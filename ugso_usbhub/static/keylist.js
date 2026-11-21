@@ -1,12 +1,17 @@
 'use strict';
 let learning = null, learnedDraft = [], learningDevice = '', learnSequence = 0;
+let openKeyEntry = null;
+const keyEditBaseline = new Map();
+function refreshKeyEditIndicators(){
+  document.querySelectorAll('.key-entry').forEach(entry=>entry.updateEditState?.());
+}
 const keyNames = {KEY_VOLUMEUP:'Lauter',KEY_VOLUMEDOWN:'Leiser',KEY_MUTE:'Stumm',KEY_PLAYPAUSE:'Play/Pause'};
 function keyId() { return Array.from(crypto.getRandomValues(new Uint8Array(12)), n=>n.toString(16).padStart(2,'0')).join(''); }
-function learnedKey(device, control) {
-  if(!learning?.topic_name)throw new Error('Gerätename für Topics fehlt. Anlernmodus neu starten.');
-  const base=learning.topic_name+'-'+control.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+function learnedKey(device, control, topicName=learning?.topic_name) {
+  if(!topicName)throw new Error('Gerätename für Topics fehlt. Anlernmodus neu starten.');
+  const base=topicName+'-'+control.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   return {id:'key-'+keyId(),device,control,name:keyNames[control]||control.replace(/^KEY_/,''),enabled:true,
-    topic_version:2,device_topic:learning.topic_name,
+    topic_version:2,device_topic:topicName,
     press:true,release:true,switch:true,press_plus:true,release_plus:true,switch_mode:'toggle',
     state:true,button:true,button_plus:true,click:true,double_click:true,hold:true,
     press_topic:base+'/press',release_topic:base+'/release',switch_topic:base+'/switch',
@@ -31,13 +36,26 @@ function collectLearned() {
 }
 function drawKeyList(parent, rows, draft=false) {
   if(!rows.length){parent.append(el('p',draft?'Noch keine neue Taste angelernt.':'Noch keine Tastenliste. Anlernmodus starten; vorhandene Einzelbelegungen bleiben unten erhalten.'));return;}
-  const wrap=el('div',undefined,'table-wrap'),table=el('table',undefined,'key-table'),head=el('tr');
-  ['Aktiv','USB-Gerät · Taste / Name','Press / Press+','Release / Release+','Switch / Tastenzustand','Button / Button+','Einzelne Gesten','Icon / Bearbeiten'].forEach(x=>head.append(el('th',x)));table.append(head);
+  const list=el('div',undefined,'key-list');parent.append(list);
   rows.forEach(k=>{
+    if(!keyEditBaseline.has(k.id))keyEditBaseline.set(k.id,cloneConfig(k));
+    const entry=el('details',undefined,'key-entry');entry.dataset.keyId=k.id;entry.name='usb-key-entries';
+    const summary=el('summary'),title=el('span',undefined,'key-entry-title');summary.append(title);entry.append(summary);
+    function updateTitle(){title.textContent=(config.devices[k.device]?.name||k.device)+' – '+k.control+' – '+(k.name||'Ohne Namen');}
+    updateTitle();entry.open=openKeyEntry===k.id;
+    entry.addEventListener('toggle',()=>{
+      if(!entry.isConnected)return;
+      if(entry.open){
+        openKeyEntry=k.id;
+        document.querySelectorAll('.key-entry').forEach(other=>{if(other!==entry)other.open=false;});
+      }else if(openKeyEntry===k.id)openKeyEntry=null;
+    });
+    const wrap=el('div',undefined,'table-wrap'),table=el('table',undefined,'key-table'),head=el('tr');
+    ['Aktiv','USB-Gerät · Taste / Name','Press / Press+','Release / Release+','Switch / Tastenzustand','Button / Button+','Einzelne Gesten','Icon / Bearbeiten'].forEach(x=>head.append(el('th',x)));table.append(head);
     const tr=el('tr');
     function cell(){const td=el('td');tr.append(td);return td;}
     field(cell(),'Aktiv',k.enabled,v=>k.enabled=v,'checkbox');
-    const name=cell();name.append(el('small',config.devices[k.device]?.name||k.device),el('div',k.control,'device-id'));field(name,'Name',k.name,v=>k.name=v);
+    const name=cell();name.append(el('small',config.devices[k.device]?.name||k.device),el('div',k.control,'device-id'));field(name,'Name',k.name,v=>{k.name=v;updateTitle();});
     const groups=[['press','press_plus'],['release','release_plus'],['switch','state'],['button','button_plus'],['click','double_click','hold']];
     const labels={press:'Press',press_plus:'Press+ · danach leer',release:'Release',release_plus:'Release+ · danach leer',
       switch:'Switch · Drücken schaltet um',state:'Tastenzustand · gedrückt ON',button:'Button · alle Gesten',button_plus:'Button+ · danach leer',
@@ -88,7 +106,31 @@ function drawKeyList(parent, rows, draft=false) {
       details.append(el('small','Wiederholt die aktiven Press-/Press+-Kanäle, nicht Release oder Switch. Das Zielsystem legt den Lautstärkeschritt fest. Sicherheitsstopp nach 30 Sekunden ohne Loslassen.'));
     }
     button(details,'Aus Liste entfernen',()=>{rows.splice(rows.indexOf(k),1);dirty();render();},'danger');
-  });wrap.append(table);parent.append(wrap);
+    wrap.append(table);entry.append(wrap);
+    const actions=el('div',undefined,'key-edit-actions');
+    const reminder=el('p','Änderungen noch nicht gespeichert. Speichern übernimmt alle geänderten Einstellungen.','warning');reminder.setAttribute('role','status');
+    if(!draft){
+      const buttons=el('div',undefined,'row');
+      const save=button(buttons,'Speichern',()=>$('#save').onclick(),'primary');
+      const cancel=button(buttons,'Abbrechen',()=>{
+        const original=(savedConfig?.keys||[]).find(row=>row.id===k.id)||keyEditBaseline.get(k.id);
+        rows[rows.indexOf(k)]=cloneConfig(original);
+        changed=JSON.stringify(config)!==JSON.stringify(savedConfig);
+        $('#save').disabled=!changed||!!learning;$('#dirty').textContent=changed?'Ungespeicherte Änderungen':'Gespeichert';
+        render();
+      });
+      actions.append(reminder,buttons);entry.append(actions);
+      entry.updateEditState=()=>{
+        const original=(savedConfig?.keys||[]).find(row=>row.id===k.id)||keyEditBaseline.get(k.id);
+        const modified=JSON.stringify(k)!==JSON.stringify(original);
+        reminder.hidden=!modified;save.disabled=!modified||!!learning||!!learnedDraft.length;cancel.disabled=!modified;
+        entry.classList.toggle('key-modified',modified);
+        summary.title=modified?'Ungespeicherte Änderungen – bitte speichern.':'';
+      };
+      entry.updateEditState();
+    }
+    list.append(entry);
+  });
 }
 function learningPanel() {
   const c=card('Anlernmodus · Tastenliste');

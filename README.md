@@ -2,7 +2,111 @@
 
 **USB-Geräte und Stream Decks über MQTT verbinden – für Raspberry Pi.**
 
-Version **0.1.5** · Öffentliches Projekt · Stand 21. November 2026
+Version **0.1.22** · Öffentliches Testrelease · Stand 21. November 2026
+
+**Schneller Paketimport:** Ein ZIP bzw. ein Ordner schreibt den Iconindex nur einmal
+am Ende. Browser-Ordner werden lokal zu einem gemeinsamen ZIP gebündelt statt als
+tausende Einzelanfragen gesendet. Originale werden geprüft und gespeichert;
+Vorschauen, Animationseinzelbilder und WebP-Vorschauen entstehen erst beim ersten
+Anzeigen oder Verwenden eines Icons und werden danach wiederverwendet.
+Bestehende Icon-IDs und Tastenzuordnungen bleiben beim erneuten Import erhalten.
+
+Lokaler Einzelvergleich auf diesem Windows-PC: Itsyhome (240 Bilder) **4,262 →
+0,395 Sekunden**, 6.800 synthetische PNG-Testicons **458,323 → 10,464 Sekunden**.
+Das sind keine Raspberry-Pi-Messungen und nicht das aktuell beim Nutzer laufende
+6.800er-Paket. Laufenden Import erst beenden lassen, danach aktualisieren.
+
+Beim Paketimport zeigt ein Ladebalken den tatsächlichen Stand **x von y Icons**.
+Während der Übertragung und Paketprüfung läuft er zunächst ohne Prozentangabe.
+Beim Hochladen ganzer Ordner liest die Oberfläche `manifest.json`, damit der
+lesbare Paketname erscheint (etwa **Fluent UI System Icons (Filled)**).
+Ordnername und Originaldateien bleiben erhalten. Bereits importierte Pakete für
+die aktualisierte Namensanzeige erneut importieren; bestehende Icon-IDs bleiben gleich.
+
+Die vorhandene Lizenz steht einmal im Paketkopf; der vollständige Text lässt sich
+im Paket aufklappen. Unterschiedliche Lizenzhinweise bleiben gemeinsam erhalten.
+Einzelne Icons haben keine Lizenzbedienelemente mehr. 48×48-Icons sitzen in
+kompakten 52×52-Kacheln; Dateinamen und Animationshinweise erscheinen beim Hover.
+
+Die **Iconbibliothek** zeigt zunächst geschlossene Pakete mit Anzahl. Suche nach
+Dateiname, Paket, Unterordner oder Schlagwort; beim Darüberfahren bzw. Tastaturfokus
+erscheint eine größere Vorschau mit Originaldateiname und Paketname. Miniaturen
+sind höchstens 48×48 Pixel groß. Neue Originaldateien bleiben unter
+`/var/lib/ugso-usbhub/icons/IconPacks/<Paketordner>/…` mit Namen und Unterordnern
+erhalten. Technische Vorschaudaten liegen getrennt in `icons/.cache/`, der Index
+in `icons/index.json`. Frühere Icon-Zuordnungen bleiben lesbar.
+
+GIF und animiertes WebP können normal und gedrückt animiert angezeigt werden.
+Maximal 120 Einzelbilder, Bildabstand mindestens 100 ms (höchstens 10 Bilder/s).
+Statische Icons werden weiterhin nur bei Änderungen übertragen. Hintergründe
+bleiben statisch. Bereits früher auf ein Einzelbild reduzierte Imports benötigen
+einen erneuten Import aus dem Originalpaket.
+
+**Paket entfernen** sichert vorher die Bibliothek; noch verwendete Pakete werden
+nicht entfernt. Im Kopf stehen freier und gesamter Speicher des Datenlaufwerks.
+Bei knappem Speicher ist die Anzeige rot; zu große Imports werden abgelehnt.
+Der echte Animationstest auf dem Tablet steht noch aus.
+
+Die gespeicherten Tasten sind zunächst eingeklappt: **Gerätename – Key – Name**.
+Eine Zeile anklicken, um ihre Einstellungen zu öffnen. Beim Öffnen einer anderen
+Taste klappt die vorherige zu. Erneuter Klick schließt den Eintrag. Änderungen
+bleiben beim Wechsel erhalten; zum dauerhaften Übernehmen oben speichern.
+Im geöffneten Eintrag stehen zusätzlich **Speichern** und **Abbrechen**.
+Ein Hinweis und eine Markierung zeigen ungespeicherte Änderungen. Speichern
+übernimmt alle geänderten Einstellungen. Abbrechen setzt ausschließlich diese
+Taste zurück; Änderungen an anderen Tasten bleiben erhalten.
+
+Unter **Gedrückt** im Stream-Deck-Editor je Taste ein zweites Icon sowie eigene
+Hintergrund- und Schriftfarben wählen. Beim Loslassen erscheint wieder die normale
+Darstellung. Ohne eigene Auswahl werden normale Werte übernommen. **Vorschau:
+Taste gedrückt** sendet kein MQTT. Oben speichern, um die Gestaltung auf USB- und
+Mobile-Decks anzuwenden. Der echte Tablet-Test steht noch aus.
+
+Der Stream-Deck-Tab bleibt sichtbar. Bei Verbindungstrennung zeigt er **Offline**
+und behält Tastenansicht, Auswahl und ungespeicherte Texte. Statuswechsel ersetzen
+den Editor nicht mehr. Gespeicherte Gerätegeometrie erlaubt späteres Offline-
+Bearbeiten; ein Mobile-Deck merkt sich sein Raster auch im Serverregister.
+
+Mobile: Zeilen und Spalten ausschließlich in der **Android-App** ändern. Das
+App-Raster wird ohne Verbindungstrennung übernommen. Die falsche Editor-
+Übersteuerung aus 0.1.14 ist entfernt; alte Werte bleiben gespeichert, aber inaktiv.
+Offline bleibt das zuletzt von der App gemeldete Raster erhalten.
+Leere WebSocket-Pings alle fünf Sekunden verhindern das zu späte Keepalive des
+bisherigen 15-Sekunden-Intervalls. Das erzeugt keine Bildaktualisierungen.
+Optionale, nicht unterstützte Shortcut-Nachrichten schließen die Sitzung nicht
+mehr. Unter Mobile-Verbindungen steht die letzte Trennung mit ihrem Grund.
+
+Mobile-Farben: Rot/Blau in komprimierten Tablet-Bildern korrigiert. Identische
+Bildpixel und Anzeige-Metadaten werden nicht erneut gesendet. Unter Mobile-
+Verbindungen zeigen Zähler den tatsächlichen Versand; ohne Änderungen bleiben
+sie stehen. Ob damit auch das gemeldete Blinken aufhört, ist am Tablet zu prüfen.
+
+Stream-Deck-Tasten erhalten nach Freigabe und **Speichern** automatisch die elf
+bekannten Kanäle: press/release, press-plus/release-plus, switch (Umschalter),
+state (gedrückt/losgelassen), button/button-plus, click/double-click/hold.
+Beispiel: `stream-deck-mobile-key-0/press`. Alle Tasten sind anschließend in der
+Tastenliste einzeln editierbar. Bestehende Zeilen/Topics bleiben erhalten;
+zusätzliche Einzelaktionen senden weiterhin zusätzlich. MQTT-Freigabe bleibt
+ausdrücklich erforderlich. Gilt für Mobile und physische Stream Decks.
+
+Mobile-Verbindung: Die Android-Meldung „Stream Deck mindestens 6.3“ wurde durch
+unsere Produktversion im falschen Protokollfeld ausgelöst. Ab 0.1.12 wird dort
+die Kompatibilitätsangabe 6.3.0 gesendet, während die Oberfläche weiterhin die
+echte USB-Extender-Version zeigt. Kein vollständiger Stream-Deck-Desktopnachbau.
+Nach dem Update die Android-App vollständig schließen und wieder öffnen;
+gespeicherte Kopplung und Einstellungen bleiben erhalten.
+
+Iconbibliothek: einzelne oder mehrere Bilder mit **Dateien importieren** laden.
+Für komplette PC-Ordner **Ganzer Ordner auf diesem Computer** auswählen und
+**Ordner importieren** anklicken. Unterordner werden mitgelesen; der gewählte
+Ordnername wird zur Sammlung. Fortschritt und übersprungene Dateien werden
+angezeigt. Maximal 10.000 Dateien/96 MB je Auswahl, 8 MB je Bild. Vorhandene Icons
+und Einstellungen bleiben erhalten. Der Import eines Ordners auf dem Raspi
+über dessen Pfad sowie ZIP-/Elgato-Iconpacks bleiben ebenfalls verfügbar.
+
+Mobile: Unveränderte Icons werden nicht ständig erneut übertragen. Text oben/unten
+erhält einen eigenen Bereich; das Vordergrundicon wird passend verkleinert.
+Text mittig bleibt über dem Icon. Gilt für Vorschau, USB-Deck und Mobile.
 
 **Deutsch** · [English](README.en.md) · [ZIP herunterladen](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/latest)
 
@@ -34,7 +138,7 @@ kein USB-over-IP-Tunnel und leitet keine beliebigen USB-Protokolle weiter.
 | Physische Elgato Stream Decks | Eigener HID-Treiber; Funktionen unten | Implementiert, noch kein physisches Stream Deck in diesem Projekt geprüft |
 | Stream-Deck-ähnliche Geräte mit LCD-Tasten | Tastatureingaben eventuell über HID; Displayansteuerung nur mit passendem Herstellerprotokoll/Treiber | Keine pauschale Kompatibilitätszusage |
 | Drucker, Kameras, USB-Speicher, Audiointerfaces, serielle Geräte, weitere Controller | Bestandsanzeige; spezielle Nutzfunktionen brauchen eigene Adapter | Keine allgemeine Druck-, Kamera-, Audio-, MIDI- oder serielle Weiterleitung |
-| Stream Deck Mobile / Tablet-App | Kein direktes USB-Stream-Deck am Pi | Derzeit nicht angebunden |
+| Stream Deck Mobile / Tablet-App | Optionaler experimenteller VSD2-Netzwerkserver, QR-Kopplung | Kopplung/Decköffnung und Iconanzeige vom Nutzer bestätigt; weitere Praxistests offen |
 
 ### Stream Deck: Welche Funktionen sind vorgesehen?
 
@@ -50,7 +154,7 @@ kein USB-over-IP-Tunnel und leitet keine beliebigen USB-Protokolle weiter.
 Der eingebundene Treiber `python-elgato-streamdeck` 0.10.0 kennt unter anderem
 Original/MK.2, Mini, XL, Neo, Pedal und Plus. Das ist **keine bestätigte Hardware-
 Testliste** dieses Projekts. Aktuell gibt es eine feste Belegung; Profil-/Seitenwechsel
-und animierte Icons sind nicht umgesetzt. Bei Bildanimationen wird das erste Bild verwendet.
+sind noch nicht umgesetzt. Animierte Tastenicons sind ab 0.1.18 lokal implementiert.
 
 ## Im Paket
 
@@ -193,8 +297,8 @@ Installationspaket, kein vollständig offline installierbares ARM-Abbild.
    ```bash
    # Falls unzip noch nicht vorhanden ist:
    sudo apt-get update && sudo apt-get install -y unzip
-   unzip USB-Extender-Home-Assistant-0.1.5-Raspi4.zip
-   cd USB-Extender-Home-Assistant-0.1.5
+   unzip USB-Extender-Home-Assistant-0.1.22-Raspi4.zip
+   cd USB-Extender-Home-Assistant-0.1.22
    sudo bash install.sh
    ```
 
@@ -353,10 +457,102 @@ frei eingegebenen Shellbefehle aus und verändert keine HA-Systemdateien.
 
 ## Stream-Deck-Icons und Zustände
 
+### Optionaler Stream-Deck-Mobile-Server ab 0.1.7
+
+**Experimentell:** Kopplung/Decköffnung und ein sichtbares importiertes Icon sind
+vom Nutzer auf Android bestätigt. Rasterabgleich und vollständige MQTT-Bedienung
+sind weiter praktisch zu prüfen. Ein unabhängiger Protokollsimulator prüft
+QR-Daten, verschlüsselte Kopplung, Bilder, Tasten und MQTT. Es gibt
+keine Kaufoption oder Pro-Stufe im Server; eigene Beschränkungen der Android-App
+werden nicht aufgehoben. Das Raster ist serverseitig von 1×1 bis 8×8 einstellbar,
+zunächst eine Seite. Neue Voreinstellung ab 0.1.9: **5 Spalten × 3 Zeilen**.
+Vorhandene Einstellungen bleiben erhalten. Meldet Android sein eigenes Raster,
+übernimmt der Editor dieses; die Servervorgabe überschreibt die App-Ansicht nicht.
+
+1. Neues ZIP auf den Pi kopieren und wie unten beschrieben mit `sudo bash install.sh`
+   aktualisieren. Der Installer sichert bestehende Daten und erhält Einstellungen.
+2. Weboberfläche öffnen und **Mobile-Server** wählen. Der Server ist nach dem Update
+   zunächst aus; bestehende USB-Geräte und MQTT-Broker benötigen keine Umstellung.
+3. Die im WLAN/LAN erreichbare **IPv4-Adresse oder den Hostnamen des Raspberry Pi**
+   eintragen. Nicht `127.0.0.1` verwenden, wenn Android auf einem anderen Gerät läuft.
+   Standardport ist **28198**, getrennt von der Weboberfläche auf 8098.
+4. Bei Bedarf unter **Rastervorgabe** Spalten/Zeilen für Geräte ohne eigene
+   Rastermeldung einstellen. Das Android-Raster direkt in der App ändern.
+   **Stream-Deck-Mobile-Server aktivieren**
+   anhaken und oben **Speichern**. Auf **Mobile-Dienst aktiv** warten. Ein belegter
+   Port wird als Fehler angezeigt und beendet nicht den USB-/MQTT-Dienst.
+5. **Kopplung starten · QR-Code** öffnet ein Kopplungsfenster von zwei Minuten.
+   In der Android-App **Computer hinzufügen** wählen und diesen QR-Code scannen.
+6. Die Anfrage erscheint mit Gerätenamen und sechsstelligen hexadezimalen
+   Prüfabdruck. Nur das eigene erwartete Gerät mit **Gerät vertrauen** bestätigen;
+   alternativ ablehnen. Der QR-Scan allein gibt keine MQTT-Steuerung frei.
+   Ab 0.1.8 erscheint die Bestätigung bereits nach der Begrüßung, auch wenn das
+   Tablet seine zusätzliche Authentifizierungsnachricht erst später sendet.
+7. In Android ein virtuelles Deck anlegen bzw. auswählen. Es erscheint unter
+   **USB-Geräte** und im grafischen **Stream Deck**-Tab. Gerät dort freigeben und
+   speichern, dann Icons gestalten und MQTT-Aktionen zuordnen. Auch das bisherige
+   Anlernen mit Press/Release, Switch und Button-Gesten kann genutzt werden.
+   Bei einem neu verbundenen Mobile-Deck öffnet sich der Editor automatisch, sofern
+   kein ungespeicherter Entwurf oder Anlernvorgang unterbrochen würde. MQTT wird
+   dadurch nicht automatisch freigegeben. Änderungen der Rastervorgabe trennen
+   ab 0.1.9 weder Tablet noch geöffnetes Deck; eine neue Auswahl ist nicht nötig.
+8. Zum Ausschalten die Server-Checkbox abwählen und speichern. Der separate
+   Mobile-Port und seine Verbindungen werden geschlossen; USB/MQTT bleiben aktiv.
+
+Nach erfolgreicher Kopplung kann die Konfigurations-Weboberfläche per CLI gestoppt
+werden; der Mobile-Server läuft im USB-/MQTT-Dienst weiter. Für neue Kopplungen ist
+die Weboberfläche zur Bestätigung wieder erforderlich. Kein Bonjour-/Cloud-
+Discovery-Dienst implementiert: die Einrichtung erfolgt direkt über den QR-Code.
+Der Android-Pro-Status und sein Designfilter wurden statisch untersucht; siehe
+`docs/MOBILE-PROTOKOLL.md`. Weitere Online-/Kaufprüfungen sind nicht vollständig untersucht.
+
+Die Daten liegen neben der bisherigen Konfiguration: `mobile-identity.json`
+(privater Serverschlüssel), `mobile-trust.json` (bestätigte Clients),
+`mobile-devices.json` (virtuelle Decks) und `mobile-control.json` (kurzzeitige
+Kopplungsfreigabe). Die vorhandene CLI-Sicherung umfasst diese Dateien. Schlüssel
+werden nicht an den Browser zurückgeliefert; die Update-ZIP enthält keine davon.
+Vertrauen und Deck-IDs bleiben nach einem Dienstneustart erhalten. Android regelt
+seine Bildschirmhelligkeit selbst. Entfernen eines virtuellen Decks über die App
+ist noch nicht umgesetzt; der Server erhält dessen Daten.
+
+Technische Befunde und Grenzen: [Mobile-Protokoll](docs/MOBILE-PROTOKOLL.md).
+
+### Grafischer Stream-Deck-Tab ab 0.1.6
+
+Der Tab **Stream Deck** bleibt dauerhaft sichtbar. Bei der ersten Verbindung
+das Gerät freigeben und speichern;
+danach liefert der Treiber das echte Modell, die Tastenanzahl und das Raster.
+Bei fehlenden USB-Rechten erscheint ein Hinweis statt eines erfundenen Layouts.
+
+1. Im Tab das Gerät auswählen, dann eine Taste im Gerätebild anklicken.
+2. Icon und optional Hintergrundbild aus der Iconbibliothek auswählen. Eigene
+   Bilder lassen sich über **Bilder importieren …** hinzufügen.
+3. Hintergrundfarbe, Beschriftung, Schriftfarbe, Schriftgröße und Textposition
+   einstellen. Einpassen erhält das ganze Vordergrundbild; Füllen schneidet es zu.
+4. Unter **MQTT-Zuordnung** vorhandene Einzelaktionen bearbeiten oder eine Aktion
+   für Drücken, Loslassen oder Halten hinzufügen: Topic, Nutzdaten und Zielbroker.
+   Eine zusätzliche Aktion sendet zusätzlich zu vorhandenen Belegungen. Bereits
+   angelernte Tasten bleiben in **Tasten & Anzeigen** mit ihren Kanälen erhalten.
+   Ab 0.1.13 werden fehlende Standard-Tastenzeilen nach Freigabe/Speichern
+   automatisch ergänzt. Für die elf normalen Kanäle sind keine Einzelaktionen nötig.
+5. Für Zustandsanzeigen den Empfangsbroker am Gerät und in der Aktion das
+   Zustands-Topic, optional JSON-Feld, aktiven Wert und aktives Icon einstellen.
+   Der empfangene Wert wird wie bisher als Text angezeigt.
+6. Oben **Speichern**. Erst dann übernimmt der USB-/MQTT-Dienst die Änderungen.
+
+Die Vorschau nutzt dieselbe Bildaufbereitung wie die Hardware und sendet keine
+MQTT-Aktion. Gestaltung und MQTT-Belegungen werden getrennt gespeichert. Abziehen
+zeigt Offline; Editor und Einstellungen bleiben für das erneute Anschließen erhalten.
+Ein Pedal ohne Display bietet MQTT-Zuordnung, keine Bildgestaltung.
+Seitenwechsel und ein grafischer Touchstreifen-Editor sind nicht enthalten.
+
+Automatisierte Hardware-Simulation und lokaler Chrome-Test liegen vor. Der neue
+Tab ist noch nicht mit einem physischen Stream Deck auf dem Pi bestätigt.
+
 Unter **Iconbibliothek** eigene Dateien oder ein lokal vorliegendes Paket importieren.
-Unterstützt: PNG, JPG/JPEG, SVG, GIF und WebP. Animationen werden momentan als
-erstes Einzelbild importiert. Die Bilder werden als lokale 256×256-PNGs normalisiert;
-der Stream-Deck-Treiber passt sie an das konkrete Gerät an.
+Unterstützt: PNG, JPG/JPEG, SVG, GIF und WebP. Originale bleiben erhalten,
+Vorschaudaten werden auf 256×256 normalisiert. GIF-/WebP-Animationen behalten ihre
+Bildfolgen mit den oben genannten Grenzen; der Treiber passt sie an das Gerät an.
 
 Für einen Ordner auf dem Pi zum Beispiel:
 
@@ -473,8 +669,10 @@ bleiben technische Kennungen. Der sichtbare Produktname ist
   Modelle). Physische Geräte sind in diesem Projekt noch nicht praktisch geprüft.
   Der Touchscreen wird als Ereignisquelle angebunden, nicht als frei gestaltbarer
   Displaybereich. Es gibt zunächst eine feste Belegung ohne Profil-/Seitenwechsel.
-- Stream Deck Mobile lässt sich nicht wie ein USB-Stream-Deck direkt mit dem Pi
-  koppeln. Ein eigenständiges Tablet-Deck ist in dieser Version nicht enthalten.
+- Stream Deck Mobile ist kein USB-Gerät. Ab 0.1.7 gibt es einen optionalen
+  experimentellen Netzwerkserver mit QR-Kopplung; Kopplung und Iconanzeige sind
+  vom Nutzer bestätigt, weitere Android-Praxisprüfungen stehen aus.
+  Ein eigenständiges, appfreies Tablet-Deck im Browser ist nicht enthalten.
 - Mehrere Geräte mit LCD benötigen gegebenenfalls einen aktiven USB-Hub mit
   eigener Stromversorgung. Ein Pi-Netzteil ersetzt keine Hub-Stromversorgung.
 

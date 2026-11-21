@@ -154,6 +154,9 @@ class LearnedProtocolTests(fixtures.TemporaryHome):
                 self.assertTrue(all(not m[2] for m in messages))
 
     def test_discovery_all_keys_and_plus_channels_share_named_device(self):
+        # "online" precedes queued initial discovery. Drain those three configs
+        # before changing the device name and measuring the next publication.
+        wait_for(lambda: len([m for m in self.servers[0].messages if m[0].startswith("homeassistant/") and m[1]]) >= 3)
         self.config["devices"]["keyboard"]["name"] = "Trust Keyboard"
         self.config["keys"][0].update(topic_version=2, device_topic="trust-keyboard")
         self.config["keys"].append({**self.config["keys"][0], "id": "tab", "control": "KEY_TAB", "name": "Tab", "repeat": False})
