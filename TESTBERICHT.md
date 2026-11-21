@@ -2,8 +2,9 @@
 
 ## 0.1.1 – Tastaturberechtigungen und Statusanzeige
 
-Lokal: **27 automatisierte Prüfungen erfolgreich**, einschließlich Statusprüfung
-mit abweichender PC-Uhr. Bash- und JavaScript-Syntaxprüfung erfolgreich.
+Lokaler Gesamtlauf: **28 Prüfungen erfolgreich**, einschließlich Statusprüfung mit abweichender
+PC-Uhr und Vereinheitlichung von evdev-Aliaslisten/-tupeln. Bash- und
+JavaScript-Syntaxprüfung erfolgreich.
 
 Auf dem Raspi wurde im angemeldeten Browser festgestellt:
 
@@ -13,11 +14,16 @@ Auf dem Raspi wurde im angemeldeten Browser festgestellt:
 - Nach dem vom Nutzer ausgeführten Befehl zum Sichern, Ergänzen der Gruppe `input`
   und Neustarten des Kernprozesses: neue Prozess-ID, **keine Gerätefehler mehr**,
   MQTT weiterhin online. Keine Belegungen oder Einstellungen geändert.
-- Ein physischer Tastendruck muss noch in der Ereignistabelle bestätigt werden.
+- Physische Eingaben in der Liveansicht bestätigt: HCT USB Entry Keyboard
+  `KEY_LEFTCTRL` mit press/release sowie Volumeregler mit Lautstärke− und Stumm.
+- Stumm wurde von 0.1.0 als Alias-Paar angezeigt. 0.1.1 normalisiert dieses Paar
+  zu `KEY_MUTE`; der Regressionstest erhält auch bestehende Alias-Zuordnungen.
 
 Die Korrektur für den Installer nimmt die Standardgruppe `input` auf und erhält
 sie in der udev-Regel. Die Statusanzeige verwendet die Uhr des Raspi statt der
 PC-Uhr. Auf dem Raspi ist während dieser Diagnose noch 0.1.0 installiert.
+
+![Live-Eingaben nach Ergänzen der Eingabegruppe, Statushinweis noch aus 0.1.0](docs/screenshots/tastatur-live-0.1.0.png)
 
 ## Bestätigte Basis 0.1.0
 

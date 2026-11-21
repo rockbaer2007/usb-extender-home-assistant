@@ -4,8 +4,10 @@
 
 - ZIP kopieren und den neunstufigen Installer auf Raspberry Pi OS 64 Bit ausführen;
   Paketprüfung, Installation und Dienststart bestätigen.
-- Ein konkretes Stream-Deck-Modell sowie eine Medien-/Makrotastatur prüfen:
-  Erkennung, Freigabe, Drücken/Loslassen/Halten, Icons und Helligkeit.
+- Ein konkretes Stream-Deck-Modell prüfen: Erkennung, Freigabe,
+  Drücken/Loslassen/Halten, Icons und Helligkeit.
+- Weitere Medientasten prüfen, insbesondere Play/Pause und Titelsprung.
+  Tastatur press/release sowie Lautstärke− und Stumm wurden bereits live bestätigt.
 - USB-Geräte abziehen/wieder anstecken, den Pi neu starten und die gespeicherten
   Belegungen sowie MQTT-Wiederverbindung prüfen.
 - Drei reale MQTT-Broker anschließen, Ausfall eines Brokers prüfen und HA-Discovery

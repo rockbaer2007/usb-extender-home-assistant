@@ -9,8 +9,11 @@
   erkannten Eingabegeräte unter dem tatsächlichen Dienstkonto.
 - Dienststatus wird mit der Uhr des Raspberry Pi berechnet. Eine abweichende
   PC-Uhr erzeugt keine falsche Anzeige „Dienst nicht aktiv“ mehr.
+- evdev-Aliase werden zu einem Tastennamen vereinheitlicht, insbesondere
+  `KEY_MIN_INTERESTING,KEY_MUTE` zu `KEY_MUTE`. Bestehende Alias-Zuordnungen bleiben nutzbar.
 - Bestätigte Browserdiagnose auf dem Raspi: Eingabegeräte und MQTT erkannt,
-  aber `Permission denied` beim Öffnen der Eingabekanäle. Live-Nachtest steht aus.
+  aber `Permission denied` beim Öffnen der Eingabekanäle. Nach Korrektur der Gruppe
+  `input` kommen HCT-Tastatur- und Volumeregler-Ereignisse in der Liveansicht an.
 
 ## 0.1.0 – 21. November 2026
 

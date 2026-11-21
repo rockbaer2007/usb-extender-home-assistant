@@ -11,7 +11,13 @@ für das Dienstkonto (`Permission denied`). Der Kernprozess läuft weiter.
 
 Korrektur 0.1.1: Standardgruppe `input` im Installer und in systemd, Prüfung der
 realen Leserechte und Dienststatus ohne Abhängigkeit von der PC-Uhr.
-Der Live-Nachtest nach der Berechtigungskorrektur ist noch offen.
+Der Live-Nachtest nach der Berechtigungskorrektur ist erfolgreich: HCT-Tastatur
+liefert `KEY_LEFTCTRL` mit press/release; der Volumeregler liefert Lautstärke− und
+Stumm. MQTT ist weiterhin online. Auf dem Raspi läuft 0.1.0 mit ergänzter Eingabegruppe;
+das vollständige Update auf 0.1.1 ist noch einzuspielen.
+
+Zusätzlich wird der beim Live-Test sichtbare evdev-Alias der Stummtaste in 0.1.1
+zu `KEY_MUTE` normalisiert, auch für bereits angelegte Alias-Zuordnungen.
 
 ## Bestätigte Basis 0.1.0
 

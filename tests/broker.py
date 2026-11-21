@@ -114,7 +114,12 @@ class Broker:
 def wait_for(predicate, timeout=6):
     end = time.monotonic() + timeout
     while time.monotonic() < end:
-        if predicate():
-            return
+        try:
+            if predicate():
+                return
+        except (FileNotFoundError, PermissionError):
+            # Windows can temporarily deny a read while another process replaces
+            # the status file. Retry the observation, not the operation under test.
+            pass
         time.sleep(0.03)
     raise AssertionError("Condition did not become true before timeout")

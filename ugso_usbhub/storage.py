@@ -18,6 +18,15 @@ def status_path():
     return Path(os.environ.get("UGSO_USB_STATUS", str(home() / "status.json")))
 
 
+def canonical_control(value):
+    """evdev can return alias tuples/lists; store a single actual key name."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (tuple, list)) and value and all(isinstance(x, str) for x in value):
+        return next((x for x in value if x not in {"KEY_MIN_INTERESTING", "KEY_MAX", "KEY_CNT", "BTN_MISC", "BTN_MOUSE", "BTN_GAMEPAD"}), value[0])
+    raise ValueError("Taste muss ein Name sein")
+
+
 def atomic_json(path, data):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -104,6 +113,7 @@ def validate(c):
         if not b.get("id") or b["id"] in seen or not b.get("device") or not b.get("control"):
             raise ValueError("Jede Belegung benötigt eindeutige ID, Gerät und Taste")
         seen.add(b["id"])
+        b["control"] = canonical_control(b["control"])
         import re
         if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", b["id"]):
             raise ValueError("Belegungs-ID enthält ungültige Zeichen")

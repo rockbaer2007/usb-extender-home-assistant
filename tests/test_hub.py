@@ -17,7 +17,7 @@ import http.cookiejar
 import zipfile
 from PIL import Image
 from ugso_usbhub import icons
-from ugso_usbhub.storage import defaults, home, atomic_json, load_config, save_config, validate, public_config, merge_public, password_hash, check_password
+from ugso_usbhub.storage import defaults, home, atomic_json, load_config, save_config, validate, public_config, merge_public, password_hash, check_password, canonical_control
 from ugso_usbhub.mqtt import Brokers, resolve_targets
 from ugso_usbhub.hardware import identity, match_transport, Hardware
 from ugso_usbhub.web import Server
@@ -84,6 +84,15 @@ class ConfigTests(TemporaryHome):
         self.assertEqual(match_transport("0001:000a:00", devices), "a")
         self.assertEqual(match_transport("0001:000b:00", devices), "b")
         self.assertIsNone(match_transport("0001:000c:00", devices))
+
+    def test_evdev_aliases_and_existing_mapping_are_canonical(self):
+        for value in (("KEY_MIN_INTERESTING", "KEY_MUTE"), ["KEY_MIN_INTERESTING", "KEY_MUTE"], "KEY_MUTE"):
+            self.assertEqual(canonical_control(value), "KEY_MUTE")
+        config = defaults()
+        config["bindings"] = [{"id": "mute", "device": "demo", "control": ["KEY_MIN_INTERESTING", "KEY_MUTE"], "gesture": "press"}]
+        self.assertEqual(validate(config)["bindings"][0]["control"], "KEY_MUTE")
+        with self.assertRaises(ValueError):
+            canonical_control({"not": "a key"})
 
 
 def png():

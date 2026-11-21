@@ -7,7 +7,7 @@ import sys
 import threading
 import time
 from PIL import Image, ImageDraw, ImageFont, ImageOps
-from .storage import home
+from .storage import home, canonical_control
 
 LOG = logging.getLogger(__name__)
 
@@ -177,8 +177,7 @@ class Hardware:
                 for event in device.read():
                     if event.type == evdev.ecodes.EV_KEY:
                         control = evdev.ecodes.KEY.get(event.code, evdev.ecodes.BTN.get(event.code, str(event.code)))
-                        if isinstance(control, list):
-                            control = control[0]
+                        control = canonical_control(control)
                         self.emit(ident, control, {0: "release", 1: "press", 2: "repeat"}.get(event.value, "press"), event.value)
                     elif event.type == evdev.ecodes.EV_REL and event.value:
                         self.emit(ident, evdev.ecodes.REL.get(event.code, str(event.code)), "rotate_right" if event.value > 0 else "rotate_left", event.value)
