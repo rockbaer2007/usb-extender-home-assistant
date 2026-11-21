@@ -10,6 +10,9 @@
   Belegungen sowie MQTT-Wiederverbindung prüfen.
 - Drei reale MQTT-Broker anschließen, Ausfall eines Brokers prüfen und HA-Discovery
   sowie Display-Rückmeldungen mit der tatsächlichen HA-Installation testen.
+- ioBroker-Adapter für HA-Discovery praktisch prüfen: Werden die MQTT-
+  Geräteauslöser (`device_automation`) übernommen? Identische Topics und Payloads
+  an Produktiv- und Testbroker sind bereits lokal protokollseitig bestätigt.
 - Webdienst per CLI beenden und bestätigen, dass die Geräte weiterarbeiten und
   Port 8098 geschlossen ist. Anschließend erneut starten.
 - Ein tatsächlich verwendetes Marketplace-Iconpack mit eigener gültiger Lizenz

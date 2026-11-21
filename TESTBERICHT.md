@@ -6,8 +6,8 @@ Datum: 21. November 2026. Lokale Windows-Prüfung mit Python 3.13.14.
 
 `python -m unittest discover -v`
 
-Der letzte Gesamtlauf umfasst **26 Prüfungen**, einschließlich identischer
-Spiegelung zu mehreren Brokern.
+**26 Prüfungen erfolgreich**, lokal und in der Linux-CI, einschließlich
+identischer Spiegelung zu mehreren Brokern.
 
 - Konfigurationsversion und genau drei Brokerplätze; Passwort-Hash,
   ausgeblendete Zugangsdaten und Erhalt gespeicherter MQTT-Passwörter.
@@ -68,5 +68,19 @@ Lokale Oberfläche `http://127.0.0.1:8098` mit ausdrücklich künstlichen Beispi
 - HA-Geräteauslöser und Anzeigezustände mit der tatsächlichen HA-Installation.
 - Alle Varianten realer Elgato-Marketplace-Iconpacks sowie Animationen.
 
-Eine Linux-CI ist im privaten Repository vorgesehen; ihr Ergebnis wird separat
-festgehalten und ersetzt keinen Raspberry-Pi-Hardwaretest.
+## Linux-CI
+
+Die Linux-CI unter Ubuntu 24.04 / Python 3.11 ist erfolgreich:
+[Linux-Prüfung für 2432764](https://github.com/rockbaer2007/usb-extender-home-assistant/actions/runs/44889742734).
+
+- Native Bibliotheken und Linux-Python-Abhängigkeiten installiert, einschließlich evdev.
+- Gesamttests, echte SVG-Rasterung und ZIP-Erstellung erfolgreich.
+- `sudo bash install.sh` auf der isolierten Linux-VM vollständig ausgeführt.
+- CLI-Versionsanzeige 0.1.0; USB-/MQTT-Dienst aktiv; systemd-Units geprüft.
+- Weboberfläche gestartet und HTML erfolgreich abgerufen; Konfigurations-API
+  ohne Anmeldung wie vorgesehen mit HTTP 401 abgewiesen.
+- Weboberfläche gestoppt, HTTP-Port geschlossen; USB-/MQTT-Dienst weiterhin aktiv.
+- Kernprozess über systemd neu gestartet und danach wieder aktiv.
+
+Der Installationslauf enthält alle 26 Gesamttests und die native USB-Bibliotheksprüfung.
+Ein Linux-x86-VM-Test ersetzt keinen Raspberry-Pi-/USB-Hardwaretest.
