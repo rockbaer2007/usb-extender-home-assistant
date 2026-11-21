@@ -32,6 +32,9 @@ jobs:
         run: |
           sudo bash install.sh </dev/null
           sudo usb-extender --version
+          sudo install -o root -g input -m 640 /etc/hostname /tmp/usb-extender-input-probe
+          sudo runuser -u ugso-usbhub -- cat /tmp/usb-extender-input-probe >/dev/null
+          sudo rm /tmp/usb-extender-input-probe
           sudo systemctl is-active --quiet ugso-usbhub.service
           sudo systemd-analyze verify /etc/systemd/system/ugso-usbhub.service /etc/systemd/system/ugso-usbhub-web.service
           sudo runuser -u ugso-usbhub -- /opt/ugso-usbhub/current/.venv/bin/python - <<'PY'
@@ -57,5 +60,5 @@ jobs:
         run: python tools/package.py
       - uses: actions/upload-artifact@v4
         with:
-          name: USB-Extender-Home-Assistant-0.1.0-Raspi4
+          name: USB-Extender-Home-Assistant-0.1.1-Raspi4
           path: dist/*

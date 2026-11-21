@@ -11,6 +11,7 @@ async function api(path, data) {
 function error(e) { $('#error').textContent = e.message || String(e); $('#error').hidden = false; }
 function notice(text) { $('#notice').textContent = text; $('#notice').hidden = false; }
 function dirty() { changed = true; $('#save').disabled = false; $('#dirty').textContent = 'Ungespeicherte Änderungen'; }
+function serviceAlive() { return typeof status.active === 'boolean' ? status.active : !!(status.updated && Math.abs(Date.now()/1000-status.updated)<15 && !status.stopped); }
 function card(title, parent=$('#content')) { const c=el('article',undefined,'card'); if(title)c.append(el('h2',title)); parent.append(c); return c; }
 function field(parent, label, value, change, type='text', choices=null) {
   const l=el('label', label), input=el(choices?'select':'input');
@@ -38,7 +39,7 @@ function overview() {
   [['USB-Geräte',status.devices.length,'Vom Linux-System erkannt'],['Aktive Belegungen',config.bindings.length,'Tasten, Mediensteuerung und Anzeigen'],['MQTT-Verbindungen',Object.values(status.brokers).filter(x=>x==='online').length+' / 3','Jeder Broker arbeitet unabhängig']].forEach(([t,v,s])=>{const c=card(t,grid);c.append(el('div',String(v),'stat'),el('small',s));});
   const c=card('So richtest du deinen Hub ein');
   const list=el('ol');['Unter „MQTT-Broker“ mindestens eine Verbindung einrichten.','Unter „USB-Geräte“ das gewünschte Gerät ausdrücklich freigeben.','Taste drücken und das Ereignis unter „Tasten & Anzeigen“ übernehmen.','Zielbroker, Belegung und bei Stream Decks ein Icon auswählen.','Speichern. Danach kann die Weboberfläche per CLI abgeschaltet werden.'].forEach(t=>list.append(el('li',t)));c.append(list);
-  if(!status.updated||Date.now()/1000-status.updated>15||status.stopped)c.append(el('p','USB-/MQTT-Dienst ist nicht aktiv oder liefert keinen aktuellen Status. Mit sudo systemctl status ugso-usbhub prüfen.','warning'));
+  if(!serviceAlive())c.append(el('p','USB-/MQTT-Dienst ist nicht aktiv oder liefert keinen aktuellen Status. Mit sudo systemctl status ugso-usbhub prüfen.','warning'));
   const note=card('Unterstützung');note.append(el('p','Alle USB-Geräte werden aufgelistet. Tastaturen und Medientasten werden über Linux evdev verarbeitet; unterstützte physische Stream Decks über den HID-Treiber. Andere Geräte sind zunächst nur in der Bestandsliste. Stream Deck Mobile ist kein direkt gekoppeltes USB-Gerät.'));
 }
 function devices() {
@@ -128,6 +129,6 @@ $('#login-form').onsubmit=async e=>{e.preventDefault();try{await api('login',{pa
 $('#logout').onclick=async()=>{if(changed&&!confirm('Ungespeicherte Änderungen verwerfen?'))return;await api('logout',{});changed=false;showLogin();};
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{page=b.dataset.page;render();});
 $('#save').onclick=async()=>{try{await api('config',config);config=await api('config');changed=false;$('#save').disabled=true;$('#dirty').textContent='Gespeichert';$('#error').hidden=true;render();notice('Gespeichert. Der USB-/MQTT-Dienst übernimmt die Einstellungen innerhalb weniger Sekunden.');}catch(e){error(e);}};
-setInterval(async()=>{if(!config)return;try{status=await api('status');const alive=status.updated&&Date.now()/1000-status.updated<15&&!status.stopped;$('#connection').textContent=alive?'● USB-/MQTT-Dienst aktiv':'○ Dienst nicht aktiv';if(page==='bindings'){const target=$('#content article:first-child > div');if(target)renderEvents(target,true);} }catch(e){error(e);}},2500);
+setInterval(async()=>{if(!config)return;try{status=await api('status');$('#connection').textContent=serviceAlive()?'● USB-/MQTT-Dienst aktiv':'○ Dienst nicht aktiv';if(page==='bindings'){const target=$('#content article:first-child > div');if(target)renderEvents(target,true);} }catch(e){error(e);}},2500);
 window.addEventListener('beforeunload',e=>{if(changed){e.preventDefault();e.returnValue='';}});
 enter().catch(()=>{});

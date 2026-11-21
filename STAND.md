@@ -1,9 +1,19 @@
 # Aktueller Stand
 
-## USB Extender für Home Assistant 0.1.0
+## USB Extender für Home Assistant 0.1.1 in Prüfung
 
 Stand: 21. November 2026. Eigenständiges privates Repository, keine Änderungen
 an ATLAS, HA Logic Studio Pro, VFRegist oder bestehenden Home-Assistant-Systemen.
+
+Praxisdiagnose auf dem Raspi: HCT USB Entry Keyboard und weitere USB-Eingabegeräte
+werden erkannt; MQTT-Broker 1 ist online. Auf den Eingabekanälen fehlen Leserechte
+für das Dienstkonto (`Permission denied`). Der Kernprozess läuft weiter.
+
+Korrektur 0.1.1: Standardgruppe `input` im Installer und in systemd, Prüfung der
+realen Leserechte und Dienststatus ohne Abhängigkeit von der PC-Uhr.
+Der Live-Nachtest nach der Berechtigungskorrektur ist noch offen.
+
+## Bestätigte Basis 0.1.0
 
 Implementiert: USB-Inventar, freigegebene evdev-Eingaben, Stream-Deck-Adapter,
 drei MQTT-Broker, Belegungen, Iconbibliothek, getrennte Weboberfläche, CLI und

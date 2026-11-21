@@ -68,7 +68,11 @@ class Handler(BaseHTTPRequestHandler):
         if route == "/api/config":
             self.reply(200, public_config(load_config()))
         elif route == "/api/status":
-            self.reply(200, read_json(status_path(), {"devices": [], "events": [], "brokers": {}, "errors": {}, "updated": 0}))
+            snapshot = read_json(status_path(), {"devices": [], "events": [], "brokers": {}, "errors": {}, "updated": 0})
+            age = max(0, time.time() - snapshot.get("updated", 0))
+            snapshot["age_seconds"] = age
+            snapshot["active"] = bool(snapshot.get("updated") and age < 15 and not snapshot.get("stopped"))
+            self.reply(200, snapshot)
         elif route == "/api/icons":
             self.reply(200, icons.library())
         elif route.startswith("/icons/"):

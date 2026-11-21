@@ -87,7 +87,9 @@ fi
 
 step 'Dienstkonto und Datenordner anlegen'
 getent group ugso-usbhub >/dev/null || groupadd --system ugso-usbhub
+getent group input >/dev/null || groupadd --system input
 id ugso-usbhub >/dev/null 2>&1 || useradd --system --gid ugso-usbhub --home-dir "$STATE" --shell /usr/sbin/nologin ugso-usbhub
+usermod -a -G input ugso-usbhub
 install -d -o ugso-usbhub -g ugso-usbhub -m 750 "$STATE" "$STATE/import" "$STATE/icons" "$STATE/backups"
 install -d -m 755 "$BASE/releases"
 
@@ -130,6 +132,22 @@ install -m 644 "$SOURCE/systemd/70-ugso-usbhub.rules" /etc/udev/rules.d/70-ugso-
 udevadm control --reload-rules
 udevadm trigger --subsystem-match=input
 udevadm trigger --subsystem-match=usb
+udevadm settle --timeout=15
+printf '  Eingaberechte des Dienstkontos prüfen ...\n'
+runuser -u ugso-usbhub -- env UGSO_USB_HOME="$STATE" "$RELEASE/.venv/bin/python" - <<'PY'
+from ugso_usbhub.hardware import inventory
+import os
+bad = []
+for device in inventory():
+    if device['kind'] == 'input':
+        for path in device['inputs']:
+            readable = os.access(path, os.R_OK)
+            print('  ' + ('OK       ' if readable else 'WARNUNG  ') + path)
+            if not readable:
+                bad.append(path)
+if bad:
+    print('  Einige Eingabegeräte sind nicht lesbar. Details unter System in der Weboberfläche.')
+PY
 install -m 644 "$SOURCE/systemd/ugso-usbhub.service" /etc/systemd/system/ugso-usbhub.service
 install -m 644 "$SOURCE/systemd/ugso-usbhub-web.service" /etc/systemd/system/ugso-usbhub-web.service
 install -m 755 "$SOURCE/scripts/ugso-usbhub" /usr/local/bin/ugso-usbhub

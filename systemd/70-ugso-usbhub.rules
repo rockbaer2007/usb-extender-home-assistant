@@ -1,4 +1,5 @@
-# Dedicated service account only; the application opens inputs only after opt-in.
-SUBSYSTEM=="input", KERNEL=="event*", GROUP="ugso-usbhub", MODE="0660"
+# Preserve the standard Linux input group (Raspberry Pi OS assigns it again later).
+# The dedicated service account joins input; the application still requires opt-in.
+SUBSYSTEM=="input", KERNEL=="event*", GROUP="input", MODE="0660"
 SUBSYSTEM=="usb", ATTR{idVendor}=="0fd9", GROUP="ugso-usbhub", MODE="0660"
 SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0fd9", GROUP="ugso-usbhub", MODE="0660"

@@ -1,5 +1,17 @@
 # Änderungen
 
+## 0.1.1 – 21. November 2026
+
+- Tastaturzugriff auf Raspberry Pi OS: Dienstkonto zusätzlich in der Standardgruppe
+  `input`; systemd setzt diese Gruppe ebenfalls ausdrücklich. Die udev-Regel erhält
+  die Standardgruppe, statt sie durch eine private Gruppe zu ersetzen.
+- Installer wartet auf abgeschlossene udev-Verarbeitung und prüft Leserechte der
+  erkannten Eingabegeräte unter dem tatsächlichen Dienstkonto.
+- Dienststatus wird mit der Uhr des Raspberry Pi berechnet. Eine abweichende
+  PC-Uhr erzeugt keine falsche Anzeige „Dienst nicht aktiv“ mehr.
+- Bestätigte Browserdiagnose auf dem Raspi: Eingabegeräte und MQTT erkannt,
+  aber `Permission denied` beim Öffnen der Eingabekanäle. Live-Nachtest steht aus.
+
 ## 0.1.0 – 21. November 2026
 
 Erste eigenständige Fassung von **USB Extender für Home Assistant**.

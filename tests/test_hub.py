@@ -247,6 +247,26 @@ class WebTests(TemporaryHome):
             self.request("/api/config", public_config(load_config()), {"Origin": "http://other-host:99"})
         self.assertEqual(error.exception.code, 403)
 
+    def test_service_liveness_uses_server_clock(self):
+        self.login()
+        snapshot = {"updated": 995, "devices": [], "events": [], "errors": {}, "brokers": {}}
+        atomic_json(home() / "status.json", snapshot)
+        with patch("ugso_usbhub.web.time.time", return_value=1000):
+            with self.request("/api/status") as r:
+                result = json.load(r)
+            self.assertTrue(result["active"])
+            self.assertEqual(result["age_seconds"], 5)
+        snapshot["updated"] = 980
+        atomic_json(home() / "status.json", snapshot)
+        with patch("ugso_usbhub.web.time.time", return_value=1000):
+            with self.request("/api/status") as r:
+                self.assertFalse(json.load(r)["active"])
+        snapshot.update(updated=999, stopped=True)
+        atomic_json(home() / "status.json", snapshot)
+        with patch("ugso_usbhub.web.time.time", return_value=1000):
+            with self.request("/api/status") as r:
+                self.assertFalse(json.load(r)["active"])
+
     def test_icon_http_upload(self):
         self.login()
         import base64

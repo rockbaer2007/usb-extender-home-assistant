@@ -7,6 +7,7 @@ After=network-online.target
 Type=simple
 User=ugso-usbhub
 Group=ugso-usbhub
+SupplementaryGroups=input
 Environment=UGSO_USB_HOME=/var/lib/ugso-usbhub
 Environment=UGSO_USB_STATUS=/run/ugso-usbhub/status.json
 RuntimeDirectory=ugso-usbhub

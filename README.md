@@ -2,7 +2,7 @@
 
 **USB-Geräte und Stream Decks über MQTT verbinden – für Raspberry Pi.**
 
-Version **0.1.0** · Privates Projekt · Stand 21. November 2026
+Version **0.1.1** · Privates Projekt · Stand 21. November 2026
 
 Ein Raspberry Pi 4 wird zur USB-/MQTT-Brücke: Tastaturen, Medientasten,
 Makropads und unterstützte physische Stream Decks liefern Eingaben an bis zu
@@ -45,8 +45,8 @@ Installationspaket, kein vollständig offline installierbares ARM-Abbild.
    ```bash
    # Falls unzip noch nicht vorhanden ist:
    sudo apt-get update && sudo apt-get install -y unzip
-   unzip USB-Extender-Home-Assistant-0.1.0-Raspi4.zip
-   cd USB-Extender-Home-Assistant-0.1.0
+   unzip USB-Extender-Home-Assistant-0.1.1-Raspi4.zip
+   cd USB-Extender-Home-Assistant-0.1.1
    sudo bash install.sh
    ```
 
@@ -286,7 +286,8 @@ bleiben technische Kennungen. Der sichtbare Produktname ist
   in der Installation. Neu setzen mit `sudo usb-extender password`.
 - HTTP im vertrauenswürdigen lokalen Netz; nicht öffentlich weiterleiten.
   Für fremde Netze VPN oder HTTPS-Reverse-Proxy vorsehen.
-- Das Dienstkonto erhält udev-Zugriff auf Eingabegeräte und Elgato-HID-Geräte.
+- Das Dienstkonto ist Mitglied der Standardgruppe `input` für Linux-Eingabegeräte
+  und erhält udev-Zugriff auf Elgato-HID-Geräte.
   Die Anwendung liest Eingaben erst nach Freigabe. Das ist eine Softwarefreigabe,
   keine zusätzliche kernelbasierte Trennung einzelner Tastaturen.
 - MQTT-Passwörter müssen zum Verbinden lokal lesbar gespeichert sein; Datei und
