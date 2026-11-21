@@ -23,6 +23,12 @@ Die Korrektur für den Installer nimmt die Standardgruppe `input` auf und erhäl
 sie in der udev-Regel. Die Statusanzeige verwendet die Uhr des Raspi statt der
 PC-Uhr. Auf dem Raspi ist während dieser Diagnose noch 0.1.0 installiert.
 
+Auch die [Linux-CI für 9623d8b](https://github.com/rockbaer2007/usb-extender-home-assistant/actions/runs/44892114882)
+ist grün: alle 28 Prüfungen, native Bibliotheken, vollständiger Installer und
+Dienstprüfung. Zusätzlich konnte das Dienstkonto eine nur für root und die Gruppe
+`input` lesbare Testdatei tatsächlich öffnen. Damit ist die Gruppenmitgliedschaft
+unter Linux geprüft; der reale Tastatur-Nachtest erfolgte wie oben beschrieben.
+
 ![Live-Eingaben nach Ergänzen der Eingabegruppe, Statushinweis noch aus 0.1.0](docs/screenshots/tastatur-live-0.1.0.png)
 
 ## Bestätigte Basis 0.1.0

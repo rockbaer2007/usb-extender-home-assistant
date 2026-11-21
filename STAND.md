@@ -1,6 +1,6 @@
 # Aktueller Stand
 
-## USB Extender für Home Assistant 0.1.1 in Prüfung
+## USB Extender für Home Assistant 0.1.1
 
 Stand: 21. November 2026. Eigenständiges privates Repository, keine Änderungen
 an ATLAS, HA Logic Studio Pro, VFRegist oder bestehenden Home-Assistant-Systemen.
@@ -19,6 +19,10 @@ das vollständige Update auf 0.1.1 ist noch einzuspielen.
 Zusätzlich wird der beim Live-Test sichtbare evdev-Alias der Stummtaste in 0.1.1
 zu `KEY_MUTE` normalisiert, auch für bereits angelegte Alias-Zuordnungen.
 
+28 lokale Prüfungen und die Linux-CI einschließlich frischer Installation,
+tatsächlichem Lesetest mit der Gruppe `input` und Dienststart sind erfolgreich:
+[CI-Lauf für 9623d8b](https://github.com/rockbaer2007/usb-extender-home-assistant/actions/runs/44892114882).
+
 ## Bestätigte Basis 0.1.0
 
 Implementiert: USB-Inventar, freigegebene evdev-Eingaben, Stream-Deck-Adapter,
@@ -33,8 +37,8 @@ Geprüfter Quellcode: `2432764`, [CI-Lauf](https://github.com/rockbaer2007/usb-e
 systemd-Dienste, udev-Regeln und Anleitung. Abhängigkeiten werden bei der
 Installation aus den Paketquellen geladen.
 
-Noch kein Test auf einem physischen Raspi 4 und noch kein USB-Gerätetest.
-Docker ist auf diesem PC nicht gestartet; WSL kann hier nicht verwendet werden.
-Die ARM-Installation auf Raspberry Pi OS und die konkrete Hardware bleiben zu bestätigen.
+Der inzwischen erfolgreiche physische Eingabetest ist oben festgehalten.
+Offen bleiben das vollständige Update auf 0.1.1 am Raspi und der Test eines
+physischen Stream Decks.
 
 Der nächste praktische Schritt steht in [ROADMAP.md](ROADMAP.md).
