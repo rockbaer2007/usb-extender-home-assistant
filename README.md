@@ -2,7 +2,7 @@
 
 **USB-Geräte und Stream Decks über MQTT verbinden – für Raspberry Pi.**
 
-Version **0.1.3** · Privates Projekt · Stand 21. November 2026
+Version **0.1.4** · Privates Projekt · Stand 21. November 2026
 
 Ein Raspberry Pi 4 wird zur USB-/MQTT-Brücke: Tastaturen, Medientasten,
 Makropads und unterstützte physische Stream Decks liefern Eingaben an bis zu
@@ -54,22 +54,31 @@ im Browser; vorhandene Einstellungen und Einzelbelegungen bleiben erhalten.
 | Press | `press` beim Drücken | an |
 | Release | `release` beim Loslassen | an |
 | Switch | `ON` beim Drücken, `OFF` beim Loslassen | an |
-| Press+ | Press danach nach 50 ms leer zurücksetzen | aus |
-| Release+ | Release danach nach 50 ms leer zurücksetzen | aus |
+| Press+ | Eigener Kanal: `press`, nach 50 ms leer zurücksetzen | an |
+| Release+ | Eigener Kanal: `release`, nach 50 ms leer zurücksetzen | an |
 
-Die Plus-Optionen gelten für das jeweilige Press-/Release-Topic. Ihre Leer-
-Nachricht ist kein physisches Loslassen. Switch wird niemals leer zurückgesetzt.
-Beispieltopic: `ugso/usbhub/2/<geraete-id>/key_volumeup/press`; daneben gibt es
-`release` und `switch`. Leere Topicfelder nutzen den Präfix des Zielbrokers,
-explizite Topics werden unverändert an alle gewählten Broker gesendet.
+Ab 0.1.4 sind alle fünf Topics beim Anlernen mit lesbaren Namen ausgefüllt:
+`trust-keyboard-key-f1/press`, `/release`, `/switch`, `/press-plus` und `/release-plus`.
+Sie gehen mit identischem Namen an alle gewählten Broker. In MQTT ist `+` ein
+Platzhalter; deshalb heißen die Plus-Topics ausdrücklich `press-plus`/`release-plus`.
+Nur diese beiden Kanäle werden leer zurückgesetzt; normale Press-/Release-Kanäle
+bleiben unverändert. Die Leer-Nachricht ist kein physisches Loslassen.
+
+Gerätenamen werden MQTT-tauglich umgewandelt, etwa „Büro Tastatur“ zu
+`buero-tastatur`. Gleiche Gerätenamen erhalten bei Bedarf `-2`, `-3` usw.
+Nach dem Speichern bleiben Topics auch bei einer späteren Umbenennung stabil.
+Die technische Gerätekennung wird weiterhin intern verwendet und steht nicht
+im neuen Daten-Topic. Bestehende Einzelbelegungen und Tasten aus 0.1.3 behalten
+ihre bisherigen Topics und ihre ursprüngliche Plus-Funktion; keine stille Umstellung.
 Alle Tastenmeldungen bleiben QoS 0 und nicht retained; Offline-Eingaben werden
 nicht nachgesendet. Die Anzeige „übergeben“ bestätigt die lokale MQTT-Übergabe,
 nicht den Empfang oder die Entitätsanlage im Zielsystem.
 
 **Lauter/Leiser:** `KEY_VOLUMEUP` und `KEY_VOLUMEDOWN` starten beim Anlernen mit
 Wiederholung an: nach 500 ms alle 150 ms eine weitere Press-Nachricht. Zeiten sind
-einstellbar; Release, Switch und vorhandene Einzelbelegungen werden dadurch nicht
-wiederholt. Loslassen, Abziehen und eine Konfigurationsübernahme beenden die
+einstellbar; aktive Press- und Press+-Kanäle werden wiederholt. Release, Switch
+und vorhandene Einzelbelegungen werden dadurch nicht wiederholt.
+Loslassen, Abziehen und eine Konfigurationsübernahme beenden die
 Wiederholung. Nach 30 Sekunden greift ein Sicherheitsstopp. Das Gerät muss
 Drücken und Loslassen zuverlässig melden. Den Lautstärkeschritt und die
 Zielaktion legt die HA-Automation bzw. ioBroker-Logik fest.
@@ -77,7 +86,10 @@ Zielaktion legt die HA-Automation bzw. ioBroker-Logik fest.
 Bei aktivierter HA-Discovery werden Press/Release als Geräteauslöser mit passendem
 Payloadfilter und Switch als MQTT-Binärsensor angemeldet. Der Binärsensor zeigt
 die gedrückte Taste an; zum Steuern anderer Geräte ist eine Zuordnung/Automation
-erforderlich. Für ioBroker Discovery ausgeschaltet lassen und die MQTT-Topics
+erforderlich. Alle Tasten, Plus-Auslöser und Switch-Binärsensoren eines USB-Geräts
+teilen dieselbe stabile Gerätekennung und den gewählten Gerätenamen. Eine
+Namensänderung erzeugt dadurch kein neues Gerät. Für ioBroker Discovery
+ausgeschaltet lassen und die MQTT-Topics
 verwenden. Der tatsächliche ioBroker-Tastenempfang ist noch separat zu klären.
 
 ## Installation auf dem Raspberry Pi
@@ -94,8 +106,8 @@ Installationspaket, kein vollständig offline installierbares ARM-Abbild.
    ```bash
    # Falls unzip noch nicht vorhanden ist:
    sudo apt-get update && sudo apt-get install -y unzip
-   unzip USB-Extender-Home-Assistant-0.1.3-Raspi4.zip
-   cd USB-Extender-Home-Assistant-0.1.3
+   unzip USB-Extender-Home-Assistant-0.1.4-Raspi4.zip
+   cd USB-Extender-Home-Assistant-0.1.4
    sudo bash install.sh
    ```
 

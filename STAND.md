@@ -1,5 +1,23 @@
 # Aktueller Stand
 
+## USB Extender für Home Assistant 0.1.4
+
+Neue Tasten werden mit fünf lesbaren, vorbelegten Topics aus dem Gerätenamen
+angelegt. Press+/Release+ sind jetzt eigene Kanäle, die nur sich selbst nach
+50 ms zurücksetzen. Alle fünf sind standardmäßig an, einzeln abschaltbar und
+bearbeitbar. Bestehende Belegungen werden nicht automatisch umbenannt.
+
+Alle Discovery-Komponenten eines USB-Geräts teilen dieselbe stabile Gerätekennung
+und denselben gewählten Anzeigenamen. Lokal geprüft: zwei Tasten mit insgesamt
+acht Aktionsauslösern und zwei Switch-Binärsensoren unter einem gemeinsamen Gerät.
+Der tatsächliche HA-Geräteregister-Nachtest nach Installation steht noch aus.
+
+Vorherige Quellen gesichert unter
+`M:\repos-backups\usb-extender-before-readable-topics-20261121-130409`.
+47 Python-Prüfungen und beide JavaScript-Prüfläufe lokal erfolgreich.
+Keine Installation auf .112, keine Änderungen an HA/ioBroker in diesem Schritt.
+Der fehlende ioBroker-Tastenempfang bleibt offen.
+
 ## USB Extender für Home Assistant 0.1.3
 
 Implementiert: Anlernmodus, editierbare Tastenliste, Press/Release, Switch ON/OFF,

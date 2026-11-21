@@ -10,7 +10,7 @@ from unittest.mock import patch
 from tests import test_hub as fixtures
 from tests.broker import Broker, wait_for
 from ugso_usbhub.core import Core
-from ugso_usbhub.keymap import all_bindings
+from ugso_usbhub.keymap import all_bindings, device_topic_names, topic_slug
 from ugso_usbhub.learning import command, current
 from ugso_usbhub.mqtt import Brokers
 from ugso_usbhub.storage import defaults, validate, save_config, load_config, merge_public, public_config
@@ -26,6 +26,16 @@ def row(control="KEY_VOLUMEUP"):
 
 
 class LearnedConfigTests(fixtures.TemporaryHome):
+    def test_readable_names_with_umlauts_collisions_and_frozen_namespace(self):
+        config = defaults()
+        config["devices"] = {"a": {"name": "Büro-Tastatur"}, "b": {"name": "Büro Tastatur"}}
+        self.assertEqual(device_topic_names(config), {"a": "buero-tastatur", "b": "buero-tastatur-2"})
+        self.assertEqual(topic_slug("KEY_VOLUMEUP"), "key-volumeup")
+        config["keys"] = [{**row(), "device": "a", "device_topic": "buero-tastatur", "topic_version": 2}]
+        config["devices"]["a"]["name"] = "Neuer Name"
+        self.assertEqual(device_topic_names(config)["a"], "buero-tastatur")
+        self.assertTrue(all(b["topic"].startswith("buero-tastatur-key-volumeup/") for b in all_bindings(config)))
+
     def test_existing_settings_and_credentials_survive_save_restart(self):
         config = load_config()
         config["brokers"][1].update(password="preserved-secret", discovery=False)
@@ -125,6 +135,38 @@ class LearnedProtocolTests(fixtures.TemporaryHome):
         self.assertEqual((sensor["payload_on"], sensor["payload_off"]), ("ON", "OFF"))
         self.assertTrue(sensor["state_topic"].endswith("/key_volumeup/switch"))
         self.assertEqual({c["payload"] for c in configs if "automation_type" in c}, {"press", "release"})
+
+    def test_five_named_channels_and_plus_reset_on_both_brokers(self):
+        self.config["keys"][0].update(topic_version=2, device_topic="trust-keyboard")
+        self.assertEqual(self.pool.send("keyboard", "KEY_VOLUMEUP", "press"), 6)
+        self.pool.flush_resets(time.monotonic() + 1)
+        self.assertEqual(self.pool.send("keyboard", "KEY_VOLUMEUP", "release"), 6)
+        self.pool.flush_resets(time.monotonic() + 1)
+        expected = {"press": [b"press"], "press-plus": [b"press", b""],
+                    "release": [b"release"], "release-plus": [b"release", b""],
+                    "switch": [b"ON", b"OFF"]}
+        wait_for(lambda: all(len([m for m in s.messages if m[0].startswith("trust-keyboard-")]) == 8 for s in self.servers))
+        for server in self.servers:
+            for mode, payloads in expected.items():
+                topic = "trust-keyboard-key-volumeup/" + mode
+                messages = [m for m in server.messages if m[0] == topic]
+                self.assertEqual([m[1] for m in messages], payloads)
+                self.assertTrue(all(not m[2] for m in messages))
+
+    def test_discovery_all_keys_and_plus_channels_share_named_device(self):
+        self.config["devices"]["keyboard"]["name"] = "Trust Keyboard"
+        self.config["keys"][0].update(topic_version=2, device_topic="trust-keyboard")
+        self.config["keys"].append({**self.config["keys"][0], "id": "tab", "control": "KEY_TAB", "name": "Tab", "repeat": False})
+        before = len(self.servers[0].messages)
+        self.pool.discovery(self.config["brokers"][0])
+        wait_for(lambda: len([m for m in self.servers[0].messages[before:] if m[0].startswith("homeassistant/") and m[1]]) >= 10)
+        configs = [json.loads(p) for t, p, _ in self.servers[0].messages[before:] if t.startswith("homeassistant/") and p]
+        self.assertEqual({c["device"]["name"] for c in configs}, {"Trust Keyboard"})
+        self.assertEqual(len({tuple(c["device"]["identifiers"]) for c in configs}), 1)
+        triggers = [c for c in configs if "automation_type" in c]
+        self.assertEqual(len(triggers), 8)
+        self.assertEqual(len({(c["type"], c["subtype"]) for c in triggers}), 8)
+        self.assertTrue(all(c["topic"].startswith("trust-keyboard-key-") for c in triggers))
 
     def test_volume_repeat_stops_on_release_and_learning_suppresses(self):
         save_config(self.config)

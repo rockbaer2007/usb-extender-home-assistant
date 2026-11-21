@@ -3,9 +3,13 @@ let learning = null, learnedDraft = [], learningDevice = '', learnSequence = 0;
 const keyNames = {KEY_VOLUMEUP:'Lauter',KEY_VOLUMEDOWN:'Leiser',KEY_MUTE:'Stumm',KEY_PLAYPAUSE:'Play/Pause'};
 function keyId() { return Array.from(crypto.getRandomValues(new Uint8Array(12)), n=>n.toString(16).padStart(2,'0')).join(''); }
 function learnedKey(device, control) {
+  if(!learning?.topic_name)throw new Error('Gerätename für Topics fehlt. Anlernmodus neu starten.');
+  const base=learning.topic_name+'-'+control.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   return {id:'key-'+keyId(),device,control,name:keyNames[control]||control.replace(/^KEY_/,''),enabled:true,
-    press:true,release:true,switch:true,press_plus:false,release_plus:false,
-    press_topic:'',release_topic:'',switch_topic:'',targets:null,icon:'',
+    topic_version:2,device_topic:learning.topic_name,
+    press:true,release:true,switch:true,press_plus:true,release_plus:true,
+    press_topic:base+'/press',release_topic:base+'/release',switch_topic:base+'/switch',
+    press_plus_topic:base+'/press-plus',release_plus_topic:base+'/release-plus',targets:null,icon:'',
     repeat:['KEY_VOLUMEUP','KEY_VOLUMEDOWN'].includes(control),repeat_delay:500,repeat_interval:150};
 }
 function collectLearned() {
@@ -31,11 +35,24 @@ function drawKeyList(parent, rows, draft=false) {
     field(cell(),'Aktiv',k.enabled,v=>k.enabled=v,'checkbox');
     const name=cell();name.append(el('small',config.devices[k.device]?.name||k.device),el('div',k.control,'device-id'));field(name,'Name',k.name,v=>k.name=v);
     ['press','release','switch'].forEach(mode=>{
-      const td=cell();field(td,'Senden',k[mode],v=>k[mode]=v,'checkbox');
-      const input=field(td,'Topic (leer = automatisch)',k[mode+'_topic'],v=>k[mode+'_topic']=v);input.placeholder='Automatisch pro Broker';
-      const targets=k.targets??config.devices[k.device]?.targets??config.default_targets;
-      targets.forEach(id=>{const b=config.brokers.find(b=>b.id===id);if(b)td.append(el('small',b.name+': '+(k[mode+'_topic']||b.prefix+'/'+k.device+'/'+k.control.toLowerCase().replace(/[^a-z0-9_-]/g,'-')+'/'+mode),'topic-preview'));});
-      if(mode!=='switch')field(td,mode==='press'?'Press+ · danach leer':'Release+ · danach leer',k[mode+'_plus'],v=>k[mode+'_plus']=v,'checkbox');
+      const td=cell();
+      function channel(channel,label){
+        field(td,label,k[channel],v=>k[channel]=v,'checkbox');
+        const input=field(td,'Topic',k[channel+'_topic'],v=>{k[channel+'_topic']=v;preview();});input.placeholder='Automatisch';
+        const targetText=el('div');td.append(targetText);
+        function preview(){
+          targetText.replaceChildren();const targets=k.targets??config.devices[k.device]?.targets??config.default_targets;
+          targets.forEach(id=>{const b=config.brokers.find(b=>b.id===id);if(!b)return;
+            const fallback=k.topic_version===2?k.device_topic+'-'+k.control.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'/'+channel.replace('_','-'):b.prefix+'/'+k.device+'/'+k.control.toLowerCase().replace(/[^a-z0-9_-]/g,'-')+'/'+channel;
+            targetText.append(el('small',b.name+': '+(k[channel+'_topic']||fallback),'topic-preview'));
+          });
+        }preview();
+      }
+      channel(mode,'Senden');
+      if(mode!=='switch'){
+        if(k.topic_version===2)channel(mode+'_plus',mode==='press'?'Press+ · eigener Kanal':'Release+ · eigener Kanal');
+        else field(td,mode==='press'?'Press+ · danach leer':'Release+ · danach leer',k[mode+'_plus'],v=>k[mode+'_plus']=v,'checkbox');
+      }
     });
     const icon=cell();if(k.icon){const image=el('img');image.src='/icons/'+k.icon+'.png';image.alt=k.name;image.className='key-icon';icon.append(image);}
     field(icon,'Icon',k.icon,v=>k.icon=v,'select',[['','Kein Icon'],...iconList.map(i=>[i.id,i.name])]);
@@ -48,7 +65,7 @@ function drawKeyList(parent, rows, draft=false) {
       const fields=el('div',undefined,'fields');details.append(fields);
       const delay=field(fields,'Start nach (ms)',k.repeat_delay,v=>k.repeat_delay=v,'number');delay.min=200;delay.max=5000;
       const interval=field(fields,'Abstand (ms)',k.repeat_interval,v=>k.repeat_interval=v,'number');interval.min=100;interval.max=2000;
-      details.append(el('small','Wiederholt nur Press, nicht Release oder Switch. Das Zielsystem legt den Lautstärkeschritt fest. Sicherheitsstopp nach 30 Sekunden ohne Loslassen.'));
+      details.append(el('small','Wiederholt die aktiven Press-/Press+-Kanäle, nicht Release oder Switch. Das Zielsystem legt den Lautstärkeschritt fest. Sicherheitsstopp nach 30 Sekunden ohne Loslassen.'));
     }
     button(details,'Aus Liste entfernen',()=>{rows.splice(rows.indexOf(k),1);dirty();render();},'danger');
   });wrap.append(table);parent.append(wrap);
@@ -77,7 +94,7 @@ function learningPanel() {
     button(c,'Tasten übernehmen',()=>{config.keys||=[];config.keys.push(...learnedDraft);learnedDraft=[];dirty();render();notice('Tasten übernommen. Jetzt speichern, um MQTT zu aktivieren.');},'primary');
     button(c,'Anlernliste verwerfen',()=>{learnedDraft=[];render();});
   }
-  c.append(el('small','Press/Release: press bzw. release. Plus: nach 50 ms leer zurücksetzen. Switch: ON beim Drücken, OFF beim Loslassen. Keine dieser Nachrichten wird retained gesendet.'));
+  c.append(el('small','Neue Tasten: Gerätename-key-taste/press, /release, /switch, /press-plus und /release-plus. Alle fünf Kanäle sind vorbereitet und aktiv. Nur die Plus-Kanäle werden nach 50 ms leer zurückgesetzt. Switch sendet ON/OFF. Bestehende Topics bleiben erhalten.'));
   const list=card('Gespeicherte Tasten');drawKeyList(list,config.keys||[]);
 }
 async function endLearning() {

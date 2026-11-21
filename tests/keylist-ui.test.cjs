@@ -17,7 +17,7 @@ w.fetch=async(path,options)=>{
   if(path==='/api/status')result=snapshot;
   if(path==='/api/icons')result=[];
   if(path==='/api/learning'){
-    if(body.action==='start')lease={id:'session',device:body.device,expires:Date.now()/1000+15};
+    if(body.action==='start')lease={id:'session',device:body.device,topic_name:'trust-keyboard',expires:Date.now()/1000+15};
     if(body.action==='stop'){
       lease.expires=0;
       snapshot.events.push({sequence:2,learning_id:'session',device:'kbd',control:'KEY_F2',gesture:'press',time:Date.now()/1000});
@@ -41,7 +41,8 @@ const click=async text=>{const b=[...w.document.querySelectorAll('button')].find
   await interval();
   assert.equal(w.document.querySelectorAll('#learned-draft .key-table').length,1);
   assert.ok([...w.document.querySelectorAll('#learned-draft input')].some(i=>i.value==='Lauter'));
-  assert.ok(w.document.querySelector('#learned-draft').textContent.includes('test/iob/kbd/key_volumeup/switch'));
+  assert.ok(w.document.querySelector('#learned-draft').textContent.includes('IOB: trust-keyboard-key-volumeup/switch'));
+  assert.ok([...w.document.querySelectorAll('#learned-draft input')].some(i=>i.value==='trust-keyboard-key-volumeup/press-plus'));
   await click('Anlernen beenden');await click('Tasten übernehmen');await click('Speichern');
   assert.equal(config.keys.length,2);
   assert.equal(config.keys[0].repeat,true);

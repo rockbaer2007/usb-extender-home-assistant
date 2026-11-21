@@ -2,7 +2,7 @@
 
 ## Als Nächstes: Praxisprüfung auf dem Raspberry Pi 4
 
-- 0.1.3 auf dem Pi installieren und den Anlernmodus mit der Trust-Tastatur prüfen:
+- 0.1.4 auf dem Pi installieren und den Anlernmodus mit der Trust-Tastatur prüfen:
   keine Aktionen beim Anlernen, keine Duplikate, Übernahme/Speicherung und Neustart.
 - Press/Release, Plus-Rücksetzung und Switch ON/OFF praktisch prüfen; Lauter/Leiser
   halten und kontrollieren, dass die Wiederholung beim Loslassen stoppt.
@@ -17,6 +17,7 @@
 - Drei reale MQTT-Broker anschließen, Ausfall eines Brokers prüfen und HA-Discovery
   sowie Display-Rückmeldungen mit der tatsächlichen HA-Installation testen.
 - HA-Binärsensor für den Switch-Zustand sowie gefilterte Press/Release-Auslöser
+  einschließlich der separaten Plus-Kanäle unter einem benannten USB-Gerät
   mit Discovery praktisch prüfen. IOB-Discovery bleibt aus: hass-mqtt meldete
   `device_automation` als nicht unterstützt.
 - Webdienst per CLI beenden und bestätigen, dass die Geräte weiterarbeiten und

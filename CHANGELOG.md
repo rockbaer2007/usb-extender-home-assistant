@@ -1,5 +1,19 @@
 # Änderungen
 
+## 0.1.4 – 21. November 2026
+
+- Neue Tasten haben sofort lesbare, ausgefüllte Topics:
+  `geraetename-key-f1/press`, `/release`, `/switch`, `/press-plus`, `/release-plus`.
+- Alle fünf Kanäle werden vorbereitet und sind einzeln aktivierbar. Plus ist ein
+  separater Kanal mit Leer-Rücksetzung; normale Press/Release bleiben unverändert.
+- Gleiche Gerätenamen erhalten lesbare Zähler, Umlaute werden MQTT-tauglich
+  umgewandelt. Gespeicherte Topics ändern sich bei späterer Umbenennung nicht.
+- HA-Discovery verwendet durchgehend dieselbe Gerätekennung und denselben
+  Anzeigenamen für alle Tasten, Plus-Auslöser und Binärsensoren eines Geräts.
+- Lautstärkewiederholung berücksichtigt auch den separaten Press+-Kanal.
+- Bestehende Einzelbelegungen und Tasten aus 0.1.3 bleiben kompatibel und behalten
+  Topics, Aktivierung sowie die bisherige Plus-Funktion.
+
 ## 0.1.3 – 21. November 2026
 
 - Anlernmodus mit 15-Sekunden-Lease pro Gerät; unterdrückt dessen MQTT-Aktionen,

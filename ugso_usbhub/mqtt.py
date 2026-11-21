@@ -119,6 +119,11 @@ class Brokers:
     def discovery_topic(self, binding):
         return f"homeassistant/device_automation/ugso_{self.config['hub_id']}_{binding['id']}/config"
 
+    def discovery_device(self, ident):
+        return {"identifiers": [f"ugso_{self.config['hub_id']}_{ident}"],
+                "name": self.config["devices"].get(ident, {}).get("name") or "USB-Gerät",
+                "manufacturer": "USB Extender", "model": "USB input"}
+
     def known_discovery(self, broker, registry, endpoint):
         known = set(registry.get(endpoint, []))
         # Migrate deterministic announcements from 0.1.0/0.1.1 config backups.
@@ -152,15 +157,12 @@ class Brokers:
                         "unique_id": f"ugso_{self.config['hub_id']}_{b['key_id']}_switch",
                         "state_topic": self.event_topic(broker, b), "payload_on": "ON", "payload_off": "OFF",
                         "availability_topic": broker["prefix"] + "/availability",
-                        "device": {"identifiers": [f"ugso_{self.config['hub_id']}_{b['device']}"],
-                                   "name": self.config["devices"].get(b["device"], {}).get("name") or b["device"]}})
+                        "device": self.discovery_device(b["device"])})
                     continue
                 kind = {"press": "button_short_press", "release": "button_short_release", "hold": "button_long_press"}.get(b["gesture"], b["gesture"])
                 payload = {"automation_type": "trigger", "topic": self.event_topic(broker, b),
                            "type": kind, "subtype": (b.get("key_mode", "") + "_" if b.get("key_mode") else "") + canonical_control(b["control"]).replace(":", "_"),
-                           "device": {"identifiers": [f"ugso_{self.config['hub_id']}_{b['device']}"],
-                                      "name": self.config["devices"].get(b["device"], {}).get("name") or b["device"],
-                                      "manufacturer": "UGSo", "model": "USB Hub"}}
+                           "device": self.discovery_device(b["device"])}
                 if b.get("key_mode"):
                     payload["payload"] = b["payload"]
                 desired[self.discovery_topic(b)] = json.dumps(payload)
@@ -191,7 +193,7 @@ class Brokers:
         for binding in all_bindings(self.config):
             if switch_only and binding.get("key_mode") != "switch":
                 continue
-            if repeat_key and binding.get("key_mode") != "press":
+            if repeat_key and binding.get("key_mode") not in ("press", "press_plus"):
                 continue
             if (binding["device"], canonical_control(binding["control"]), binding["gesture"]) != (device, control, gesture):
                 continue

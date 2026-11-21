@@ -1,5 +1,23 @@
 # Prüfungen
 
+## 0.1.4 – Lesbare Topics und Gerätezuordnung
+
+47 Python-Prüfungen und beide JavaScript-Prüfläufe lokal erfolgreich.
+
+- Namen mit Umlauten, gleichen Schreibweisen und späterer Umbenennung geprüft:
+  lesbare Zähler statt Hashes; gespeicherter Topic-Namensraum bleibt stabil.
+- Zwei TCP-MQTT-Testbroker empfangen dieselben fünf lesbaren Topics.
+  Nur `press-plus` und `release-plus` erhalten anschließend leere Nutzdaten;
+  normale Press/Release und Switch bleiben unverändert. Keine Retain-Markierung.
+- Discovery für zwei Tasten: acht verschiedene Geräteauslöser und zwei
+  Binärsensoren tragen identischen Gerätenamen und identische Gerätekennung.
+- DOM-Anlernablauf zeigt die fertigen lesbaren Topics einschließlich der beiden
+  Plus-Kanäle bereits vor dem Speichern an und speichert sie unverändert.
+- Vorhandene 0.1.3-Belegungen und deren MQTT-Verhalten werden weiter geprüft.
+
+Kein physischer Pi-/HA-/ioBroker-Nachtest dieser Fassung. Referenz für die
+Gerätezuordnung: [Home Assistant MQTT](https://www.home-assistant.io/integrations/mqtt/).
+
 ## 0.1.3 – Anlernmodus und Tastenliste
 
 44 Python-Prüfungen sowie die beiden JavaScript-Prüfläufe sind lokal erfolgreich.
