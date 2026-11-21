@@ -11,7 +11,7 @@ Erste eigenständige Fassung von **USB Extender für Home Assistant**.
 - Eigene Iconordner, Einzelbilder, ZIP und lokale Elgato-Iconpack-Archive.
 - Separat abschaltbare, passwortgeschützte Weboberfläche.
 - Neunstufiger Installer mit Prüfung und Nachinstallation fehlender Pakete,
-  Update-Sicherung, getrennten Dienstkonten/Prozessen und Programm-Rückschaltung.
+  Update-Sicherung, separatem Dienstkonto, getrennten Prozessen und Programm-Rückschaltung.
 - Anleitung, automatisierte Prüfungen und kopierbares Raspi-Installations-ZIP.
 
 Physischer Raspberry-Pi-/USB-Test steht vor dem Praxiseinsatz noch aus.

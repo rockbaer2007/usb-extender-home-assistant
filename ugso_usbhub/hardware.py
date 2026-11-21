@@ -25,6 +25,8 @@ def identity(vendor, product, serial, port):
 
 
 def inventory():
+    from StreamDeck.ProductIDs import USBProductIDs
+    deck_products = {f"{value:04x}" for key, value in vars(USBProductIDs).items() if key.startswith("USB_PID_STREAMDECK_")}
     devices = []
     for path in sorted(Path("/sys/bus/usb/devices").glob("*")):
         if not (path / "idVendor").exists() or text(path / "bDeviceClass") == "09":
@@ -40,7 +42,7 @@ def inventory():
                         "vendor": vendor, "product_id": product, "serial": serial,
                         "bus": int(text(path / "busnum") or 0), "address": int(text(path / "devnum") or 0),
                         "port": path.name, "name": text(path / "product") or f"USB {vendor}:{product}",
-                        "inputs": inputs, "kind": "streamdeck" if vendor == "0fd9" else "input" if inputs else "inventory",
+                        "inputs": inputs, "kind": "streamdeck" if vendor == "0fd9" and product in deck_products else "input" if inputs else "inventory",
                         "identity_hint": "Seriennummer" if serial else "USB-Port (beim Umstecken neu zuordnen)"})
     return devices
 

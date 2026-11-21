@@ -82,6 +82,9 @@ class Brokers:
     def _message(self, broker):
         def callback(client, userdata, message):
             try:
+                if len(message.payload) > 16384:
+                    LOG.warning("Zu großer MQTT-Anzeigeauftrag verworfen")
+                    return
                 if message.topic == "homeassistant/status" and message.payload == b"online":
                     self.discovery(broker)
                 else:
