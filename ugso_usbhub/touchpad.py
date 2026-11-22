@@ -1,11 +1,22 @@
 """Headless type-B multitouch gestures; no desktop and no raw-coordinate MQTT."""
 import math
+import copy
 
 # Linux input-event-codes.h: EV_SYN/ABS/KEY and type-B MT slots.
 EV_SYN, EV_KEY, EV_ABS = 0, 1, 3
 SYN_REPORT, SYN_DROPPED = 0, 3
 MT_SLOT, MT_X, MT_Y, MT_ID = 0x2f, 0x35, 0x36, 0x39
 BTN_LEFT = 0x110
+SLIDE_DIRECTIONS = ('UP', 'DOWN', 'LEFT', 'RIGHT', 'UP_LEFT', 'UP_RIGHT', 'DOWN_LEFT', 'DOWN_RIGHT')
+
+
+def slide_value(direction, position):
+    """Absolute surface position, with matching values for opposite directions."""
+    x, y = position
+    if direction in ('UP', 'DOWN'): return 100-y
+    if direction in ('LEFT', 'RIGHT'): return x
+    if direction in ('UP_RIGHT', 'DOWN_LEFT'): return round((x+100-y)/2)
+    return round((x+y)/2)
 
 
 def slide_direction(x,y):
@@ -24,13 +35,17 @@ class Touchpad:
 
     def configure(self, options):
         selected={key:options.get(key,default) for key,default in
-                  (('touchpad_sensitivity',5),('touchpad_rate',10),('touchpad_xy',False))}
+                  (('touchpad_sensitivity',5),('touchpad_rate',10),('touchpad_xy',False),('touchpad_mode','directions'))}
+        selected['touchpad_slide_values'] = copy.deepcopy(options.get('touchpad_slide_values', {}))
+        selected['touchpad_faders'] = copy.deepcopy(options.get('touchpad_faders', {}))
         if selected!=self.options:
             self.options=selected
             self.threshold=.20/selected['touchpad_sensitivity']
             self.interval=1/selected['touchpad_rate']
             self.pending_position=None
             self.sent_position=None
+            self.pending_slide=None; self.last_value=-100.; self.sent_slide=None
+            self.pending_fader=None;self.last_fader=-100.;self.sent_fader=None
             self.slots.clear()
             self.reset()
 
@@ -38,6 +53,10 @@ class Touchpad:
         self.started=None;self.center=None;self.span=None;self.count=0
         self.peak=0;self.travel=0;self.motion=[0.0,0.0];self.swipe=[0.0,0.0];self.mode=''
         self.clicked=self.physical
+        self.value_direction=None
+        self.fader=None
+        if not preserve_position:self.pending_fader=None
+        if not preserve_position:self.pending_slide=None
         if not preserve_position:self.pending_position=None
 
     def pulse(self, name, now, minimum=.04):
@@ -51,7 +70,7 @@ class Touchpad:
             self.slots.clear();self.reset();return
         if kind==EV_KEY and code==BTN_LEFT:
             self.physical=bool(value)
-            if value:self.clicked=True;self.pending_position=None
+            if value:self.clicked=True;self.pending_position=None;self.pending_slide=None;self.pending_fader=None
         elif kind==EV_ABS:
             if code==MT_SLOT:
                 if 0<=value<32:self.slot=value
@@ -77,9 +96,12 @@ class Touchpad:
             self.reset(preserve_position=True);return
         center=tuple(sum(p[a] for p in points)/count for a in (0,1))
         span=math.dist(points[0],points[1]) if count==2 else None
-        if self.started is None:self.started=now
+        if self.started is None:
+            self.started=now
+            self.pending_fader=None
+            if count==1:self.fader=max(1,min(5,math.floor(center[0]*5)+1))
         self.peak=max(self.peak,count)
-        if count>1:self.pending_position=None
+        if count>1:self.pending_position=None;self.pending_slide=None;self.pending_fader=None
         if self.count!=count:
             self.center=center;self.span=span;self.motion=[0.,0.];self.count=count
             return
@@ -89,12 +111,27 @@ class Touchpad:
             self.swipe[0]+=dx;self.swipe[1]+=dy
         self.travel+=math.hypot(dx,dy)
         if self.clicked:
-            self.pending_position=None;return
+            self.pending_position=None;self.pending_slide=None;self.pending_fader=None;return
         if count==1 and self.peak==1 and self.mode in ('','hold','slide'):
-            if math.hypot(*self.motion)>=self.threshold:
+            distance=abs(self.motion[1]) if self.options['touchpad_mode']=='faders' else math.hypot(*self.motion)
+            if distance>=self.threshold:
                 self.mode='slide'
             if self.mode=='slide' and self.options['touchpad_xy']:
                 self.pending_position=tuple(max(0,min(100,round(c*100))) for c in center)
+            if self.mode=='slide' and self.options['touchpad_mode']=='faders':
+                selected=self.options['touchpad_faders'].get(str(self.fader),{'enabled':True})
+                if selected.get('enabled',True):
+                    self.pending_fader=(self.fader,max(0,min(100,round((1-center[1])*100))))
+            if self.mode=='slide' and self.options['touchpad_mode']=='directions':
+                if math.hypot(*self.motion)>=self.threshold:
+                    self.value_direction=slide_direction(*self.motion)
+                direction=self.value_direction
+                # A small reversal must not publish on the previous direction's topic.
+                if (dx or dy) and slide_direction(dx,dy)!=direction:direction=None
+                if self.options['touchpad_slide_values'].get(direction,{}).get('enabled'):
+                    position=tuple(max(0,min(100,round(c*100))) for c in center)
+                    self.pending_slide=(direction,slide_value(direction,position))
+                else:self.pending_slide=None
         if count==2 and self.peak==2:
             ratio=span/self.span if self.span and span else 1
             if self.mode!='scroll' and abs(ratio-1)>=0.15:
@@ -109,7 +146,17 @@ class Touchpad:
         self.tick(now)
 
     def tick(self, now):
-        if self.count==1 and self.peak==1 and self.mode=='slide' and not self.clicked:
+        if self.pending_fader is not None and now-self.last_fader>=self.interval:
+            current=self.pending_fader;self.pending_fader=None
+            if current!=self.sent_fader:
+                self.emit('_touchpad_fader_value','value',list(current))
+                self.sent_fader=current;self.last_fader=now
+        if self.pending_slide is not None and now-self.last_value>=self.interval:
+            current=self.pending_slide;self.pending_slide=None
+            if current!=self.sent_slide:
+                self.emit('_touchpad_slide_value',current[0],current[1])
+                self.sent_slide=current;self.last_value=now
+        if self.count==1 and self.peak==1 and self.mode=='slide' and not self.clicked and self.options['touchpad_mode']=='directions':
             if math.hypot(*self.motion)>=self.threshold and now-self.last_slide>=self.interval:
                 x,y=self.motion
                 direction=slide_direction(x,y)

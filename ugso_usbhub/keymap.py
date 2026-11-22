@@ -166,4 +166,4 @@ def key_bindings(config, device=None, control=None):
 def all_bindings(config, device=None, control=None):
     from .deck import binding_allowed
     bindings=[b for b in config.get("bindings", []) if (device is None or b["device"]==device) and (control is None or canonical_control(b["control"])==control)]
-    return [b for b in bindings + key_bindings(config,device,control) if binding_allowed(config, b["device"], b["control"])]
+    return [b for b in bindings + key_bindings(config,device,control) if not config.get('devices',{}).get(b['device'],{}).get('scanner_enabled') and binding_allowed(config, b["device"], b["control"])]

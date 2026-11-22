@@ -1,5 +1,57 @@
 # Änderungen
 
+## 0.1.35 – 22. November 2026 (öffentliches Testrelease)
+
+Enthält die zuvor lokalen Zwischenstände 0.1.32–0.1.34: acht Richtungswerte und
+X/Y mit HA-Sensoren, fünf alternative Touchpad-Regler sowie Gamepad-Stickwerte.
+
+- Barcode-/QR-Modus für USB-HID-Tastaturscanner, je Gerät ausdrücklich aktivierbar.
+  DE/US, Enter/Tab/Scanpause, Text mit führenden Nullen und wiederholten Scans.
+- Eigenes MQTT-Topic und native HA-MQTT-Tag-Discovery; HA-Tag-URLs optional als ID.
+  Geräte-Zielbroker und individuelle Discovery-Schalter gelten. Keine Retain-Scans.
+- Lesbare letzte Scan-Anzeige, Schutz vor unvollständigen/überlangen Eingaben,
+  Scanner-Tasten lösen keine normalen Belegungen aus. Bestehende Aktionen pausieren
+  ohne Löschen ihrer Einstellungen; Kopplungen bleiben erhalten.
+- Echter Aplic-305045-Test bestanden: zwei gleiche Barcodes, Text-QR und HA-Tag-QR
+  als vier getrennte native HA-Ereignisse empfangen; Übergabe an drei MQTT-Broker
+  und ioBroker-Empfang bestätigt. Beide Dienste aktiv, keine Neustarts oder Fehler.
+- ZIP mit SHA256-Prüfsumme, README DE/EN und Dokumentation DE/EN/FR aktualisiert.
+  [Praxistest und Prüfgrenzen](docs/tests/scanner-live-0.1.35-20261122.md).
+
+## 0.1.34 – 22. November 2026 (Zwischenstand, enthalten in 0.1.35)
+
+- Opt-in für das gemessene DragonRise-Gamepad 0079:0006: vier Stickachsen mit
+  0–100, Mitte 50, Hardware-Totzone, eigener Topic und Ein-/Ausschalter je Achse.
+  Senderate 1–30/s je Achse; identische Werte werden nicht erneut gesendet.
+- HA-Discovery als vier Sensoren am selben Gerät, Geräte-Zielbroker und jeweilige
+  Discovery-Einstellung gelten. Beim Abschalten wird die Anmeldung entfernt.
+- L1/R1, L2/R2 und beide Stick-Klicks nutzen vorhandene Tastenfunktionen mit
+  unveränderten Linux-IDs und verständlichen Namen beim neuen Anlernen.
+- ABS_Z wird verworfen. Keine Startwerte oder Nachsendung an Offline-Broker.
+- Vorherige lokale Quellen gesichert; lokale Protokoll-, UI- und Regressionstests.
+  Keine Änderung auf .112, keine Veröffentlichung.
+
+## 0.1.33 – 22. November 2026 (Zwischenstand, enthalten in 0.1.35)
+
+- Umschaltbarer Flächenmodus mit fünf senkrechten Reglern, je MQTT-Topic und
+  HA-Sensor. Festlegung des Streifens beim Aufsetzen bis zum Abheben; 0 unten,
+  100 oben, Empfindlichkeit und Senderate weiter einstellbar.
+- Richtungsaktionen/-werte im Flächenmodus pausiert; Belegungen und Topics bleiben
+  erhalten. HA-Discovery gleicht den Moduswechsel ab. X/Y bleibt unabhängig.
+- Webansicht mit Farben für aktive/pausierte Bereiche, fünf Füllständen, letzter
+  Trigger-Markierung und deutlich gekennzeichneter ungespeicherter Modusvorschau.
+- Nur lokale Prüfungen und ZIP; keine Remoteänderung und keine Veröffentlichung.
+
+## 0.1.32 – 22. November 2026 (Zwischenstand, enthalten in 0.1.35)
+
+- Acht einzeln aktivierbare Slide-Werte mit eigenen, automatisch vorbelegten oder
+  frei einstellbaren MQTT-Topics. Absolute Position 0–100, diagonale Projektion,
+  vorhandene Empfindlichkeit und Senderate; standardmäßig deaktiviert.
+- HA-Discovery für X/Y und Richtungswerte als Sensoren am selben Gerät, inklusive
+  Abgleich beim Neustart und Entfernung deaktivierter Anmeldungen.
+- Bestehende Richtungsaktionen, X/Y-Topics, Einstellungen und Kopplungen erhalten.
+- Nur lokale Prüfungen und neues ZIP; keine Installation und keine Veröffentlichung.
+
 ## 0.1.31 – 22. November 2026 (öffentliches Testrelease)
 
 Enthält auch die zuvor lokalen Zwischenstände 0.1.29 und 0.1.30: Schrittfilter

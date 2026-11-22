@@ -42,6 +42,9 @@ jobs:
           npm install --prefix .state/ui-test jsdom@31.0.1 --ignore-scripts --no-audit --no-fund
           node tests/keylist-ui.test.cjs
           node tests/devices-ui.test.cjs
+          node tests/faders-ui.test.cjs
+          node tests/gamepad-ui.test.cjs
+          node tests/scanner-ui.test.cjs
           node tests/streamdeck-ui.test.cjs
           node tests/pages-ui.test.cjs
           node tests/mobile-ui.test.cjs
@@ -80,5 +83,5 @@ jobs:
         run: python tools/package.py
       - uses: actions/upload-artifact@v4
         with:
-          name: USB-Extender-Home-Assistant-0.1.31-Raspi4
+          name: USB-Extender-Home-Assistant-0.1.35-Raspi4
           path: dist/*

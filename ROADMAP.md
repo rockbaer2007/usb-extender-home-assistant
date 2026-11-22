@@ -1,5 +1,42 @@
 # Offene Schritte
 
+## Scanner: ergänzende Praxisprüfungen
+
+- Ergänzend zum bestandenen Barcode-/QR-/HA-Tag-Test: Neustart, Abschalten,
+  US-Layout und alternative Abschlusszeichen am echten Scanner prüfen.
+  Metadatenvergleich nur nachholbar, falls die
+  ursprünglich geprüfte, am bisherigen Pfad fehlende Sicherung wieder verfügbar ist.
+- Bei Gelegenheit UI-Gerätezuordnung korrigieren: Die Auswahl eines vorhandenen
+  Zielgeräts setzt die globale Ungespeichert-Markierung und blockiert damit
+  „Zuordnung übernehmen“. Im Scanner-Praxistest beobachtet, keine Zuordnung
+  übernommen und keine Serverkonfiguration dadurch geändert.
+- Serielle Scanner, GS1-Steuersequenzen und zusätzliche Layouts bleiben außerhalb
+  der bisherigen Umsetzung.
+
+## 0.1.34: Gamepad praktisch prüfen (lokal umgesetzt)
+
+- Nach Freigabe auf .112 im Analogmodus: beide Sticks, Enden und Mitte, Senderate,
+  Achsenabschaltung, L1/R1/L2/R2 und Stick-Klicks mit bestehendem Anlernmodus.
+- HA auf dem freigegebenen Testsystem: vier Sensoren, Live-Empfang, Abschalten und
+  Neustart sowie unveränderte T650-/Mobile-Funktionen prüfen.
+- Weitere Gamepads benötigen eigene gemessene Profile. ABS_Z bleibt ausgeschlossen;
+  analoge Trigger und neue Steuerkreuz-Aktionen sind nicht Teil dieser Umsetzung.
+
+## 0.1.33: Nach Freigabe praktisch prüfen
+
+- Fünf Regler am echten T650: Aufsetzen in jedem Streifen, vertikale Werte, seitliches
+  Verrutschen, Abheben/Neuwahl, Empfindlichkeit und Senderate.
+- Auf .193 Moduswechsel und HA-Discovery praktisch prüfen: fünf Regler statt acht
+  Richtungswerten, X/Y unabhängig, Rückschalten mit bisherigen IDs und Topics.
+- Live-Farben und Füllstände am echten Gerät prüfen. Lokal auf Desktop/Mobil geprüft.
+
+## 0.1.32: Noch ausstehende Praxisprüfung
+
+- Ergänzend nach Bedarf: kurze Wege, Richtungswechsel und praktische Senderate
+  systematisch vergleichen; alle acht Live-Werte sowie X/Y-Empfang auf .193 bestätigt.
+- Entfernung nach Abschalten und erneute Anmeldung nach Neustart am echten HA
+  prüfen. Sensorzuordnung und Live-Empfang aller zehn Werte auf .193 abgeschlossen.
+
 ## Nach abgeschlossener isolierter T650-Messung
 
 Die acht Richtungen, Tippunterdrückung, X/Y und drei lokale MQTT-Ziele sind am

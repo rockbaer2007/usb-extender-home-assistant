@@ -2,7 +2,7 @@ import sys
 import types
 from unittest.mock import Mock,patch
 from tests.test_hub import TemporaryHome
-from tools.t650_check import main,replay,summarize,drain_pending
+from tools.t650_check import main,replay,summarize,drain_pending,value_options
 from ugso_usbhub.storage import home
 
 
@@ -35,6 +35,8 @@ class ProbeTests(TemporaryHome):
         result=summarize(replay(raw,[(0,1000),(0,1000)]))
         self.assertEqual(result['actions'],{'TOUCHPAD_SLIDE_DOWN_RIGHT':1})
         self.assertEqual(result['tap_actions'],0);self.assertEqual(result['xy_max'],[80,80])
+        self.assertEqual(result['direction_values']['DOWN_RIGHT']['last'],80)
+        self.assertEqual(len(value_options()['touchpad_slide_values']),8)
 
     def test_k400_is_rejected_before_any_service_action(self):
         backup=home()/'backup.tar.gz';backup.write_bytes(b'placeholder')

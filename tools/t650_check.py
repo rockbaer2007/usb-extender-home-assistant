@@ -19,6 +19,11 @@ PROMPTS=('nach rechts','nach links','nach oben','nach unten','links oben → rec
          'rechts unten → links oben','rechts oben → links unten','links unten → rechts oben')
 
 
+def value_options():
+    return {'touchpad_xy':True,'touchpad_slide_values':{
+        name:{'enabled':True,'topic':'t650-test/slide-'+name.lower()+'/value'} for name in DIRECTIONS}}
+
+
 def drain_pending(device, seconds=.2, maximum=4096):
     """Consume evdev's generator; never wait for a continuously active pad."""
     deadline=time.monotonic()+seconds
@@ -36,7 +41,7 @@ def drain_pending(device, seconds=.2, maximum=4096):
 def replay(raw, ranges, sensitivity=5, rate=10):
     events=[];stamp=0.
     pad=Touchpad(lambda *e:events.append((stamp,*e)),*ranges,
-                 {'touchpad_xy':True,'touchpad_sensitivity':sensitivity,'touchpad_rate':rate})
+                 {**value_options(),'touchpad_sensitivity':sensitivity,'touchpad_rate':rate})
     for stamp,kind,code,value in raw:
         pad.feed(kind,code,value,stamp);pad.tick(stamp)
     if raw:stamp=raw[-1][0]+1.1;pad.tick(stamp)
@@ -49,6 +54,12 @@ def summarize(events):
     slides=[e for e in events if e[2]=='press' and e[1].startswith('TOUCHPAD_SLIDE_')]
     result={'actions':dict(actions),'xy_pairs':len(xy),'slide_actions':len(slides),
             'tap_actions':sum(v for k,v in actions.items() if k.startswith('TOUCHPAD_TAP_'))}
+    values=[e for e in events if e[1]=='_touchpad_slide_value']
+    result['direction_values']={}
+    for direction in DIRECTIONS:
+        rows=[e[3] for e in values if e[2]==direction]
+        if rows:result['direction_values'][direction]={'count':len(rows),'first':rows[0],'last':rows[-1],'min':min(rows),'max':max(rows)}
+    result['values_min_interval']=round(min(b[0]-a[0] for a,b in zip(values,values[1:])),6) if len(values)>1 else None
     for label,rows in [('xy',xy),('slide',slides)]:
         gaps=[b[0]-a[0] for a,b in zip(rows,rows[1:])]
         result[label+'_min_interval']=round(min(gaps),6) if gaps else None
@@ -61,7 +72,7 @@ def summarize(events):
 def live_hashes():
     folder=Path('/var/lib/ugso-usbhub')
     return {name:hashlib.sha256((folder/name).read_bytes()).hexdigest()
-            for name in ('config.json','switches.json','mobile-trust.json','mobile-devices.json') if (folder/name).is_file()}
+            for name in ('config.json','switches.json','mobile-identity.json','mobile-trust.json','mobile-devices.json') if (folder/name).is_file()}
 
 
 def main():
@@ -98,7 +109,7 @@ def main():
             from ugso_usbhub.storage import defaults,save_config
             from ugso_usbhub.core import Core
             config=defaults();config['devices']['t650']={'name':'T650 Test','enabled':True,
-                'touchpad_gestures':True,'touchpad_xy':True,'targets':['broker1','broker2','broker3']}
+                'touchpad_gestures':True,**value_options(),'targets':['broker1','broker2','broker3']}
             for direction in (*DIRECTIONS,'TAP_1'):
                 control='TOUCHPAD_'+('SLIDE_'+direction if direction in DIRECTIONS else direction)
                 config.setdefault('keys',[]).append({'id':direction,'device':'t650','control':control,'name':direction,
@@ -107,9 +118,10 @@ def main():
             config['devices']['t650'].update(touchpad_x_topic='t650-test/x',touchpad_y_topic='t650-test/y')
             for broker in config['brokers']:
                 server=Broker();servers.append(server)
-                broker.update(enabled=True,host='127.0.0.1',port=server.port,discovery=False)
+                broker.update(enabled=True,host='127.0.0.1',port=server.port,discovery=broker['id']!='broker2')
             save_config(config);core=Core();pool=core.brokers
             wait_for(lambda:len(pool.states)==3 and all(s=='online' for s in pool.states.values()))
+            wait_for(lambda:all(len([m for m in servers[i].messages if m[0].startswith('homeassistant/sensor/')])==10 for i in (0,2)))
             phases=list(zip(DIRECTIONS,PROMPTS))+[('TAP_1','nur kurz tippen, ohne Schieben'),
                 ('RATE','zügig mit EINEM Finger über die GANZE Fläche hin und her schieben, jeweils abheben')]
             for name,prompt in phases:
@@ -120,7 +132,7 @@ def main():
                 progress=0
                 def emit(*event):
                     events.append((stamp,*event));core.event('t650',*event)
-                pad=Touchpad(emit,*ranges,{'touchpad_xy':True})
+                pad=Touchpad(emit,*ranges,value_options())
                 while time.monotonic()-start<6:
                     if select.select([device.fd],[],[],.01)[0]:
                         for event in device.read():
@@ -138,6 +150,7 @@ def main():
                     'sensitivity':{str(n):summarize(replay(raw,ranges,n,10)) for n in (1,5,10)},
                     'rates':{str(n):summarize(replay(raw,ranges,5,n)) for n in (1,5,30)}}
                 result['expected_seen']=('TOUCHPAD_'+('TAP_1' if name=='TAP_1' else 'SLIDE_'+name)) in result['live']['actions'] if name!='RATE' else None
+                result['expected_value_seen']=name in result['live']['direction_values'] if name in DIRECTIONS else None
                 report['phases'].append(result)
                 (args.output/(name+'-raw.json')).write_text(json.dumps(raw),encoding='utf-8')
                 print(name,'live:',json.dumps(result['live'],ensure_ascii=False),'erwartete Richtung:',result['expected_seen'],flush=True)
@@ -149,6 +162,18 @@ def main():
             report['mqtt_identical']=messages[0]==messages[1]==messages[2]
             report['mqtt_plain_xy']=all(m['payload'].isdigit() and 0<=int(m['payload'])<=100 and not m['retain'] for rows in messages for m in rows if m['topic'] in ('t650-test/x','t650-test/y'))
             report['mqtt_messages']=messages
+            numeric_topics={'t650-test/x','t650-test/y',*[v['topic'] for v in value_options()['touchpad_slide_values'].values()]}
+            report['mqtt_plain_values']=all(m['payload'].isdigit() and 0<=int(m['payload'])<=100 and not m['retain'] for rows in messages for m in rows if m['topic'] in numeric_topics)
+            report['mqtt_value_topics']=sorted({m['topic'] for m in messages[0] if m['topic'] in numeric_topics})
+            discoveries=[]
+            for server in servers:
+                discoveries.append({t:json.loads(p) for t,p,r in server.messages if t.startswith('homeassistant/sensor/') and p})
+            report['discovery_counts']=[len(d) for d in discoveries]
+            report['discovery_valid']=all(len(discoveries[i])==10 and len({v['unique_id'] for v in discoveries[i].values()})==10 and
+                all(v['device']['identifiers']==[f"ugso_{config['hub_id']}_t650"] and v['state_topic'] in numeric_topics for v in discoveries[i].values()) for i in (0,2)) and not discoveries[1]
+            report['discovery_scope']='Loopback MQTT payload check; real Home Assistant entity display not checked'
+            directions=[p for p in report['phases'] if p['name'] in DIRECTIONS]
+            report['hardware_values_pass']=len(directions)==8 and all(p['expected_seen'] and p['expected_value_seen'] and not p['live']['tap_actions'] for p in directions) and len(report['mqtt_value_topics'])==10
     finally:
         try:
             if pool:pool.close()
@@ -162,6 +187,9 @@ def main():
     print('\nBericht:',args.output/'report.json',flush=True)
     print('Einstellungen unverändert:',report['settings_unchanged'],flush=True)
     print('MQTT:',report.get('mqtt_counts'),'identisch:',report.get('mqtt_identical'),'X/Y Zahlen:',report.get('mqtt_plain_xy'),flush=True)
+    print('Acht Richtungswerte:',report.get('hardware_values_pass'),'alle Zahlen:',report.get('mqtt_plain_values'),'Discovery:',report.get('discovery_counts'),report.get('discovery_valid'),flush=True)
+    if not all(report.get(k) for k in ('hardware_values_pass','mqtt_plain_values','mqtt_identical','discovery_valid','settings_unchanged')):
+        raise SystemExit('Prüfung unvollständig/fehlgeschlagen; Bericht auswerten, kein Erfolg bestätigt.')
 
 
 if __name__=='__main__':main()

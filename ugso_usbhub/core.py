@@ -118,6 +118,33 @@ class Core:
             return
         if not self.config["devices"].get(device, {}).get("enabled"):
             return
+        if control=='_scanner_scan':
+            if gesture!='scan' or self.learning.get('device')==device and self.learning.get('expires',0)>time.time():return
+            try:report=self.brokers.send_scan(device,value)
+            except ValueError:return
+            if report['matched']:self.record(device,'BARCODE_SCAN','scan',value,report)
+            return
+        if self.config['devices'].get(device,{}).get('scanner_enabled'):return
+        if control=='_gamepad_axis':
+            if self.learning.get('device')==device and self.learning.get('expires',0)>time.time():return
+            from .gamepad import AXES
+            if gesture not in AXES or type(value) is not int or not 0<=value<=100:return
+            report=self.brokers.send_gamepad_value(device,gesture,value)
+            self.record(device,'GAMEPAD_'+gesture.upper(),'value',value,report)
+            return
+        if control=='_touchpad_fader_value':
+            if self.learning.get('device')==device and self.learning.get('expires',0)>time.time():return
+            if not isinstance(value,(list,tuple)) or len(value)!=2 or type(value[0]) is not int or not 1<=value[0]<=5 or type(value[1]) is not int or not 0<=value[1]<=100:return
+            report=self.brokers.send_fader_value(device,*value)
+            self.record(device,'TOUCHPAD_FADER_'+str(value[0]),'value',value[1],report)
+            return
+        if control=='_touchpad_slide_value':
+            if self.learning.get('device')==device and self.learning.get('expires',0)>time.time():return
+            from .touchpad import SLIDE_DIRECTIONS
+            if gesture not in SLIDE_DIRECTIONS or type(value) is not int or not 0<=value<=100:return
+            report=self.brokers.send_slide_value(device,gesture,value)
+            self.record(device,'TOUCHPAD_SLIDE_'+gesture,'value',value,report)
+            return
         if control=='_touchpad_position':
             learning=self.learning if self.learning.get('expires',0)>time.time() else {}
             if learning.get('device')==device:return
@@ -136,6 +163,7 @@ class Core:
             return
         now = time.monotonic()
         control = canonical_control(control)
+        if control.startswith('TOUCHPAD_SLIDE_') and self.config['devices'].get(device,{}).get('touchpad_mode')=='faders':return
         self.hardware.config = self.config
         if re.fullmatch(r"key:\d+", control) and int(control[4:]) < 128:
             from .deck import artwork, logical_key, page_count, page_slot

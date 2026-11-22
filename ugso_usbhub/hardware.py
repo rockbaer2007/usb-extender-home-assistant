@@ -107,6 +107,8 @@ class Hardware:
         self.page_states = {}
         self.page_feedback = {}
         self.touchpads = {}
+        self.gamepads = {}
+        self.scanners = {}
 
     def active_page(self, ident):
         return max(0, min(self.page_states.get(ident, 0), page_count(self.config, ident)-1))
@@ -138,6 +140,8 @@ class Hardware:
             if path not in paths or self.inputs[path][0]!=paths[path]:
                 self.inputs.pop(path)[1].close()
                 self.touchpads.pop(path,None)
+                self.gamepads.pop(path,None)
+                self.scanners.pop(path,None)
         if sys.platform == "linux":
             import evdev
             for path, ident in paths.items():
@@ -148,7 +152,7 @@ class Hardware:
                     except OSError as exc:
                         self.errors[path] = str(exc)
             for path,(ident,device) in self.inputs.items():
-                if not config['devices'].get(ident,{}).get('touchpad_gestures'):
+                if not config['devices'].get(ident,{}).get('touchpad_gestures') or config['devices'].get(ident,{}).get('scanner_enabled'):
                     self.touchpads.pop(path,None);continue
                 if path in self.touchpads:
                     self.touchpads[path].configure(config['devices'].get(ident,{}));continue
@@ -161,6 +165,27 @@ class Hardware:
                         self.touchpads[path]=Touchpad(lambda control,gesture,value,ident=ident:self.emit(ident,control,gesture,value),(x.min,x.max),(y.min,y.max),config['devices'].get(ident,{}))
                 except (OSError,ValueError) as exc:
                     self.errors[path]=str(exc)
+            from .gamepad import Gamepad,AXES,PROFILE
+            for path,(ident,device) in self.inputs.items():
+                settings=config['devices'].get(ident,{})
+                actual=allowed.get(ident,{})
+                if settings.get('scanner_enabled') or not settings.get('gamepad_axes_enabled') or settings.get('gamepad_profile')!=PROFILE or (actual.get('vendor'),actual.get('product_id'))!=('0079','0006'):
+                    self.gamepads.pop(path,None);continue
+                if path in self.gamepads:self.gamepads[path].configure(settings);continue
+                try:
+                    codes=[c[0] if isinstance(c,tuple) else c for c in device.capabilities().get(evdev.ecodes.EV_ABS,[])]
+                    ranges={}
+                    for name,(code,_) in AXES.items():
+                        if code in codes:
+                            info=device.absinfo(code);ranges[name]=(info.min,info.max,info.flat)
+                    self.gamepads[path]=Gamepad(lambda control,gesture,value,ident=ident:self.emit(ident,control,gesture,value),ranges,settings)
+                except (OSError,ValueError) as exc:self.errors[path]=str(exc)
+            from .scanner import Scanner
+            for path,(ident,device) in self.inputs.items():
+                settings=config['devices'].get(ident,{})
+                if not settings.get('scanner_enabled'):self.scanners.pop(path,None);continue
+                if path in self.scanners:self.scanners[path].configure(settings)
+                else:self.scanners[path]=Scanner(lambda control,gesture,value,ident=ident:self.emit(ident,control,gesture,value),settings)
         self._scan_decks({ident:d for ident,d in allowed.items() if d.get("connection") != "mobile"})
         for device in self.inventory:
             deck = self.decks.get(device["id"])
@@ -301,6 +326,8 @@ class Hardware:
 
     def poll(self, timeout=0.05):
         for pad in self.touchpads.values():pad.tick(time.monotonic())
+        for pad in self.gamepads.values():pad.tick(time.monotonic())
+        for scanner in self.scanners.values():scanner.tick(time.monotonic())
         if not self.inputs:
             time.sleep(timeout)
             return
@@ -314,8 +341,17 @@ class Hardware:
             path, ident, device = handles[fd]
             try:
                 for event in device.read():
+                    scanner=self.scanners.get(path)
+                    if scanner:
+                        if event.type==0 and event.code==3:scanner.invalidate()
+                        if event.type==evdev.ecodes.EV_KEY:
+                            control=canonical_control(evdev.ecodes.KEY.get(event.code,evdev.ecodes.BTN.get(event.code,str(event.code))))
+                            scanner.feed(control,event.value,time.monotonic())
+                        continue
                     pad=self.touchpads.get(path)
                     if pad:pad.feed(event.type,event.code,event.value,time.monotonic())
+                    gamepad=self.gamepads.get(path)
+                    if gamepad:gamepad.feed(event.type,event.code,event.value,time.monotonic())
                     if event.type == evdev.ecodes.EV_KEY:
                         control = evdev.ecodes.KEY.get(event.code, evdev.ecodes.BTN.get(event.code, str(event.code)))
                         control = canonical_control(control)
@@ -327,11 +363,15 @@ class Hardware:
                 self.errors[path] = str(exc)
                 self.inputs.pop(path, None)
                 self.touchpads.pop(path, None)
+                self.gamepads.pop(path, None)
+                self.scanners.pop(path, None)
                 device.close()
 
     def close(self):
         self.animations.clear()
         self.touchpads.clear()
+        self.gamepads.clear()
+        self.scanners.clear()
         for _, device in self.inputs.values():
             device.close()
         for deck in self.decks.values():

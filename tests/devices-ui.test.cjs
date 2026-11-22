@@ -29,9 +29,13 @@ const settle=()=>new Promise(r=>setTimeout(r,20));
     const input=w.document.querySelector('[aria-label="'+label+'"]');assert.ok(input);input.value=value;input.dispatchEvent(new w.Event('input'));
   }
   const xy=w.document.querySelector('[aria-label="X/Y-Werte zusätzlich per MQTT senden (0–100)"]');xy.checked=true;xy.dispatchEvent(new w.Event('change'));
+  const directionInputs=[...xy.closest('.card').querySelectorAll('input[aria-label$="· Wert senden"]')].filter(x=>!x.getAttribute('aria-label').startsWith('Regler '));assert.equal(directionInputs.length,8);assert.ok(directionInputs.every(x=>!x.checked));
+  const up=w.document.querySelector('[aria-label="Unten → oben · Wert senden"]');up.checked=true;up.dispatchEvent(new w.Event('change'));
+  const upTopic=w.document.querySelector('[aria-label="Unten → oben · Topic"]');upTopic.value='office/t650/up';upTopic.dispatchEvent(new w.Event('input'));
   w.document.querySelector('#save').click();await settle();
   assert.equal(config.devices.new.touchpad_sensitivity,7);assert.equal(config.devices.new.touchpad_rate,20);
   assert.equal(config.devices.new.touchpad_xy,true);assert.equal(config.devices.new.touchpad_x_topic,'office/slide/x');assert.equal(config.devices.new.touchpad_y_topic,'office/slide/y');
+  assert.equal(config.devices.new.touchpad_slide_values.UP.enabled,true);assert.equal(config.devices.new.touchpad_slide_values.UP.topic,'office/t650/up');assert.equal(config.devices.new.touchpad_slide_values.DOWN.enabled,false);
   let remove=w.document.querySelector('[aria-label="Gerät entfernen: Alpha"]');assert.ok(remove);remove.click();await settle();assert.equal(actions.length,0,'cancel preserves data');
   confirmation=true;remove.click();await settle();assert.equal(actions.at(-1).action,'remove');assert.equal(actions.at(-1).device,'a');assert.equal(config.keys.length,1);assert.equal(config.keys[0].id,'bright');
   assert.ok(w.document.querySelector('#notice').textContent.includes('backup.tar.gz'));

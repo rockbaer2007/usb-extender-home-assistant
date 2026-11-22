@@ -1,0 +1,33 @@
+const {JSDOM}=require('../.state/ui-test/node_modules/jsdom');
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const dom=new JSDOM(fs.readFileSync('ugso_usbhub/static/index.html','utf8'),{url:'http://127.0.0.1:8098',runScripts:'outside-only'}),w=dom.window,ctx=dom.getInternalVMContext();
+let config={devices:{scan:{name:'Aplic Scanner',enabled:true,targets:['broker1']}},brokers:[],default_targets:[],bindings:[{id:'old',device:'scan',control:'KEY_A',gesture:'press',topic:'preserved'}],keys:[],mobile:{trusted:[{name:'Tablet',public_key:'preserved'}]}};
+let status={active:true,devices:[{id:'scan',name:'USB Scanner',kind:'input'}],events:[],brokers:{},errors:{}};
+w.setInterval=()=>{};
+w.fetch=async(path,options)=>{
+  if(path==='/api/config'&&options?.body)config=JSON.parse(options.body);
+  const data=path==='/api/config'?config:path==='/api/status'?status:path==='/api/icons/catalog'?{items:[],licenses:{}}:{ok:true};
+  return {ok:true,json:async()=>structuredClone(data)};
+};
+for(const file of ['archive.js','keylist.js','streamdeck.js','mobile.js','app.js'])vm.runInContext(fs.readFileSync('ugso_usbhub/static/'+file,'utf8'),ctx);
+const settle=()=>new Promise(r=>setTimeout(r,20));
+const find=label=>w.document.querySelector('[aria-label="'+label+'"]');
+const change=(label,value)=>{const e=find(label);assert.ok(e,label);e[e.type==='checkbox'?'checked':'value']=value;e.dispatchEvent(new w.Event(e.type==='checkbox'||e.tagName==='SELECT'?'change':'input'));};
+(async()=>{
+  await vm.runInContext('enter()',ctx);w.document.querySelector('[data-page=devices]').click();await settle();
+  assert.equal(find('Als Barcode-/QR-Scanner verwenden').checked,false);
+  assert.equal(find('Scanner-Tastaturlayout').value,'de');assert.ok(find('Scanner-Topic').closest('fieldset').disabled);
+  change('Als Barcode-/QR-Scanner verwenden',true);assert.equal(find('Scanner-Topic').closest('fieldset').disabled,false);
+  assert.match(w.document.querySelector('.scanner-last').textContent,/Vorschau/);
+  change('Scanner-Tastaturlayout','us');change('Scanner-Abschluss','tab');change('Scanner-Pause (100–3000 ms)','750');change('Scanner-Topic','office/scanner/tag');change('HA-Tag-URLs als Tag-ID senden',false);
+  w.document.querySelector('#save').click();await settle();
+  assert.equal(config.devices.scan.scanner_enabled,true);assert.equal(config.devices.scan.scanner_layout,'us');assert.equal(config.devices.scan.scanner_terminator,'tab');
+  assert.equal(config.devices.scan.scanner_timeout_ms,750);assert.equal(config.devices.scan.scanner_topic,'office/scanner/tag');assert.equal(config.devices.scan.scanner_ha_urls,false);
+  assert.equal(config.bindings[0].topic,'preserved');assert.equal(config.mobile.trusted[0].public_key,'preserved');
+  status.events=[{device:'scan',control:'BARCODE_SCAN',gesture:'scan',value:'<img src=x onerror=alert(1)>',time:Date.now()/1000}];
+  vm.runInContext('status='+JSON.stringify(status)+';refreshScannerVisuals()',ctx);
+  assert.match(w.document.querySelector('.scanner-last').textContent,/<img src=x/);assert.equal(w.document.querySelector('.scanner-last img'),null);
+  change('Als Barcode-/QR-Scanner verwenden',false);w.document.querySelector('#save').click();await settle();
+  assert.equal(config.devices.scan.scanner_topic,'office/scanner/tag');assert.equal(config.bindings.length,1);assert.match(w.document.querySelector('.scanner-last').textContent,/pausiert/);
+  assert.equal(w.document.querySelector('#error').textContent,'');console.log('Scanner DOM: opt-in, DE/US, terminator, timeout, topic, save, safe scan preview and preserved settings OK');dom.window.close();
+})().catch(e=>{console.error(e);dom.window.close();process.exitCode=1});

@@ -1,0 +1,38 @@
+const {JSDOM}=require('../.state/ui-test/node_modules/jsdom');
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const dom=new JSDOM(fs.readFileSync('ugso_usbhub/static/index.html','utf8'),{url:'http://127.0.0.1:8098',runScripts:'outside-only'}),w=dom.window,ctx=dom.getInternalVMContext();
+let config={devices:{pad:{name:'T650',enabled:true,touchpad_gestures:true,touchpad_xy:true,touchpad_x_topic:'T650-X',touchpad_y_topic:'T650-Y',touchpad_slide_values:{UP:{enabled:true,topic:'custom/up'}}}},brokers:[],default_targets:[],bindings:[],keys:[{id:'up',device:'pad',control:'TOUCHPAD_SLIDE_UP',name:'Up',enabled:true,press:true,press_topic:'old/up'}]};
+let status={active:true,devices:[{id:'pad',name:'T650',kind:'input'}],events:[],brokers:{},errors:{}};
+w.setInterval=()=>{};w.fetch=async(path,options)=>{
+ if(path==='/api/config'&&options?.body)config=JSON.parse(options.body);
+ const data=path==='/api/config'?config:path==='/api/status'?status:path==='/api/icons/catalog'?{items:[],licenses:{}}:{ok:true};
+ return {ok:true,json:async()=>structuredClone(data)};
+};
+for(const file of ['archive.js','keylist.js','streamdeck.js','mobile.js','app.js'])vm.runInContext(fs.readFileSync('ugso_usbhub/static/'+file,'utf8'),ctx);
+const settle=()=>new Promise(r=>setTimeout(r,20));
+(async()=>{
+ await vm.runInContext('enter()',ctx);w.document.querySelector('[data-page=devices]').click();await settle();
+ const find=label=>w.document.querySelector('[aria-label="'+label+'"]');
+ let mode=find('Touchpad-Modus');assert.equal(mode.value,'directions');
+ assert.equal(w.document.querySelectorAll('.touchpad-fader-tile.touchpad-tile-disabled').length,5);
+ assert.equal(w.document.querySelectorAll('.touchpad-direction-tile:not(.touchpad-tile-disabled)').length,8);
+ mode.value='faders';mode.dispatchEvent(new w.Event('change'));
+ assert.ok(find('Unten → oben · Wert senden').closest('fieldset').disabled);
+ assert.equal(find('Regler 1 · Wert senden').closest('fieldset').disabled,false);
+ assert.equal(w.document.querySelectorAll('.touchpad-direction-tile.touchpad-tile-disabled').length,8);
+ assert.equal(w.document.querySelectorAll('.touchpad-fader-tile:not(.touchpad-tile-disabled)').length,5);
+ assert.match(w.document.querySelector('.touchpad-mode-status').textContent,/Vorschau/);
+ find('Regler 3 · Topic').value='house/fader/3';find('Regler 3 · Topic').dispatchEvent(new w.Event('input'));
+ w.document.querySelector('#save').click();await settle();
+ assert.equal(config.devices.pad.touchpad_mode,'faders');assert.equal(config.devices.pad.touchpad_faders['3'].topic,'house/fader/3');
+ assert.equal(config.devices.pad.touchpad_slide_values.UP.topic,'custom/up');assert.equal(config.devices.pad.touchpad_x_topic,'T650-X');assert.equal(config.keys[0].press_topic,'old/up');
+ status.events=[{device:'pad',control:'TOUCHPAD_FADER_3',gesture:'value',value:72,time:Date.now()/1000}];
+ vm.runInContext('status='+JSON.stringify(status)+';refreshTouchpadVisuals()',ctx);
+ const tile=w.document.querySelector('[data-control="TOUCHPAD_FADER_3"]');assert.equal(tile.querySelector('.touchpad-tile-value').textContent,'72');assert.equal(tile.querySelector('.touchpad-fader-fill').style.height,'72%');assert.ok(tile.classList.contains('touchpad-tile-triggered'));
+ w.document.querySelector('[data-page=bindings]').click();await settle();assert.ok(w.document.querySelector('.touchpad-binding-paused'));assert.match(w.document.querySelector('.touchpad-paused-label').textContent,/pausiert/);
+ w.document.querySelector('[data-page=devices]').click();await settle();mode=find('Touchpad-Modus');mode.value='directions';mode.dispatchEvent(new w.Event('change'));w.document.querySelector('#save').click();await settle();
+ assert.equal(config.devices.pad.touchpad_faders['3'].topic,'house/fader/3');assert.equal(config.devices.pad.touchpad_slide_values.UP.enabled,true);
+ assert.equal(w.document.querySelectorAll('.touchpad-fader-tile.touchpad-tile-disabled').length,5);
+ w.document.querySelector('[data-page=bindings]').click();await settle();assert.equal(w.document.querySelector('.touchpad-binding-paused'),null);
+ assert.equal(w.document.querySelector('#error').textContent,'');console.log('Five-fader DOM: modes, paused controls/bindings, colours, saved topics, live fill and reverse switch OK');dom.window.close();
+})().catch(e=>{console.error(e);dom.window.close();process.exitCode=1});

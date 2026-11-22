@@ -2,7 +2,63 @@
 
 **USB-Geräte und Stream Decks über MQTT verbinden – für Raspberry Pi.**
 
-Version **0.1.31** · Öffentliches Testrelease · Stand 22. November 2026 · [ZIP herunterladen](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.31)
+Version **0.1.35** · Öffentliches Testrelease · Stand 22. November 2026.
+[Download ZIP und Prüfsumme](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.35) · [English](README.en.md).
+
+### Neu in 0.1.35: Barcode-/QR-Scanner und HA-Tags
+
+Eigener, zunächst ausgeschalteter Scanner-Modus für USB-HID-Tastaturscanner.
+DE-/US-Layout, Abschluss per Enter/Tab oder Scanpause, eigenes MQTT-Topic und
+lesbare Anzeige des letzten Scans. Führende Nullen bleiben erhalten; gleiche
+Codes lösen bei jedem Scan erneut aus. HA-Discovery meldet einen nativen MQTT-
+Tag-Scanner am Gerät an. HA-Tag-URLs lassen sich automatisch auf die Tag-ID
+reduzieren und in HA-Automationen verwenden. Bisherige Tastenbelegungen pausieren
+und bleiben gespeichert. [Einrichtung und Grenzen](docs/barcode-scanner.md).
+Lokal geprüft und anschließend mit echtem Aplic-Scanner auf .112 getestet:
+Barcode-Wiederholung, Text-QR und nativer HA-Tag-Empfang auf .193 bestätigt,
+ioBroker-Empfang durch Nutzerbild belegt. Abschlussdienststatus fehlerfrei.
+[Praxistest mit Ergebnissen und Prüfgrenzen](docs/tests/scanner-live-0.1.35-20261122.md).
+In HA landen Scans als native `tag_scanned`-Ereignisse unter **Einstellungen → Tags**,
+nicht als normale Sensorwerte. Die gewünschte Aktion wird in HA eingerichtet.
+
+### Enthalten seit 0.1.34: Gamepad-Sticks und Tasten
+
+Das geprüfte DragonRise-Profil `0079:0006` stellt linken und rechten Stick mit
+je X/Y als Zahlen von 0–100 bereit, Mitte 50. In „USB / Virtuelle Geräte“ die
+Stickausgabe ausdrücklich einschalten und speichern. Jede Achse lässt sich einzeln
+aktivieren, mit eigenem Topic und gemeinsamer Senderate von 1–30 Werten/s je Achse.
+HA-Discovery meldet vier Sensoren am selben Gerät; ioBroker erhält reine Zahlen.
+`ABS_Z` wird ignoriert. Schultertasten und Stick-Klicks wie normale Tasten anlernen;
+bestehende Belegungen und Kopplungen bleiben erhalten. L2/R2 liefern digitale Tasten.
+[Einrichtung und Zuordnung](docs/gamepad.md). Achsenzuordnung am echten Gerät
+gemessen; die neue MQTT-Anbindung wurde lokal geprüft.
+
+### Enthalten seit 0.1.33: fünf senkrechte Regler für das Logitech Touchpad T650
+
+„Touchpad-Modus“ schaltet zwischen acht Richtungen und fünf senkrechten Streifen
+um. Aufsetzen wählt einen Regler von links nach rechts; er bleibt bis zum Abheben
+fest. Nach oben steigt der Wert 0–100, nach unten fällt er 100–0. Jeder Regler hat
+ein eigenes MQTT-Topic und einen HA-Sensor. Bestehende Richtungsbelegungen und Topics
+bleiben gespeichert und pausieren im Flächenmodus. X/Y ist unabhängig nutzbar.
+
+Die Webansicht zeigt aktive Regler türkis, aktive Richtungen goldfarben und pausierte
+Bereiche grau. Füllstände und ein leuchtender Rand zeigen zuletzt empfangene Werte
+und Trigger. Ein Moduswechsel als Entwurf wird sofort sichtbar, wirkt aber erst
+nach „Speichern“ auf das Gerät. [Einrichtung und Verhalten](docs/touchpad-faders.md).
+Fünf Werte am echten T650 in ioBroker bestätigt; zusätzliche Praxisprüfungen stehen in der Roadmap.
+
+### Enthalten seit 0.1.32: Richtungswerte und HA-Sensoren
+
+Unter „USB / Virtuelle Geräte“ beim Touchpad lassen sich alle acht Slide-Richtungen
+einzeln als Zahlenwert aktivieren, jeweils mit eigenem MQTT-Topic. Leere Topics
+werden beim Speichern automatisch aus dem Gerätenamen erzeugt. Bestehende Topics,
+Tastenaktionen, Einstellungen und Kopplungen bleiben erhalten. Alle neuen Werte
+sind standardmäßig aus. [Werte, Einrichtung und Grenzen](docs/slide-values.md).
+
+X/Y und aktivierte Richtungswerte werden bei eingeschalteter Discovery auf den
+gewählten Zielbrokern als HA-Sensoren am selben Gerät angemeldet. ioBroker benötigt
+keine Discovery und erhält weiterhin reine Zahlen. Abschalten entfernt die jeweilige
+Discovery-Anmeldung. Alle acht Richtungswerte sowie X/Y wurden auf HA .193 empfangen.
 
 Dieses Release enthält auch die zuvor lokalen Änderungen aus 0.1.29 und 0.1.30:
 Schrittfilter, Gerätegruppen und Gerätezuordnung sowie Ein-Finger-Slide und X/Y.
@@ -494,8 +550,8 @@ Installationspaket, kein vollständig offline installierbares ARM-Abbild.
    ```bash
    # Falls unzip noch nicht vorhanden ist:
    sudo apt-get update && sudo apt-get install -y unzip
-   unzip USB-Extender-Home-Assistant-0.1.31-Raspi4.zip
-   cd USB-Extender-Home-Assistant-0.1.31
+   unzip USB-Extender-Home-Assistant-0.1.35-Raspi4.zip
+   cd USB-Extender-Home-Assistant-0.1.35
    sudo bash install.sh
    ```
 

@@ -16,6 +16,9 @@ function notice(text) { $('#notice').textContent = text; $('#notice').hidden = f
 function dirty() { changed = true; $('#save').disabled = !!learning; $('#dirty').textContent = 'Ungespeicherte Änderungen'; refreshKeyEditIndicators(); }
 function serviceAlive() { return typeof status.active === 'boolean' ? status.active : !!(status.updated && Math.abs(Date.now()/1000-status.updated)<15 && !status.stopped); }
 function renderStorage(){
+  refreshTouchpadVisuals();
+  refreshGamepadVisuals();
+  refreshScannerVisuals();
   const node=$('#storage-space');if(!node)return;
   const disk=status.storage;
   if(!disk||!Number.isFinite(disk.free)||!Number.isFinite(disk.total)||disk.total<=0){node.textContent='Speicherplatz derzeit nicht verfügbar';return;}
@@ -175,6 +178,62 @@ async function deviceAction(action,device,observed_id){
   config=await api('config');savedConfig=cloneConfig(config);status=await api('status');keyEditBaseline.clear();render();
   notice('Gespeichert. Sicherung der betroffenen Einstellungen: '+result.backup);
 }
+const touchpadDirections=[['UP','Unten → oben'],['DOWN','Oben → unten'],['RIGHT','Links → rechts'],['LEFT','Rechts → links'],['UP_RIGHT','Links unten → rechts oben'],['DOWN_LEFT','Rechts oben → links unten'],['DOWN_RIGHT','Links oben → rechts unten'],['UP_LEFT','Rechts unten → links oben']];
+const touchpadPreviewValues=new Map(),touchpadLastTriggers=new Map();
+function markTouchpadBinding(entry,device,control){
+  if(control.startsWith('TOUCHPAD_SLIDE_')&&config.devices[device]?.touchpad_mode==='faders'){
+    entry.classList.add('touchpad-binding-paused');entry.querySelector('summary')?.append(el('small',' · Flächenmodus: pausiert','touchpad-paused-label'));
+  }
+}
+function refreshTouchpadVisuals(){
+  if(!config)return;
+  for(const event of status.events||[]){
+    if(!/^TOUCHPAD_(SLIDE_|FADER_)/.test(event.control))continue;
+    const id=event.device+'|'+event.control;
+    if(event.gesture==='value'&&(!touchpadPreviewValues.has(id)||event.time>touchpadPreviewValues.get(id).time))touchpadPreviewValues.set(id,event);
+    if(['value','press'].includes(event.gesture)&&(!touchpadLastTriggers.has(event.device)||event.time>touchpadLastTriggers.get(event.device).time))touchpadLastTriggers.set(event.device,event);
+  }
+  for(const view of document.querySelectorAll('.touchpad-mode-view')){
+    const device=view.dataset.device,settings=config.devices[device]||{},mode=settings.touchpad_mode||'directions';
+    const ready=!!settings.enabled&&!!settings.touchpad_gestures,saved=(savedConfig.devices[device]?.touchpad_mode||'directions')===mode;
+    view.dataset.mode=mode;view.querySelector('.touchpad-mode-status').textContent=(mode==='faders'?'Fünf Regler aktiv · Richtungsaktionen pausiert':'Acht Richtungen aktiv · Regler pausiert')+(!ready?' · Gerät/Gesten ausgeschaltet':'')+(!saved?' · Vorschau, noch nicht gespeichert':'');
+    for(const tile of view.querySelectorAll('[data-control]')){
+      const active=ready&&tile.dataset.mode===mode&&(mode!=='faders'||settings.touchpad_faders?.[tile.dataset.lane]?.enabled!==false);
+      const event=touchpadPreviewValues.get(device+'|'+tile.dataset.control),last=touchpadLastTriggers.get(device);
+      tile.classList.toggle('touchpad-tile-disabled',!active);
+      const recent=active&&saved&&last?.control===tile.dataset.control&&Date.now()/1000-last.time<6;
+      tile.classList.toggle('touchpad-tile-triggered',recent);
+      tile.querySelector('.touchpad-tile-value').textContent=!active?'Pausiert':!saved?'Vorschau':event?String(event.value):'Bereit';
+      tile.setAttribute('aria-label',tile.dataset.name+' · '+(active?'aktiv':'pausiert')+(recent?' · letzter Trigger':''));
+      const bar=tile.querySelector('.touchpad-fader-fill');if(bar)bar.style.height=active&&saved&&event?Math.max(0,Math.min(100,event.value))+'%':'0%';
+    }
+  }
+}
+const gamepadAxes=[['left_x','Linker Stick X','ABS_X'],['left_y','Linker Stick Y','ABS_Y'],['right_x','Rechter Stick X','ABS_RX'],['right_y','Rechter Stick Y','ABS_RZ']];
+function refreshScannerVisuals(){
+  if(!config)return;
+  for(const node of document.querySelectorAll('.scanner-last')){
+    const settings=config.devices[node.dataset.device]||{},saved=savedConfig.devices[node.dataset.device]||{};
+    const event=(status.events||[]).find(e=>e.device===node.dataset.device&&e.control==='BARCODE_SCAN'&&e.gesture==='scan');
+    node.textContent=!settings.enabled||!settings.scanner_enabled?'Scanner pausiert':!saved.scanner_enabled?'Vorschau · erst speichern':event?'Letzter Scan: '+event.value:'Bereit · noch kein Scan empfangen';
+  }
+}
+const gamepadPreviewValues=new Map();
+function refreshGamepadVisuals(){
+  if(!config)return;
+  for(const event of status.events||[]){
+    if(event.gesture!=='value'||!/^GAMEPAD_(LEFT|RIGHT)_[XY]$/.test(event.control))continue;
+    const key=event.device+'|'+event.control;if(!gamepadPreviewValues.has(key)||event.time>gamepadPreviewValues.get(key).time)gamepadPreviewValues.set(key,event);
+  }
+  for(const tile of document.querySelectorAll('.gamepad-axis-tile')){
+    const settings=config.devices[tile.dataset.device]||{},active=settings.enabled&&settings.gamepad_axes_enabled&&settings.gamepad_axes?.[tile.dataset.axis]?.enabled!==false;
+    const value=gamepadPreviewValues.get(tile.dataset.device+'|GAMEPAD_'+tile.dataset.axis.toUpperCase());
+    const saved=!!savedConfig.devices[tile.dataset.device]?.gamepad_axes_enabled===!!settings.gamepad_axes_enabled;
+    tile.classList.toggle('touchpad-tile-disabled',!active);
+    tile.querySelector('output').textContent=!active?'Pausiert':!saved?'Vorschau':value?String(value.value):'Bereit';
+    tile.querySelector('meter').value=active&&saved&&value?value.value:50;
+  }
+}
 function devices() {
   if(!status.devices.length)empty($('#content'),'Noch kein USB-Gerät erkannt','USB-Geräte am Raspi einstecken. Die Bestandsliste wird alle fünf Sekunden aktualisiert.');
   const all=status.devices.filter(d=>!(d.connection==='mobile'&&forgottenDecks.has(d.id)));Object.keys(config.devices).forEach(id=>{if(!all.some(d=>d.id===id))all.push({id,name:config.devices[id].name||id,kind:'offline',identity_hint:'Nicht verbunden; Einstellungen bleiben erhalten'});});
@@ -187,16 +246,76 @@ function devices() {
     field(fields,'Gerät für Eingaben freigeben',settings.enabled,v=>settings.enabled=v,'checkbox');
     field(fields,'Broker für Display-Rückmeldungen',settings.receive_broker,v=>settings.receive_broker=v,'select',[['','Keiner'],...config.brokers.map(b=>[b.id,b.name])]);
     const bright=field(fields,'Stream-Deck-Helligkeit (0–100)',settings.brightness,v=>settings.brightness=v,'number');bright.min=0;bright.max=100;
-    if(d.kind==='input'||(d.kind==='offline'&&!d.id.startsWith('mobile-'))){
+    if(d.kind==='input'||(d.kind==='offline'&&d.connection!=='mobile'&&!d.id.startsWith('mobile-'))){
+      const scanner=el('details',undefined,'scanner-options');c.append(scanner);scanner.append(el('summary','Barcode-/QR-Scanner · USB-Tastatur'));
+      const controls=el('fieldset',undefined,'fields');
+      field(scanner,'Als Barcode-/QR-Scanner verwenden',!!settings.scanner_enabled,v=>{settings.scanner_enabled=v;controls.disabled=!v;refreshScannerVisuals();},'checkbox');
+      scanner.append(controls);controls.disabled=!settings.scanner_enabled;
+      field(controls,'Scanner-Tastaturlayout',settings.scanner_layout||'de',v=>settings.scanner_layout=v,'select',[['de','Deutsch (DE)'],['us','Englisch (US)']]);
+      field(controls,'Scanner-Abschluss',settings.scanner_terminator||'enter',v=>settings.scanner_terminator=v,'select',[['enter','Enter (empfohlen)'],['tab','Tab'],['timeout','Scanpause']]);
+      const timeout=field(controls,'Scanner-Pause (100–3000 ms)',settings.scanner_timeout_ms??500,v=>settings.scanner_timeout_ms=v,'number');timeout.min=100;timeout.max=3000;timeout.step=50;
+      const topic=field(controls,'Scanner-Topic',settings.scanner_topic||'',v=>settings.scanner_topic=v);topic.placeholder='Leer = beim Speichern automatisch anlegen';
+      field(scanner,'HA-Tag-URLs als Tag-ID senden',settings.scanner_ha_urls!==false,v=>settings.scanner_ha_urls=v,'checkbox');
+      const output=el('output',undefined,'scanner-last');output.dataset.device=d.id;output.setAttribute('aria-live','polite');scanner.append(output);
+      scanner.append(el('p','Scanner auf USB-Tastaturmodus und dasselbe DE-/US-Layout einstellen. Enter als Abschluss empfohlen. Scanpause beendet im Pausenmodus einen Scan; bei Enter/Tab verwirft sie unvollständige Eingaben. Maximal 4096 UTF-8-Bytes, druckbare Zeichen.'));
+      scanner.append(el('small','Kein Anlernen erforderlich. Im Scanner-Modus pausieren vorhandene Tasten-, Touchpad- und Gamepad-Aktionen; die Einstellungen bleiben gespeichert. Geräte-Zielbroker gelten. HA-Discovery am HA-Broker einschalten: MQTT-Tag-Scanner erzeugt tag_scanned. Gleiche Codes lösen bei jedem Scan erneut aus. Inhalte werden nicht ausgeführt.'));
+    }
+    if(isDragonrise(d.id)&&!settings.scanner_enabled){
+      const gamepad=el('details',undefined,'gamepad-options');c.append(gamepad);gamepad.append(el('summary','Gamepad · DragonRise 0079:0006'));
+      field(gamepad,'Stickwerte per MQTT senden (0–100)',!!settings.gamepad_axes_enabled,v=>{settings.gamepad_axes_enabled=v;if(v)settings.gamepad_profile='dragonrise-0079-0006';refreshGamepadVisuals();},'checkbox');
+      const rate=field(gamepad,'Gamepad-Senderate je Achse (1–30/s)',settings.gamepad_rate??10,v=>settings.gamepad_rate=v,'number');rate.min=1;rate.max=30;rate.step=1;
+      const axes=el('div',undefined,'fields');gamepad.append(axes);
+      for(const [name,label,raw] of gamepadAxes){
+        const value=(settings.gamepad_axes ||= {})[name] ||= {enabled:true,topic:''},row=el('div');axes.append(row);
+        field(row,label+' · Wert senden',value.enabled!==false,v=>{value.enabled=v;refreshGamepadVisuals();},'checkbox');
+        const topic=field(row,label+' · Topic',value.topic,v=>value.topic=v);topic.placeholder='Leer = beim Speichern automatisch anlegen';
+        const tile=el('div',undefined,'gamepad-axis-tile');Object.assign(tile.dataset,{device:d.id,axis:name});row.append(tile);
+        tile.append(el('small',raw),el('output','Bereit'));const meter=el('meter');meter.min=0;meter.max=100;meter.value=50;meter.setAttribute('aria-label',label+' · letzter Wert');tile.append(meter);
+      }
+      gamepad.append(el('p','Analogmodus am Gamepad verwenden. Vier Stickachsen: 0–100, Mitte 50; die vom Gerät gemeldete Totzone beruhigt die Mitte. ABS_Z wird ignoriert. Eigene Topics und HA-Sensoren am selben Gerät; Geräte-Zielbroker gelten. Änderungen erst speichern.'));
+      gamepad.append(el('small','Schultertasten und Stick-Klicks unter „Tasten & Anzeigen“ anlernen: L1 = BTN_BASE, R1 = BTN_BASE2, L2 = BTN_TOP2, R2 = BTN_PINKIE, linker Klick = BTN_BASE5, rechter Klick = BTN_BASE6. L2/R2 sind digitale Tasten. Vorhandene Belegungen und Linux-IDs bleiben erhalten.'));
+    }
+    if(!settings.scanner_enabled&&!isDragonrise(d.id)&&(d.kind==='input'||(d.kind==='offline'&&!d.id.startsWith('mobile-')))){
       field(fields,'Touchpad-Gesten auswerten',!!settings.touchpad_gestures,v=>settings.touchpad_gestures=v,'checkbox');
       c.append(el('small','Für T650 und andere Multitouch-Touchpads: Tippen, Ein-Finger-Slide, Scrollen, Wischen und Pinch anlernen. Zuerst freigeben, Gesten aktivieren und speichern.'));
       const options=el('details',undefined,'touchpad-options');options.append(el('summary','Ein-Finger-Slide und optionale X/Y-Werte'));c.append(options);
       const controls=el('div',undefined,'fields');options.append(controls);
+      const modeInput=field(controls,'Touchpad-Modus',settings.touchpad_mode||'directions',v=>{settings.touchpad_mode=v;updateMode();},'select',[['directions','Acht Slide-Richtungen'],['faders','Flächenmodus · fünf senkrechte Regler']]);
       const sensitivity=field(controls,'Slide-Empfindlichkeit (1–10)',settings.touchpad_sensitivity??5,v=>settings.touchpad_sensitivity=v,'number');sensitivity.min=1;sensitivity.max=10;sensitivity.step=1;
       const rate=field(controls,'Slide-/X/Y-Senderate (1–30/s)',settings.touchpad_rate??10,v=>settings.touchpad_rate=v,'number');rate.min=1;rate.max=30;rate.step=1;
       field(options,'X/Y-Werte zusätzlich per MQTT senden (0–100)',!!settings.touchpad_xy,v=>settings.touchpad_xy=v,'checkbox');
       const topics=el('div',undefined,'fields');options.append(topics);
       for(const axis of ['x','y']){const input=field(topics,axis.toUpperCase()+'-Topic',settings['touchpad_'+axis+'_topic']||'',v=>settings['touchpad_'+axis+'_topic']=v);input.placeholder='Leer = beim Speichern automatisch anlegen';}
+      const slideValues=el('details');options.append(slideValues);slideValues.append(el('summary','Richtungswerte einzeln aktivieren (0–100)'));
+      const valueFields=el('fieldset',undefined,'fields');slideValues.append(valueFields);
+      for(const [direction,label] of touchpadDirections){
+        const values=settings.touchpad_slide_values ||= {};const value=values[direction] ||= {enabled:false,topic:''};
+        const row=el('div');valueFields.append(row);
+        field(row,label+' · Wert senden',!!value.enabled,v=>value.enabled=v,'checkbox');
+        const input=field(row,label+' · Topic',value.topic,v=>value.topic=v);input.placeholder='Leer = beim Speichern automatisch anlegen';
+      }
+      slideValues.append(el('small','Absolute Position auf der gesamten Fläche: oben und rechts 100, unten und links 0. Diagonal: Mittelwert der beiden Achsen entlang der Diagonale; Gegenrichtung zählt zurück. Nur die erkannte Richtung sendet. Kurze Wege nutzen einen Teilbereich. Senderate und Empfindlichkeit gelten auch hier. HA-Discovery meldet aktivierte Werte und X/Y als Sensoren am selben Gerät an, wenn Discovery beim Zielbroker eingeschaltet ist.'));
+      const faders=el('details',undefined,'touchpad-fader-settings');options.append(faders);faders.append(el('summary','Fünf senkrechte Regler · Topics'));
+      const faderFields=el('fieldset',undefined,'fields');faders.append(faderFields);
+      for(let lane=1;lane<=5;lane++){
+        const values=settings.touchpad_faders ||= {},value=values[lane] ||= {enabled:true,topic:''},row=el('div');faderFields.append(row);
+        field(row,'Regler '+lane+' · Wert senden',value.enabled!==false,v=>{value.enabled=v;refreshTouchpadVisuals();},'checkbox');
+        const input=field(row,'Regler '+lane+' · Topic',value.topic,v=>value.topic=v);input.placeholder='Leer = beim Speichern automatisch anlegen';
+      }
+      faders.append(el('small','Fünf gleich breite Streifen von links nach rechts. Aufsetzen wählt den Regler bis zum Abheben, auch bei seitlichem Verrutschen. Nur vertikales Schieben aktiviert: unten 0, oben 100. Neue Regler sind im Flächenmodus standardmäßig aktiv. X/Y bleibt unabhängig.'));
+      const view=el('div',undefined,'touchpad-mode-view');view.dataset.device=d.id;view.append(el('p',undefined,'touchpad-mode-status'));options.insertBefore(view,slideValues);
+      view.append(el('small','Türkis: Regler aktiv · Gold: Richtungsaktionen aktiv · Grau: pausiert · Leuchtender Rand: letzter Trigger (bis zu 6 s). Aktualisierung bei geöffneter Oberfläche, kein Tastenbild-/Geräte-Upload.'));
+      const compass=el('div',undefined,'touchpad-compass'),strips=el('div',undefined,'touchpad-strips');view.append(compass,strips);
+      for(const direction of ['UP_LEFT','UP','UP_RIGHT','LEFT','','RIGHT','DOWN_LEFT','DOWN','DOWN_RIGHT']){
+        if(!direction){compass.append(el('span','8 Richtungen','touchpad-compass-center'));continue;}
+        const tile=el('div',undefined,'touchpad-direction-tile');tile.dataset.control='TOUCHPAD_SLIDE_'+direction;tile.dataset.mode='directions';tile.dataset.name=touchpadDirections.find(x=>x[0]===direction)[1];tile.append(el('strong',direction.replaceAll('_',' ')),el('span','Bereit','touchpad-tile-value'));compass.append(tile);
+      }
+      for(let lane=1;lane<=5;lane++){
+        const tile=el('div',undefined,'touchpad-fader-tile');Object.assign(tile.dataset,{control:'TOUCHPAD_FADER_'+lane,mode:'faders',name:'Regler '+lane,lane:String(lane)});
+        tile.append(el('div',undefined,'touchpad-fader-fill'),el('strong','Regler '+lane),el('span','Bereit','touchpad-tile-value'));strips.append(tile);
+      }
+      function updateMode(){const faderMode=modeInput.value==='faders';valueFields.disabled=faderMode;faderFields.disabled=!faderMode;slideValues.classList.toggle('touchpad-settings-paused',faderMode);faders.classList.toggle('touchpad-settings-paused',!faderMode);if(faderMode)faders.open=true;refreshTouchpadVisuals();}
+      updateMode();
       options.append(el('small','10 = empfindlich, 1 = größere Bewegung nötig. Acht Richtungen im Anlernmodus: TOUCHPAD_SLIDE_LEFT/RIGHT/UP/DOWN sowie UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT. X/Y ist standardmäßig aus, nutzt die Geräte-Zielbroker und sendet reine Zahlen, kein JSON. X: links 0 → rechts 100; Y: oben 0 → unten 100. Kein zusätzlicher Tipp nach Schieben.'));
     }
     c.append(el('div','Standardziele für dieses Gerät','route-title'));routes(c,settings.targets,v=>settings.targets=v);
@@ -215,6 +334,9 @@ function devices() {
       }
     }
   });
+  refreshTouchpadVisuals();
+  refreshGamepadVisuals();
+  refreshScannerVisuals();
 }
 function brokers() {
   const grid=el('div',undefined,'grid');$('#content').append(grid);
@@ -242,6 +364,7 @@ function bindings() {
   config.bindings.forEach((b,index)=>{
     const group=deviceKeyGroup($('#saved-keys'),b.device),entry=el('details',undefined,'key-entry');entry.name='usb-key-entries';entry.open=openKeyEntry===b.id;
     entry.append(el('summary',(config.devices[b.device]?.name||b.device)+' – '+b.control+' – '+(b.text||'Einzelbelegung')));group.append(entry);
+    markTouchpadBinding(entry,b.device,b.control);
     entry.addEventListener('toggle',()=>{if(entry.isConnected&&entry.open){openKeyEntry=b.id;document.querySelectorAll('.key-entry').forEach(other=>{if(other!==entry)other.open=false;});}});
     const c=card(undefined,entry);const row=el('div',undefined,'row spread');row.append(el('span','BELEGUNG '+(index+1),'binding-number'));button(row,'Entfernen',()=>{config.bindings.splice(index,1);dirty();render();},'danger');c.append(row);
     const f=el('div',undefined,'fields');c.append(f);

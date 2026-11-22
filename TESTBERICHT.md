@@ -1,5 +1,36 @@
 # Prüfungen
 
+## 0.1.35: Barcode-/QR-Scanner und MQTT-Tags
+
+Anschließend [Praxistest auf .112 / HA .193 abgeschlossen](docs/tests/scanner-live-0.1.35-20261122.md):
+native Discovery, Barcode zweimal, Text-QR und HA-Tag-Ereignis nachgewiesen.
+Alle vier an drei Broker übergeben; HA-Empfang direkt, ioBroker durch Nutzerbild
+bestätigt. Abschluss: beide Dienste aktiv, keine Neustarts/Fehler. Abschließender
+Metadatenvergleich wegen nicht mehr vorhandenem Sicherungsarchiv nicht möglich.
+
+[Prüfbericht](docs/tests/scanner-0.1.35-20261122.md): synthetische USB-Tastatur-
+Eingaben, drei Loopback-MQTT-Broker, native Tag-Discovery-Nachrichten und lokale
+Desktop-/Mobil-Webansicht. Der nachfolgende echte Test ist oben separat dokumentiert.
+
+## 0.1.34: Gamepad-Achsen und normale Tasten (lokal)
+
+Details: [Prüfbericht](docs/tests/gamepad-0.1.34-20261122.md). Synthetische evdev-
+Eingaben, temporäre Konfigurationen, drei Loopback-MQTT-Broker und lokale Webansicht.
+Die frühere physische Messung bestimmt das Profil; diese Implementierung wurde
+noch nicht am echten Gamepad auf .112 installiert oder geprüft.
+
+## 0.1.33: Fünf Regler und sichtbare Modusumschaltung (lokal)
+
+Details: [Prüfbericht](docs/tests/faders-0.1.33-20261122.md). Synthetische Eingaben,
+temporäre Einstellungen, drei Loopback-MQTT-Broker und lokale Webansicht. Keine
+Remoteprüfung, keine Installation und keine Veröffentlichung.
+
+## 0.1.32: Acht Richtungswerte und HA-Discovery (lokal)
+
+Ergebnisse und Grenzen: [Prüfbericht](docs/tests/slide-values-0.1.32-20261122.md).
+Prüfungen verwenden synthetische Eingaben, temporäre Einstellungen und drei
+MQTT-Broker ausschließlich auf 127.0.0.1. Kein neuer Test auf .112 oder echtem HA.
+
 ## 0.1.28: Seiten und Mobile-Stabilität
 
 - 168 lokale Python-Tests erfolgreich; JavaScript-/DOM-Prüfungen für Seiten,

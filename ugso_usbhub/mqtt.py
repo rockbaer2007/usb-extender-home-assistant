@@ -11,10 +11,31 @@ from .keymap import all_bindings
 LOG = logging.getLogger(__name__)
 
 
+def touchpad_channels(settings):
+    if not settings.get('enabled') or not settings.get('touchpad_gestures'):return {}
+    channels={}
+    if settings.get('touchpad_xy'):
+        for axis in ('x','y'):channels[axis]=(axis.upper(),settings['touchpad_'+axis+'_topic'])
+    if settings.get('touchpad_mode','directions')=='faders':
+        for lane,value in settings.get('touchpad_faders',{}).items():
+            if value.get('enabled',True):channels['fader_'+lane]=('Regler '+lane,value['topic'])
+    else:
+        for direction,value in settings.get('touchpad_slide_values',{}).items():
+            if value.get('enabled'):channels['slide_'+direction.lower()]=('Slide '+direction.replace('_',' '),value['topic'])
+    return channels
+
+
 def resolve_targets(config, device, binding):
     if binding.get("targets") is not None:
         return binding["targets"]
     return config.get("devices", {}).get(device, {}).get("targets", config["default_targets"])
+
+
+def numeric_channels(settings):
+    if settings.get('scanner_enabled'):return {}
+    from .gamepad import channels
+    return {**{'touchpad_'+k:v for k,v in touchpad_channels(settings).items()},
+            **{'gamepad_'+k:v for k,v in channels(settings).items()}}
 
 
 class Brokers:
@@ -75,6 +96,7 @@ class Brokers:
             if broker.get("discovery"):
                 client.subscribe("homeassistant/status")
             for binding in all_bindings(self.config):
+                if binding['control'].startswith('TOUCHPAD_SLIDE_') and self.config.get('devices',{}).get(binding['device'],{}).get('touchpad_mode')=='faders':continue
                 device = self.config["devices"].get(binding["device"], {})
                 if device.get("receive_broker") == ident and binding.get("state_topic"):
                     client.subscribe(binding["state_topic"])
@@ -82,6 +104,7 @@ class Brokers:
             try:
                 switches = read_json(home() / "switches.json", {})
                 for binding in all_bindings(self.config):
+                    if binding['control'].startswith('TOUCHPAD_SLIDE_') and self.config.get('devices',{}).get(binding['device'],{}).get('touchpad_mode')=='faders':continue
                     if binding.get("toggle") and binding["gesture"] == "toggle_on" and ident in resolve_targets(self.config, binding["device"], binding):
                         state = isinstance(switches, dict) and switches.get(binding["key_id"]) is True
                         client.publish(self.event_topic(broker, binding), "ON" if state else "OFF", qos=0, retain=False)
@@ -154,7 +177,21 @@ class Brokers:
         client = self.clients[broker["id"]]
         desired = {}
         if broker.get("discovery"):
+            for ident,settings in self.config.get('devices',{}).items():
+                if broker['id'] not in resolve_targets(self.config,ident,{}):continue
+                from .scanner import topic as scanner_topic
+                if scanner_topic(settings):
+                    desired[f"homeassistant/tag/ugso_{self.config['hub_id']}_{ident}/config"]=json.dumps({
+                        'topic':scanner_topic(settings),'device':self.discovery_device(ident)})
+                for channel,(name,state_topic) in numeric_channels(settings).items():
+                    unique=f"ugso_{self.config['hub_id']}_{ident}_{channel}"
+                    topic=f'homeassistant/sensor/{unique}/config'
+                    desired[topic]=json.dumps({'name':name,'unique_id':unique,'state_topic':state_topic,
+                        'suggested_display_precision':0,'icon':'mdi:gamepad-variant' if channel.startswith('gamepad_') else 'mdi:gesture-swipe',
+                        'availability_topic':broker['prefix']+'/availability',
+                        'device':self.discovery_device(ident)})
             for b in all_bindings(self.config):
+                if b['control'].startswith('TOUCHPAD_SLIDE_') and self.config.get('devices',{}).get(b['device'],{}).get('touchpad_mode')=='faders':continue
                 if broker["id"] not in resolve_targets(self.config, b["device"], b):
                     continue
                 if b.get("key_mode") in ("switch", "state"):
@@ -216,8 +253,56 @@ class Brokers:
                     delivered+=result.rc==mqtt.MQTT_ERR_SUCCESS
         return {'delivered':delivered,'matched':2,'reason':'sent' if delivered else 'no_targets' if not transmissions else 'not_connected','transmissions':transmissions}
 
+    def send_slide_value(self, device, direction, value):
+        from .touchpad import SLIDE_DIRECTIONS
+        if direction not in SLIDE_DIRECTIONS or type(value) is not int or not 0<=value<=100:
+            raise ValueError('Slide-Wert: bekannte Richtung und 0–100 erforderlich')
+        return self.send_touchpad_value(device,'slide_'+direction.lower(),value)
+
+    def send_fader_value(self, device, lane, value):
+        if type(lane) is not int or not 1<=lane<=5 or type(value) is not int or not 0<=value<=100:
+            raise ValueError('Regler: Platz 1–5 und Wert 0–100 erforderlich')
+        return self.send_touchpad_value(device,'fader_'+str(lane),value)
+
+    def send_touchpad_value(self, device, name, value):
+        settings=self.config.get('devices',{}).get(device,{})
+        channel=touchpad_channels(settings).get(name)
+        return self.send_numeric_channel(device,channel,value)
+
+    def send_gamepad_value(self,device,name,value):
+        from .gamepad import AXES,channels
+        if name not in AXES or type(value) is not int or not 0<=value<=100:raise ValueError('Gamepad: bekannte Achse und Wert 0–100 erforderlich')
+        return self.send_numeric_channel(device,channels(self.config.get('devices',{}).get(device,{})).get(name),value)
+
+    def send_numeric_channel(self,device,channel,value):
+        return self._send_channel(device,channel,value)
+
+    def send_scan(self,device,text):
+        from .scanner import topic,tag_value
+        settings=self.config.get('devices',{}).get(device,{})
+        target=topic(settings)
+        if not target:return {'delivered':0,'matched':0,'reason':'disabled','transmissions':[]}
+        return self._send_channel(device,('Scanner',target),tag_value(text,settings))
+
+    def _send_channel(self,device,channel,value):
+        if not channel:return {'delivered':0,'matched':0,'reason':'disabled','transmissions':[]}
+        transmissions=[];delivered=0
+        for broker in self.config['brokers']:
+            if broker['id'] not in resolve_targets(self.config,device,{}):continue
+            client=self.clients.get(broker['id'])
+            transmission={'broker':broker['id'],'name':broker['name'],'topic':channel[1],
+                          'state':'offline' if broker.get('enabled') else 'disabled'}
+            transmissions.append(transmission)
+            if client and client.is_connected():
+                result=client.publish(channel[1],str(value),qos=0,retain=False)
+                transmission['state']='sent' if result.rc==mqtt.MQTT_ERR_SUCCESS else 'failed'
+                delivered+=result.rc==mqtt.MQTT_ERR_SUCCESS
+        return {'delivered':delivered,'matched':1,'reason':'sent' if delivered else 'no_targets' if not transmissions else 'not_connected','transmissions':transmissions}
+
     def send_report(self, device, control, gesture, value=1, repeat_key=False, switch_only=False):
         control = canonical_control(control)
+        if control.startswith('TOUCHPAD_SLIDE_') and self.config.get('devices',{}).get(device,{}).get('touchpad_mode')=='faders':
+            return {'delivered':0,'matched':0,'reason':'mode_inactive','transmissions':[]}
         delivered = 0
         matched = 0
         transmissions = []
@@ -268,6 +353,22 @@ class Brokers:
     def cleanup_removed(self, replacement):
         new = {b["id"]: b for b in all_bindings(replacement)}
         new_brokers = {b["id"]: b for b in replacement["brokers"]}
+        for broker in self.config['brokers']:
+            client=self.clients.get(broker['id'])
+            if not broker.get('discovery') or not client or not client.is_connected():continue
+            updated=new_brokers.get(broker['id'],{})
+            same_endpoint=all(broker.get(k)==updated.get(k) for k in ('host','port','username'))
+            for ident,settings in self.config.get('devices',{}).items():
+                if broker['id'] not in resolve_targets(self.config,ident,{}):continue
+                channels=numeric_channels(replacement.get('devices',{}).get(ident,{}))
+                remains=updated.get('enabled') and updated.get('discovery') and same_endpoint and broker['id'] in resolve_targets(replacement,ident,{})
+                from .scanner import topic as scanner_topic
+                if scanner_topic(settings) and (not remains or not scanner_topic(replacement.get('devices',{}).get(ident,{}))):
+                    client.publish(f"homeassistant/tag/ugso_{self.config['hub_id']}_{ident}/config",'',qos=1,retain=True).wait_for_publish(timeout=2)
+                for channel in numeric_channels(settings):
+                    if not remains or channel not in channels:
+                        topic=f"homeassistant/sensor/ugso_{self.config['hub_id']}_{ident}_{channel}/config"
+                        client.publish(topic,'',qos=1,retain=True).wait_for_publish(timeout=2)
         for binding in all_bindings(self.config):
             for broker in self.config["brokers"]:
                 client = self.clients.get(broker["id"])

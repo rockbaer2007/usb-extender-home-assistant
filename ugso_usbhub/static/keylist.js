@@ -9,10 +9,18 @@ function refreshKeyEditIndicators(){
 }
 const keyNames = {KEY_VOLUMEUP:'Lauter',KEY_VOLUMEDOWN:'Leiser',KEY_MUTE:'Stumm',KEY_PLAYPAUSE:'Play/Pause',TOUCHPAD_SLIDE_LEFT:'Slide links',TOUCHPAD_SLIDE_RIGHT:'Slide rechts',TOUCHPAD_SLIDE_UP:'Slide hoch',TOUCHPAD_SLIDE_DOWN:'Slide runter',TOUCHPAD_SLIDE_UP_LEFT:'Slide links oben',TOUCHPAD_SLIDE_UP_RIGHT:'Slide rechts oben',TOUCHPAD_SLIDE_DOWN_LEFT:'Slide links unten',TOUCHPAD_SLIDE_DOWN_RIGHT:'Slide rechts unten'};
 function keyId() { return Array.from(crypto.getRandomValues(new Uint8Array(12)), n=>n.toString(16).padStart(2,'0')).join(''); }
+function isDragonrise(device){
+  const settings=config.devices?.[device]||{},live=status.devices?.find(d=>d.id===device)||{},hw=settings.hardware||{};
+  return settings.gamepad_profile==='dragonrise-0079-0006'||((live.vendor||hw.vendor)==='0079'&&(live.product_id||hw.product_id)==='0006');
+}
+function learnedName(device,control){
+  const names={BTN_BASE:'L1',BTN_BASE2:'R1',BTN_TOP2:'L2',BTN_PINKIE:'R2',BTN_BASE5:'Linker Stick-Klick',BTN_BASE6:'Rechter Stick-Klick'};
+  return (isDragonrise(device)&&names[control])||keyNames[control]||control.replace(/^KEY_/,'');
+}
 function learnedKey(device, control, topicName=learning?.topic_name) {
   if(!topicName)throw new Error('Gerätename für Topics fehlt. Anlernmodus neu starten.');
   const base=topicName+'-'+control.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-  return {id:'key-'+keyId(),device,control,name:keyNames[control]||control.replace(/^KEY_/,''),enabled:true,
+  return {id:'key-'+keyId(),device,control,name:learnedName(device,control),enabled:true,
     topic_version:2,device_topic:topicName,
     press:true,release:true,switch:true,press_plus:true,release_plus:true,switch_mode:'toggle',
     state:true,button:true,button_plus:true,click:true,double_click:true,hold:true,
@@ -65,6 +73,7 @@ function drawKeyList(parent, rows, draft=false, grouped=false) {
     const summary=el('summary'),title=el('span',undefined,'key-entry-title');summary.append(title);entry.append(summary);
     function updateTitle(){title.textContent=(config.devices[k.device]?.name||k.device)+' – '+k.control+' – '+(k.name||'Ohne Namen');}
     updateTitle();entry.open=openKeyEntry===k.id;
+    markTouchpadBinding(entry,k.device,k.control);
     entry.addEventListener('toggle',()=>{
       if(!entry.isConnected)return;
       if(entry.open){

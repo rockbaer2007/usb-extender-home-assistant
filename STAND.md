@@ -1,5 +1,128 @@
 # Aktueller Stand
 
+## 0.1.35 – Barcode-/QR-Scanner, öffentliches Testrelease
+
+- Release-Prüfung: 238 Python-Tests und zwölf Node-/DOM-Prüfprogramme erfolgreich.
+  [Freigabeprüfung](docs/tests/release-0.1.35-20261122.md).
+
+- Praxistest: Am 22.11.2026 um 20:15:45–52 MEZ Barcode zweimal, Text-QR und
+  HA-QR auf .112 gescannt; alle vier auf Topic `barcodescanner` an drei Broker
+  übergeben und in HA .193 als getrennte `tag_scanned`-Ereignisse nachgewiesen.
+  ioBroker-Empfang durch Nutzerbild bestätigt. Abschluss: beide Dienste laufen,
+  NRestarts jeweils 0, keine gemeldeten Fehler. Metadatenvergleich nicht möglich:
+  ursprünglich geprüfte Sicherung später am Pfad nicht mehr vorhanden.
+  [Praxistest](docs/tests/scanner-live-0.1.35-20261122.md).
+
+- USB-HID-Tastaturscanner mit DE/US, Scanabschluss Enter/Tab/Pause, Text-MQTT und
+  nativer HA-Tag-Discovery. Optional ID aus HA-QR-URL. Pro Gerät Opt-in, eigenes
+  Topic und Geräte-Zielbroker. Wiederholte gleiche Scans lösen erneut aus.
+- Bestehende Tastenbelegungen pausieren im Scanner-Modus und werden nicht gelöscht.
+  Einstellungen, Passwörter, andere Geräte und Mobile-Kopplungen bleiben erhalten.
+- Sicherung vor Änderungen:
+  `M:\repos-backups\usb-extender-before-035-20261122-185054.zip` (CRC geprüft).
+- Umsetzung zunächst ausschließlich lokal, anschließend oben genannter Praxistest.
+  Veröffentlichung mit ZIP, Prüfsumme und mehrsprachiger Dokumentation. [Einrichtung](docs/barcode-scanner.md) ·
+  [Prüfbericht](docs/tests/scanner-0.1.35-20261122.md).
+
+## 0.1.34 – Gamepad-Unterstützung, lokal und unveröffentlicht
+
+- DragonRise 0079:0006: ABS_X/ABS_Y (links), ABS_RX/ABS_RZ (rechts), je 0–100
+  und Mitte 50, Totzone aus dem Gerät. ABS_Z wird ignoriert. Stickausgabe zunächst
+  aus; nach Aktivierung vier getrennte Topics/Sensoren und Senderate 1–30/s je Achse.
+- Schultertasten und Stick-Klicks bleiben normale Tasten, Linux-IDs unverändert.
+  Verständliche Namen beim neuen Anlernen; vorhandene Belegungen erhalten.
+- Vor Änderungen vollständige lokale Quellsicherung:
+  `M:\repos-backups\usb-extender-before-034-20261122-180230.zip` (CRC geprüft).
+- Änderungen ausschließlich lokal; keine Installation, Veröffentlichung oder
+  Änderung an Einstellungen/Kopplungen auf dem Pi.
+- Prüfnachweis: [0.1.34](docs/tests/gamepad-0.1.34-20261122.md).
+
+## Gamepad-Prüfung auf .112 (ohne MQTT)
+
+- Geführter Einzeltest abgeschlossen:
+  `/home/pi/install/Gamepad-Einzeltest/gamepad-test-20261122-175330/bericht.json`.
+  Linker Stick Hauptachsen ABS_X/ABS_Y, rechter Stick ABS_RX/ABS_RZ (je 0–255,
+  Ruhe 128). ABS_Z reagiert bei mehreren Bewegungen mit, keine eigene sichere
+  Triggerzuordnung. L1=BTN_BASE, R1=BTN_BASE2, L2=BTN_TOP2, R2=BTN_PINKIE;
+  Stick-Klick links=BTN_BASE5, rechts=BTN_BASE6. Schultertrigger liefern Tasten,
+  keine analogen Druckwerte in diesem Test. Einstellungen unverändert,
+  Dienstlaufzustand wiederhergestellt, Prüfwerkzeug ohne MQTT. Nichts veröffentlicht.
+
+- DragonRise Inc. Generic USB Joystick, USB-ID 0079:0006. Aufnahme unter
+  `/home/pi/install/Gamepad-Pruefung/gamepad-test-20261122-174236/`.
+- Digital 788, Analog 3052 Ereignisse. Je zwölf Tasten angeboten, davon zehn mit
+  Drücken/Loslassen erfasst; BTN_BASE3/BTN_BASE4 in beiden Phasen nicht betätigt.
+- Digital beobachtet: ABS_X, ABS_Y, ABS_Z je 0–255. Analog zusätzlich ABS_RX,
+  ABS_RZ je 0–255 und ABS_HAT0X/Y je −1/0/+1. Zwischenstufenzahl des Digitalmodus
+  aus der Zusammenfassung nicht nachgewiesen. Physische Stick-/Schulterzuordnung
+  anschließend im geführten Einzeltest ergänzt (siehe oben).
+- completed/meaningful_phases/settings_unchanged/service_restored jeweils true,
+  mqtt_in_probe false. Dienst nach Test wiederhergestellt, keine Einstellungen
+  verändert oder Gamepad-MQTT-Anbindung erstellt. Nichts veröffentlicht.
+- Details: [Prüfbericht](docs/tests/gamepad-0079-0006-20261122.md).
+
+## 0.1.33 – fünf Regler, lokal und unveröffentlicht
+
+- Nach Nutzerinstallation am 22.11.2026 im Browser bestätigt: .112 zeigt 0.1.33,
+  gespeicherten Flächenmodus, fünf aktivierte Regler, X/Y und IOB-Ziel aktiv.
+  In ioBroker .116:8081 alle fünf Werte unter mqtt.0.t650-touchpad.fader-N.value
+  vorhanden: 98, 98, 85, 3, 8; identisch zu den zuletzt auf .112 angezeigten Werten.
+  Keine Änderung von MQTT-/Geräteeinstellungen während dieser Prüfung.
+  HA-Reglerprüfung, kontrollierter Streifenwechsel/Lock und Update-Prüfsummen offen.
+
+- Vollständiger Arbeitsstand inklusive uncommitteter 0.1.32-Dateien vor Änderungen
+  gesichert: `M:\repos-backups\usb-extender-before-033-20261122-170440.zip`, CRC geprüft.
+- Umschaltung acht Richtungen / fünf senkrechte Regler. Auswahl des Reglers beim
+  Aufsetzen, fest bis Abheben. Eigene Topics und HA-Sensoren; X/Y unabhängig.
+- Richtungsbelegungen bleiben erhalten und pausieren im Flächenmodus, einschließlich
+  ihrer Discovery-Anmeldungen und MQTT-Aktionen. Rückschalten erhält ihre IDs/Topics.
+- Webansicht: Regler türkis, Richtungen goldfarben, Pausiertes grau; letzte Werte,
+  Füllstände und letzter Trigger. Keine zusätzliche Netzwerkabfrage oder Bildübertragung.
+- Lokale Prüfungen und Grenzen: [Prüfbericht](docs/tests/faders-0.1.33-20261122.md).
+- Gesamtlauf: 217 Python-Tests in 100,549 s erfolgreich, zehn Node-/DOM-Prüfungen,
+  JavaScript-Syntax und Wheel-Build erfolgreich. Desktop/Mobil 1280/390 px geprüft.
+- Während der lokalen Implementierung keine Remoteänderung; Nutzer hat anschließend
+  0.1.33 auf .112 installiert. Kein Push/Release und keine Doku-Veröffentlichung.
+
+## 0.1.32 – lokaler, unveröffentlichter Teststand
+
+- Screenshot auf .112 zeigt Web 0.1.32, aktiven Dienst und 3/3 MQTT-Broker.
+- Hardwareaufnahme `t650-results-20261122-164242/report.json` mit älterem Prüfskript:
+  alle acht Richtungen erkannt, 128 Slide-Aktionen und 163 X/Y-Paare, keine Tipps in
+  den acht Slide-Phasen. Separater Tipptest neun Tipps. Drei Broker je 600 identische
+  Nachrichten; reine X/Y-Zahlen. Einstellungen laut Skript unverändert. UP_RIGHT
+  enthält zusätzlich eine UP-Aktion. Rate-Phase ohne Ereignisse, daher nicht bewertet.
+- Ergänzende Auswertung auf .112 bestanden:
+  `values-replay-20261122-164727.json` verwendet dieselben echten Rohdaten. Alle acht
+  Richtungswerte, 147 X/Y-Paare, kein Tipp. Drei Loopback-Broker je 441 identische
+  reine Zahlennachrichten, exakt passend zu den erzeugten Ereignissen. Zehn Sensoren
+  an jedem Discovery-Broker, null am Broker ohne Discovery. Fünf Metadaten-Dateien
+  während des Replays unverändert.
+- Anschließender Live-Test auf .193 am 22.11.2026 um 16:51–16:52 bestätigt:
+  acht Richtungswerte auf .112 eingeschaltet und gespeichert (automatische Sicherung
+  der vorherigen Konfiguration durch save_config). Discovery legt alle acht Sensoren
+  am bestehenden T650-Gerät an; X/Y waren bereits vorhanden. Nach vom Nutzer
+  ausgeführten acht Bewegungen alle zehn Sensoren numerisch, mit neuen Einträgen
+  in der HA-Aktivität. Letzte Werte: DOWN 2, DOWN_LEFT 7, DOWN_RIGHT 95, LEFT 2,
+  RIGHT 92, UP 98, UP_LEFT 12, UP_RIGHT 95, X 2, Y 88.
+- Acht Richtungswerte bleiben eingeschaltet. Vorhandene X/Y-Topics T650-X/T650-Y
+  und Zielauswahl erhalten. Vollständiger Installations-Prüfsummenvergleich sowie
+  neuer HA-Neustart-/Abschalttest weiterhin nicht belegt. Nichts veröffentlicht.
+- `tools/install_032_checked.sh`: vollständige aktive Sicherung, Paketprüfsummen,
+  Update und Vergleich der fünf Metadaten-Dateien sowie Dienststartprüfung.
+
+- Vorherige Quelle 99d5d9f gesichert in
+  `M:\repos-backups\usb-extender-before-032-20261122-160545.zip`.
+- Acht unabhängig aktivierbare Richtungswerte mit eigenen MQTT-Topics sowie
+  HA-Discovery für diese Werte und X/Y. Neue Richtungswerte standardmäßig aus.
+- Bestehende Richtungsaktionen, X/Y-Topics, Einstellungen und Kopplungen erhalten.
+- Lokale Tests mit temporären Einstellungen und drei Loopback-Brokern; Oberfläche
+  bei 1280 und 390 px ohne Seitenfehler/Überlaufen geprüft. Wheel erfolgreich gebaut.
+- Abschließender Gesamtlauf: 210 Python-Tests erfolgreich (96,420 s), dazu alle
+  neun Node-/DOM-Prüfungen und `git diff --check` erfolgreich.
+- Details und Prüfgrenzen: [Testbericht](docs/tests/slide-values-0.1.32-20261122.md).
+- Keine Installation auf .112, kein Push, kein GitHub-Release und kein Doku-Deployment.
+
 ## Release 0.1.31
 
 - Bündelt 0.1.29–0.1.31 mit ZIP/Prüfsumme, Changelog und README DE/EN.

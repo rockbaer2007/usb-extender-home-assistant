@@ -2,7 +2,71 @@
 
 **Connect USB input devices and Stream Decks through MQTT — for Raspberry Pi.**
 
-Version **0.1.31** · Public test release · [Deutsch](README.md) · **English** · [Download ZIP](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.31)
+Version **0.1.35** · Public test release · [Deutsch](README.md) · **English**.
+[Download ZIP and checksum](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.35).
+
+### New in 0.1.35: barcode/QR scanners and HA tags
+
+Opt-in mode for USB HID keyboard scanners with DE/US keyboard layouts, Enter/Tab
+or idle-gap completion, a custom MQTT topic and a readable last-scan preview.
+Leading zeroes are preserved; repeated identical scans produce separate events.
+HA discovery announces a native MQTT tag scanner on the existing device.
+Home Assistant tag URLs can be reduced to their tag ID for HA automations.
+Existing key, touchpad and gamepad actions pause while scanner mode is active;
+their configuration is preserved. No links or commands from scanned data execute.
+Printable HID input only; serial protocols and arbitrary Unicode/control sequences
+are not supported. Tested locally and subsequently with the real Aplic scanner on
+.112: repeated barcode scans, plain QR and native HA tags received on HA .193;
+ioBroker reception confirmed by the user's screenshot. Both services remain active
+without reported errors or restarts.
+[Practical test and limitations](docs/tests/scanner-live-0.1.35-20261122.md).
+In HA, scans appear as native `tag_scanned` events under **Settings → Tags**,
+rather than regular sensor values. Configure the desired action in HA.
+[Setup and limits (German)](docs/barcode-scanner.md).
+
+### Included since 0.1.34: gamepad sticks and buttons
+
+The verified DragonRise `0079:0006` profile provides left/right stick X/Y values
+from 0–100, with centre 50. Explicitly enable stick output in USB / Virtual Devices
+and save. Each axis has its own enable switch and MQTT topic; the shared rate
+setting limits each axis to 1–30 values/s. HA discovery creates four sensors on
+the same device; ioBroker receives plain numbers. `ABS_Z` is ignored. Learn shoulder
+buttons and stick clicks through the existing key workflow; L2/R2 are digital
+buttons. Existing bindings and pairings are preserved. Axis output defaults to off.
+Only the measured USB profile is supported; other gamepads need separate mapping.
+Axis mapping was measured on real hardware; the new MQTT implementation was tested locally.
+See [mapping and setup (German)](docs/gamepad.md).
+
+### Included since 0.1.33: five vertical faders for Logitech Touchpad T650
+
+Switch Touchpad mode between eight directions and five vertical strips. Touch-down
+selects a fader from left to right, locked until lift-off even when drifting sideways.
+Move up for 0–100, down for 100–0. Each fader has its own MQTT topic and HA sensor.
+Existing directional actions, topics and settings are preserved and paused in fader
+mode. X/Y output remains independent. Switching back restores the directional setup.
+
+The web view colours active faders turquoise, active directions gold, and paused
+controls grey. Fills show last received values; a glowing border marks the latest
+trigger for up to six seconds. Unsaved mode changes are labelled as previews and
+do not affect the device until saved. All five real T650 values were confirmed in
+ioBroker; additional practical checks remain in the roadmap.
+
+### Included since 0.1.32: directional values and HA sensors
+
+Each of the eight one-finger slide directions can publish an individually enabled
+0–100 value on its own MQTT topic in the touchpad device settings. Blank topics
+are generated on save; all new channels default to disabled. Existing settings,
+pairings, X/Y topics and key actions are preserved.
+
+X/Y and enabled directional values are announced as MQTT sensors on the same HA
+device when discovery is enabled for a selected target broker. Disabling a channel
+removes its discovery announcement. ioBroker still receives plain numbers without
+requiring discovery. Rate and sensitivity settings apply to the new values too.
+Values represent absolute position on the full surface, not distance since touch:
+up increases 0–100, down decreases 100–0; right increases, left decreases. Diagonals
+use the mean of their two oriented axes (see [formulas](docs/slide-values.md)).
+Short strokes cover a partial range. All eight directional values and X/Y were
+received on HA .193.
 
 This release includes the previously local 0.1.29 and 0.1.30 changes: step filters,
 device groups and reassignment, plus one-finger slides and optional X/Y output.
@@ -323,8 +387,8 @@ The ZIP is an installation package, not an offline firmware image.
 
 ```bash
 sudo apt-get update && sudo apt-get install -y unzip
-unzip USB-Extender-Home-Assistant-0.1.31-Raspi4.zip
-cd USB-Extender-Home-Assistant-0.1.31
+unzip USB-Extender-Home-Assistant-0.1.35-Raspi4.zip
+cd USB-Extender-Home-Assistant-0.1.35
 sudo bash install.sh
 ```
 

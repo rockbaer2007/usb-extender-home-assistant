@@ -111,6 +111,46 @@ def validate(c):
             raise ValueError("Unbekanntes MQTT-Ziel")
     targets(c.get("default_targets", []))
     for device in c.get("devices", {}).values():
+        for flag in ('scanner_enabled','scanner_ha_urls'):
+            if type(device.get(flag,flag=='scanner_ha_urls')) is not bool:raise ValueError('Scanner-Option muss ein/aus sein')
+        if device.get('scanner_layout','de') not in ('de','us'):raise ValueError('Scanner-Tastaturlayout: de oder us')
+        if device.get('scanner_terminator','enter') not in ('enter','tab','timeout'):raise ValueError('Scanner-Abschluss: Enter, Tab oder Scanpause')
+        timeout=device.get('scanner_timeout_ms',500)
+        if type(timeout) is not int or not 100<=timeout<=3000:raise ValueError('Scanner-Pause: 100–3000 ms')
+        topic=device.get('scanner_topic','')
+        if not isinstance(topic,str) or len(topic.encode('utf-8'))>512 or any(c in topic for c in ('#','+','\x00')):raise ValueError('Ungültiges Scanner-Topic')
+        from .gamepad import AXES,PROFILE
+        if type(device.get('gamepad_axes_enabled',False)) is not bool:raise ValueError('Gamepad-Achsen müssen ein/aus sein')
+        if device.get('gamepad_axes_enabled') and device.get('gamepad_profile')!=PROFILE:raise ValueError('Gamepad: geprüftes DragonRise-Profil erforderlich')
+        rate=device.get('gamepad_rate',10)
+        if type(rate) is not int or not 1<=rate<=30:raise ValueError('Gamepad-Senderate: 1–30/s')
+        axes=device.get('gamepad_axes',{})
+        if not isinstance(axes,dict) or any(name not in AXES for name in axes):raise ValueError('Unbekannte Gamepad-Achse; ABS_Z ist ausgeschlossen')
+        for value in axes.values():
+            if not isinstance(value,dict) or type(value.get('enabled',True)) is not bool:raise ValueError('Gamepad-Achse muss ein/aus sein')
+            topic=value.get('topic','')
+            if not isinstance(topic,str) or len(topic.encode('utf-8'))>512 or any(c in topic for c in ('#','+','\x00')):raise ValueError('Ungültiges Gamepad-Topic')
+        if device.get('touchpad_mode','directions') not in ('directions','faders'):
+            raise ValueError('Touchpad-Modus: directions oder faders')
+        faders=device.get('touchpad_faders',{})
+        if not isinstance(faders,dict) or any(key not in ('1','2','3','4','5') for key in faders):
+            raise ValueError('Touchpad: fünf Reglerplätze 1–5')
+        for value in faders.values():
+            if not isinstance(value,dict) or type(value.get('enabled',True)) is not bool:
+                raise ValueError('Regler müssen ein/aus sein')
+            topic=value.get('topic','')
+            if not isinstance(topic,str) or len(topic.encode('utf-8'))>512 or any(c in topic for c in ('#','+','\x00')):
+                raise ValueError('Ungültiges Regler-Topic')
+        from .touchpad import SLIDE_DIRECTIONS
+        values=device.get('touchpad_slide_values',{})
+        if not isinstance(values,dict) or any(key not in SLIDE_DIRECTIONS for key in values):
+            raise ValueError('Unbekannte Slide-Richtung')
+        for value in values.values():
+            if not isinstance(value,dict) or type(value.get('enabled',False)) is not bool:
+                raise ValueError('Slide-Werte müssen ein/aus sein')
+            topic=value.get('topic','')
+            if not isinstance(topic,str) or len(topic.encode('utf-8'))>512 or any(c in topic for c in ('#','+','\x00')):
+                raise ValueError('Ungültiges Slide-Wert-Topic')
         if 'touchpad_gestures' in device and type(device['touchpad_gestures']) is not bool:
             raise ValueError('Touchpad-Gesten müssen ein/aus sein')
         if 'touchpad_xy' in device and type(device['touchpad_xy']) is not bool:
@@ -169,12 +209,38 @@ def validate(c):
     validate_keys(c)
     names=device_topic_names(c)
     for ident,device in c.get('devices',{}).items():
+        value_topics=[]
+        if device.get('scanner_enabled') and not device.get('scanner_topic'):
+            device['scanner_topic']=names[ident]+'-scanner/tag_scanned'
+        if device.get('gamepad_axes_enabled'):
+            from .gamepad import AXES
+            axes=device.setdefault('gamepad_axes',{})
+            for name in AXES:
+                value=axes.setdefault(name,{'enabled':True,'topic':''})
+                if value.get('enabled',True):
+                    if not value.get('topic'):value['topic']=names[ident]+'-gamepad/'+name.replace('_','-')+'/value'
+                    value_topics.append(value['topic'])
+        fader_mode=device.get('touchpad_mode','directions')=='faders'
+        if fader_mode:
+            faders=device.setdefault('touchpad_faders',{})
+            for lane in ('1','2','3','4','5'):
+                value=faders.setdefault(lane,{'enabled':True,'topic':''})
+                if value.get('enabled',True):
+                    if not value.get('topic'):value['topic']=names[ident]+'-touchpad/fader-'+lane+'/value'
+                    value_topics.append(value['topic'])
+        for direction,value in device.get('touchpad_slide_values',{}).items():
+            if value.get('enabled'):
+                if not value.get('topic'):value['topic']=names[ident]+'-touchpad/slide-'+direction.lower().replace('_','-')+'/value'
+                if not fader_mode:value_topics.append(value['topic'])
         if device.get('touchpad_xy'):
             for axis in ('x','y'):
                 if not device.get('touchpad_'+axis+'_topic'):
                     device['touchpad_'+axis+'_topic']=names[ident]+'-touchpad/'+axis
             if device['touchpad_x_topic']==device['touchpad_y_topic']:
                 raise ValueError('Touchpad-X und -Y benötigen unterschiedliche Topics')
+            value_topics.extend((device['touchpad_x_topic'],device['touchpad_y_topic']))
+        if len(value_topics)!=len(set(value_topics)):
+            raise ValueError('Zahlenwerte benötigen unterschiedliche Topics')
     return c
 
 

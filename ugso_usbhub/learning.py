@@ -17,6 +17,8 @@ def command(body, config):
         device = body.get("device")
         if not config.get("devices", {}).get(device, {}).get("enabled"):
             raise ValueError("Gerät zuerst freigeben und speichern")
+        if config['devices'][device].get('scanner_enabled'):
+            raise ValueError('Scanner benötigen kein Tasten-Anlernen. Unter USB / Virtuelle Geräte einen Code scannen.')
         if lease:
             raise ValueError("Es läuft bereits ein Anlernmodus. Erst beenden oder 15 Sekunden warten.")
         lease = {"id": secrets.token_hex(16), "device": device,
