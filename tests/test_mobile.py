@@ -45,6 +45,108 @@ class Peer:
 
 
 class MobileTests(hub.TemporaryHome):
+    def test_tablet_8x8_next_key7_previous_key0_roundtrips(self):
+        from unittest.mock import patch
+        from tests.test_pages import Recorder
+        from ugso_usbhub.core import Core
+        from ugso_usbhub.keymap import ensure_deck_keys
+        peer=self.pair();ident=self.create(peer)
+        peer.send(updateKeypadConfig={'layoutCrop':{'width':8,'height':8},'iconSize':{'width':144,'height':144}})
+        wait_for(lambda:self.server.decks()[ident].key_count()==64 and self.server.decks()[ident].key_image_format()['size']==(144,144))
+        self.config['devices'][ident]={'enabled':True,'name':'Tablet','targets':['broker1'],
+            'deck_page_count':2,'deck_page_order':[0,1],'deck_keys':{
+                '7':{'action':'next','show_page':True},
+                '128':{'action':'previous','show_page':True},
+                '0':{'text':'First page','background':'#ff0000'},
+                '129':{'text':'Second page','background':'#0000ff'}}}
+        ensure_deck_keys(self.config,self.server.inventory());save_config(self.config)
+        pool=Recorder()
+        with patch('ugso_usbhub.core.Brokers',return_value=pool):core=Core()
+        core.mobile=self.server;core.hardware.mobile=self.server
+        self.server.current_page=core.hardware.active_page;self.server.emit=core.enqueue
+        listener=self.server.server;core.hardware.refresh_decks()
+        def receive_context(target):
+            for _ in range(200):
+                message=peer.recv()
+                if message.WhichOneof('payload')=='context' and message.context.currentPage==target:
+                    self.assertEqual(message.context.totalPages,2)
+                    self.assertEqual(len(message.context.actions),64)
+                    return
+            self.fail('Expected page context')
+        def press(key,pressed):
+            peer.send(keyPress={'index':key,'pressed':pressed})
+            wait_for(lambda:not core.queue.empty())
+            core.event(*core.queue.get_nowait())
+        try:
+            for _ in range(6):
+                press(7,True);receive_context(1);press(7,False)
+                press(0,True);receive_context(0);press(0,False)
+            self.assertEqual(core.hardware.active_page(ident),0)
+            self.assertEqual(pool.calls,[])
+            self.assertIs(self.server.server,listener)
+            self.assertFalse(self.server.status()['recent_disconnects'])
+        finally:pool.close();core.hardware.close()
+
+    def test_two_mobile_devices_page_navigation_images_and_context_without_reconnect(self):
+        from unittest.mock import patch
+        from tests.test_pages import Recorder
+        from ugso_usbhub.core import Core
+        from ugso_usbhub.keymap import ensure_deck_keys
+        first=self.pair();tablet=self.create(first)
+        second=self.pair();phone=self.create(second)
+        for ident in [tablet,phone]:
+            self.config['devices'][ident]={'enabled':True,'name':ident,'targets':['broker1'],'deck_page_count':3,'deck_keys':{}}
+            for page in range(3):
+                self.config['devices'][ident]['deck_keys'][str(page*128)]={'background':['#ff0000','#0000ff','#00ff00'][page]}
+                self.config['devices'][ident]['deck_keys'][str(page*128+5)]={'action':'next','show_page':True}
+        self.config['devices'][tablet]['deck_keys']['5']={'action':'goto','target_page':2,'show_page':True}
+        self.config['devices'][tablet]['deck_keys']['133']={'action':'previous','show_page':True}
+        ensure_deck_keys(self.config,self.server.inventory());save_config(self.config)
+        pool=Recorder()
+        with patch('ugso_usbhub.core.Brokers',return_value=pool):core=Core()
+        core.mobile=self.server;core.hardware.mobile=self.server
+        self.server.current_page=core.hardware.active_page;self.server.emit=core.enqueue
+        listener=self.server.server;core.hardware.refresh_decks()
+        def drain(peer,kind):
+            for _ in range(30):
+                message=peer.recv()
+                if message.WhichOneof('payload')==kind:return message
+            self.fail('Expected '+kind)
+        def process(peer,payload):
+            peer.send(**payload);wait_for(lambda:not core.queue.empty());core.event(*core.queue.get_nowait())
+        try:
+            for peer in [first,second]:
+                for _ in range(6):drain(peer,'icon')
+            process(first,{'keyPress':{'index':5,'pressed':True}})
+            context=drain(first,'context').context
+            self.assertEqual((context.currentPage,context.totalPages),(1,3))
+            frames=[drain(first,'icon').icon for _ in range(2)]
+            image=next(frame for frame in frames if frame.index==0)
+            raw=lz4.block.decompress(image.image.image,uncompressed_size=72*72*4)
+            self.assertEqual(Image.frombytes('RGBA',(72,72),raw,'raw','BGRA').getpixel((20,20)),(0,0,255,255))
+            self.assertEqual(core.hardware.active_page(phone),0)
+            self.assertEqual(pool.calls,[])
+            process(first,{'keyPress':{'index':5,'pressed':False}})
+            for _ in range(3):
+                process(first,{'keyPress':{'index':5,'pressed':True}})
+                self.assertEqual(drain(first,'context').context.currentPage,0)
+                process(first,{'keyPress':{'index':5,'pressed':False}})
+                process(first,{'keyPress':{'index':5,'pressed':True}})
+                self.assertEqual(drain(first,'context').context.currentPage,1)
+                process(first,{'keyPress':{'index':5,'pressed':False}})
+            self.assertEqual(pool.calls,[])
+            process(first,{'keyPress':{'index':0,'pressed':True}})
+            self.assertTrue(all(args[1]=='key:128' for args,kwargs in pool.calls))
+            process(first,{'keyPress':{'index':0,'pressed':False}})
+            process(second,{'nextPage':{}})
+            self.assertEqual(drain(second,'context').context.currentPage,1)
+            process(second,{'pageByIndex':{'index':0}})
+            self.assertEqual(drain(second,'context').context.currentPage,0)
+            self.assertEqual(core.hardware.active_page(tablet),1)
+            self.assertIs(self.server.server,listener)
+            self.assertTrue(all(c['authorized'] for c in self.server.status()['clients']))
+        finally:pool.close();core.hardware.close()
+
     def test_animation_frames_over_encrypted_mobile_connection(self):
         from ugso_usbhub import icons as library
         from tests.test_animated_icons import moving

@@ -17,7 +17,7 @@ from nacl.public import PrivateKey
 from websockets.sync.server import serve
 from websockets.exceptions import ConnectionClosed
 from . import __version__
-from .deck import artwork, key_image
+from .deck import artwork, key_image, logical_key, page_count, page_slot
 from .keymap import all_bindings
 from .mobile_protocol import ClientMessage, ServerMessage, encrypt, decrypt, shared_key
 from .storage import home, atomic_json, read_json
@@ -28,6 +28,9 @@ LOG = logging.getLogger(__name__)
 DESKTOP_COMPATIBILITY_VERSION = "6.3.0"
 HEARTBEAT_INTERVAL = 5
 HEARTBEAT_TIMEOUT = 20
+# Return to input and heartbeat handling between small image batches.
+IMAGE_BATCH_SIZE = 4
+IMAGE_BATCH_SECONDS = 0.025
 DEFAULTS = {"enabled": False, "host": "0.0.0.0", "port": 28198, "advertise_host": "", "columns": 5, "rows": 3}
 
 
@@ -139,7 +142,11 @@ class Session:
         self.created=time.monotonic()
         self.pending_until=0
         self.context_due=False
+        self.context_force=False
         self.nonces=set()
+        self.packets_received=0
+        self.last_receive=time.monotonic()
+        self.last_kind="hello"
 
     def send(self, message, plain=False):
         data=message.SerializeToString()
@@ -260,12 +267,15 @@ class Session:
         if not self.device:return
         actions=[]
         bindings=all_bindings(self.owner.config)
+        pages=page_count(self.owner.config,self.device)
+        page=max(0,min(self.owner.current_page(self.device),pages-1))
         for key in range(self.key_count()):
-            style=artwork(self.owner.config,self.device,key)
-            binding=next((b for b in bindings if b["device"]==self.device and b["control"]==f"key:{key}"),{})
-            title=style.get("text",binding.get("text",f"Taste {key+1}"))
-            actions.append({"index":key,"title":title,"name":title,"category":"MQTT"})
-        message=ServerMessage(context={"profileID":self.device,"totalPages":1,"currentPage":0,"actions":actions})
+            style=artwork(self.owner.config,self.device,key,page)
+            binding=next((b for b in bindings if b["device"]==self.device and b["control"]==f"key:{logical_key(key,page_slot(self.owner.config,self.device,page))}"),{})
+            title=style.get("text",binding.get("text",f"Taste {page*self.key_count()+key+1}"))
+            if not title:title={"next":"Vor","previous":"Zurück","home":"Home","goto":f"Seite {style.get('target_page',1)}"}.get(style.get("action"),title)
+            actions.append({"index":key,"title":title,"name":title,"category":"Navigation" if style.get('action','mqtt')!='mqtt' else "MQTT"})
+        message=ServerMessage(context={"profileID":self.device,"totalPages":pages,"currentPage":page,"actions":actions})
         signature=message.SerializeToString()
         if force or signature!=self.last_context:
             self.send(message)
@@ -276,11 +286,14 @@ class Session:
         if not self.authorized or not self.device:return
         if self.context_due:
             self.context_due=False
-            self.context()
-        with self.owner.lock:
-            pending=self.images
-            self.images={}
-        for key,data in pending.items():
+            force,self.context_force=self.context_force,False
+            self.context(force=force)
+        started=time.monotonic()
+        for _ in range(IMAGE_BATCH_SIZE):
+            with self.owner.lock:
+                if not self.images:break
+                key=next(iter(self.images))
+                data=self.images.pop(key)
             with Image.open(io.BytesIO(data)) as source:
                 size=source.size
                 raw=source.convert("RGBA").tobytes("raw","BGRA")
@@ -297,9 +310,13 @@ class Session:
                       "size":{"width":size[0],"height":size[1]},"rowBytes":size[0]*4,"image":data}}))
             self.sent_images[key]=signature
             self.images_sent+=1
+            if time.monotonic()-started>=IMAGE_BATCH_SECONDS:break
 
     def process(self, message):
         kind=message.WhichOneof("payload")
+        self.packets_received+=1
+        self.last_receive=time.monotonic()
+        self.last_kind=kind or "extension"
         if kind=="authenticate":
             if self.authorized:
                 self.ok(message.authenticate.requestID)
@@ -337,7 +354,9 @@ class Session:
                 self.owner.refresh_required.set()
                 self.owner.remember(self)
         elif kind in ("nextPage","previousPage","pageByIndex"):
-            self.context(force=True)  # Reply even though this server has only one page.
+            if self.device:
+                action={'nextPage':'next','previousPage':'previous','pageByIndex':'index'}[kind]
+                self.owner.emit(self.device,'_deck_page',action,message.pageByIndex.index if kind=='pageByIndex' else 0)
         elif kind=="deleteVirtualDevice":
             self.ws.close(1008,"Entfernen nur in der Serververwaltung; Daten bleiben erhalten")
         elif kind=="removeShortcut":
@@ -390,6 +409,14 @@ class MobileServer:
         self.public=self.secret=b""
         self.refresh_required=threading.Event()
         self.disconnects=deque(maxlen=8)
+        self.current_page=lambda ident:0
+
+    def page_changed(self, ident, force=False):
+        with self.lock:
+            for session in self.sessions:
+                if session.device==ident:
+                    session.context_due=True
+                    session.context_force=session.context_force or force
 
     def configure(self, config):
         self.config=config
@@ -448,7 +475,7 @@ class MobileServer:
                 session.heartbeat()
                 session.flush_images()
                 if not session.authorized and time.monotonic()-session.created>125:break
-                try:data=ws.recv(timeout=.15)
+                try:data=ws.recv(timeout=.01 if session.images else .15)
                 except TimeoutError:continue
                 now=time.monotonic()
                 if now-second>=1:count=0;second=now
@@ -472,8 +499,13 @@ class MobileServer:
             with self.lock:
                 session.closed=True
                 if session in self.sessions:self.sessions.remove(session)
-                self.disconnects.append({"time":time.time(),"name":session.name,"device":session.device,"reason":reason,"images_sent":session.images_sent,"contexts_sent":session.contexts_sent})
-            LOG.info("Mobile getrennt · %s · %s",session.name[:80],reason)
+                last_receive_age=round(max(0,time.monotonic()-session.last_receive),2)
+                self.disconnects.append({"time":time.time(),"name":session.name,"device":session.device,"reason":reason,"images_sent":session.images_sent,"contexts_sent":session.contexts_sent,
+                    "pings_sent":session.pings_sent,"pongs_received":session.pongs_received,"packets_received":session.packets_received,
+                    "last_packet":session.last_kind,"last_packet_age":last_receive_age,"queued_images":len(session.images)})
+            LOG.info("Mobile getrennt · %s · %s · Bilder %s · Context %s · Ping/Pong %s/%s · letzte Nachricht %s vor %.2fs · Bildwarteschlange %s",
+                     session.name[:80],reason,session.images_sent,session.contexts_sent,session.pings_sent,session.pongs_received,
+                     session.last_kind,last_receive_age,len(session.images))
             if session.device:self.emit(session.device,"_mobile_disconnect","release",0)
 
     def remember(self, session):

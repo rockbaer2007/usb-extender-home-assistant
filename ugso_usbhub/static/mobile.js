@@ -25,7 +25,7 @@ function mobile() {
   }
   const state=card('Mobile-Verbindungen'),box=el('div');box.id='mobile-status';state.append(box);renderMobileStatus(box);
   const steps=card('Nach der Kopplung');
-  const list=el('ol');['In der Android-App ein neues virtuelles Deck anlegen oder ein vorhandenes auswählen.','Unter „USB-Geräte“ oder im Tab „Stream Deck“ das neue Mobile-Gerät freigeben und speichern.','Im grafischen Stream-Deck-Tab Tasten auswählen, Bilder gestalten und MQTT-Aktionen zuordnen.','Android-Taste drücken und unter „Tasten & Anzeigen“ die MQTT-Übertragung prüfen.'].forEach(text=>list.append(el('li',text)));steps.append(list);
+  const list=el('ol');['In der Android-App ein neues virtuelles Deck anlegen oder ein vorhandenes auswählen.','Unter „USB / Virtuelle Geräte“ oder im Tab „Stream Deck“ das neue Mobile-Gerät freigeben und speichern.','Im grafischen Stream-Deck-Tab Tasten auswählen, Bilder gestalten und MQTT-Aktionen zuordnen.','Android-Taste drücken und unter „Tasten & Anzeigen“ die MQTT-Übertragung prüfen.'].forEach(text=>list.append(el('li',text)));steps.append(list);
   steps.append(el('p','Die Verbindung nutzt einen separaten lokalen WebSocket-Port. Kein Bonjour- oder Cloud-Discovery-Server enthalten: Einrichtung über QR-Code. Bildschirmhelligkeit am Android-Gerät einstellen.','muted'));
 }
 function renderMobileStatus(parent) {

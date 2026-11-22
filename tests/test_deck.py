@@ -174,12 +174,12 @@ class DeckTests(unittest.TestCase):
             core.config["devices"]["deck"] = {"receive_broker": "broker1", "deck_keys": {"0": {"icon": "a"*32}}}
             core.config["bindings"] = [{"id": "state", "device": "deck", "control": "key:0", "state_topic": "light/state", "on_icon": "b"*32}]
             core.display_message("broker1", "light/state", "ON")
-            core.hardware.display.assert_called_with("deck", 0, "b"*32, "ON")
+            core.hardware.display_logical.assert_called_with("deck", 0, "b"*32, "ON")
             core.display_message("broker1", "light/state", "OFF")
-            core.hardware.display.assert_called_with("deck", 0, "a"*32, "OFF")
+            core.hardware.display_logical.assert_called_with("deck", 0, "a"*32, "OFF")
             core.hardware.reset_mock()
             core.display_message("broker2", "light/state", "ON")
-            core.hardware.display.assert_not_called()
+            core.hardware.display_logical.assert_not_called()
         finally:
             core.brokers.close()
 
@@ -230,3 +230,28 @@ class PreviewTests(hub.WebTests):
         with self.assertRaises(urllib.error.HTTPError) as error:
             self.request("/api/deck/preview", request)
         self.assertEqual(error.exception.code, 400)
+
+    def test_save_and_delete_middle_page_keep_other_topics_and_page_one(self):
+        import time
+        from ugso_usbhub.storage import atomic_json,status_path,home
+        config=load_config();config['brokers'][0]['password']='keep-secret';save_config(config)
+        self.login()
+        incoming=public_config(config)
+        incoming['devices']['tablet']={'enabled':True,'name':'Tablet','deck_page_count':3,'deck_keys':{'0':{'text':'First'},'128':{'text':'Second'},'256':{'text':'Third','show_page':True}}}
+        atomic_json(status_path(),{'updated':time.time(),'devices':[{'id':'tablet','kind':'streamdeck','deck':{'keys':6}}]})
+        with self.request('/api/config',incoming):pass
+        saved=load_config();third=next(k for k in saved['keys'] if k['control']=='key:256')
+        incoming=public_config(saved);incoming['devices']['tablet']['deck_page_count']=2;incoming['devices']['tablet']['deck_page_order']=[0,2]
+        del incoming['devices']['tablet']['deck_keys']['128']
+        incoming['keys']=[k for k in incoming['keys'] if int(k['control'].split(':')[1])//128!=1]
+        with self.request('/api/config',incoming):pass
+        restored=load_config();newthird=next(k for k in restored['keys'] if k['control']=='key:256')
+        self.assertEqual((newthird['id'],newthird['press_topic']),(third['id'],third['press_topic']))
+        self.assertEqual(newthird['name'],'Taste 7');self.assertEqual(len(restored['keys']),12)
+        self.assertEqual(restored['devices']['tablet']['deck_keys']['0']['text'],'First')
+        self.assertEqual(restored['devices']['tablet']['deck_keys']['256']['text'],'Third')
+        self.assertEqual(restored['brokers'][0]['password'],'keep-secret')
+        before=(home()/'config.json').read_bytes()
+        incoming['devices']['tablet']['deck_page_order']=[1,2]
+        with self.assertRaises(urllib.error.HTTPError):self.request('/api/config',incoming)
+        self.assertEqual((home()/'config.json').read_bytes(),before)

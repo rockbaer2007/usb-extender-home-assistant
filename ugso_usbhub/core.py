@@ -2,6 +2,7 @@ from collections import deque
 import json
 import logging
 import queue
+import re
 import signal
 import time
 from . import __version__
@@ -21,8 +22,10 @@ class Core:
         self.events = deque(maxlen=100)
         self.queue = queue.Queue(maxsize=512)
         self.hardware = Hardware(self.enqueue)
+        self.hardware.config = self.config
         from .mobile import MobileServer
         self.mobile = MobileServer(self.enqueue)
+        self.mobile.current_page = self.hardware.active_page
         self.hardware.mobile = self.mobile
         self.brokers = Brokers(self.config, self.receive)
         self.running = True
@@ -36,6 +39,18 @@ class Core:
         stored = read_json(home() / "switches.json", {})
         self.toggle_states = stored if isinstance(stored, dict) else {}
         self.started = time.time()
+        self.deck_routes = {}
+        self.navigation_down = set()
+        self.deck_ignored_releases = set()
+
+    def change_page(self, device, target):
+        from .deck import page_count
+        current = self.hardware.active_page(device)
+        target = max(0, min(target, page_count(self.config, device)-1))
+        if target == current:
+            return False
+        self.release_all(device)
+        return self.hardware.set_page(device, target)
 
     def enqueue(self, device, control, gesture, value=1):
         try:
@@ -57,9 +72,19 @@ class Core:
             if self.config["devices"].get(ident, {}).get("receive_broker") != broker_id:
                 return
             command = json.loads(payload)
-            self.hardware.display(ident, int(command.get("key", 0)), command.get("icon", ""), command.get("text", ""), command.get("brightness"))
+            from .deck import logical_key, page_count, page_slot
+            target_page = command.get("page", 1)
+            if type(target_page) is not int or not 1 <= target_page <= page_count(self.config, ident):
+                raise ValueError("Ungültige Displayseite")
+            key = command.get("key", 0)
+            if type(key) is not int or not 0 <= key < 128:
+                raise ValueError("Ungültige Displaytaste")
+            self.hardware.display_logical(ident, logical_key(key, page_slot(self.config,ident,target_page-1)), command.get("icon", ""), command.get("text", ""), command.get("brightness"))
         else:
             for b in self.config["bindings"]:
+                from .deck import binding_allowed
+                if not binding_allowed(self.config,b['device'],b['control']):
+                    continue
                 if b.get("state_topic") != topic or self.config["devices"].get(b["device"], {}).get("receive_broker") != broker_id:
                     continue
                 value = payload
@@ -68,22 +93,62 @@ class Core:
                     for part in b["state_path"].split("."):
                         value = value[part]
                 if b["control"].startswith("key:"):
-                    from .deck import artwork
-                    style = artwork(self.config, b["device"], int(b["control"].split(":")[1]))
+                    from .deck import artwork, page_slots
+                    key = int(b["control"].split(":")[1])
+                    slots=page_slots(self.config,b["device"])
+                    if key // 128 not in slots:
+                        continue
+                    style = artwork(self.config, b["device"], key % 128, slots.index(key // 128))
                     base_icon = style.get("icon", b.get("icon", ""))
                     icon = (b.get("on_icon") or base_icon) if str(value) == str(b.get("on_value", "ON")) else base_icon
-                    self.hardware.display(b["device"], int(b["control"].split(":")[1]), icon or "", str(value))
+                    self.hardware.display_logical(b["device"], key, icon or "", str(value))
 
     def event(self, device, control, gesture, value):
         if control == "_mobile_disconnect":
-            self.release_all(device)
+            self.release_all(device, disconnected=True)
             return
         if not self.config["devices"].get(device, {}).get("enabled"):
             return
+        if control == '_deck_page':
+            self.hardware.config=self.config
+            current=self.hardware.active_page(device)
+            if not (self.learning.get('device')==device and self.learning.get('expires',0)>time.time()):
+                target={'next':current+1,'previous':current-1,'home':0,'index':int(value)}.get(gesture,current)
+                self.change_page(device,target)
+                self.record(device,control,'navigation',self.hardware.active_page(device)+1,{'delivered':0,'matched':1,'reason':'navigation','transmissions':[]})
+            self.mobile.page_changed(device,force=True)
+            return
         now = time.monotonic()
         control = canonical_control(control)
+        self.hardware.config = self.config
+        if re.fullmatch(r"key:\d+", control) and int(control[4:]) < 128:
+            from .deck import artwork, logical_key, page_count, page_slot
+            physical = int(control[4:])
+            token = (device, control)
+            if token in self.deck_ignored_releases or token in self.navigation_down:
+                if gesture == "release":
+                    self.deck_ignored_releases.discard(token)
+                    self.navigation_down.discard(token)
+                return
+            current = self.hardware.active_page(device) if page_count(self.config, device) > 1 else 0
+            mapped = self.deck_routes.get(token, f"key:{logical_key(physical,page_slot(self.config,device,current))}")
+            learning_now = self.learning.get("device") == device and self.learning.get("expires",0) > time.time()
+            if gesture == "press" and token not in self.deck_routes:
+                style = artwork(self.config, device, physical, current)
+                action = style.get("action", "mqtt")
+                if action != "mqtt" and not learning_now:
+                    target = {"next":current+1,"previous":current-1,"home":0,"goto":style.get("target_page",1)-1}[action]
+                    self.change_page(device, target)
+                    self.navigation_down.add(token)
+                    report = {"delivered":0,"matched":1,"reason":"navigation","transmissions":[]}
+                    self.record(device, mapped, "navigation", self.hardware.active_page(device)+1, report)
+                    return
+                self.deck_routes[token] = mapped
+            elif gesture == "release":
+                self.deck_routes.pop(token, None)
+            control = mapped
         if control.startswith("key:") and gesture in ("press", "release"):
-            self.hardware.set_pressed(device, int(control.split(":")[1]), gesture == "press")
+            self.hardware.set_pressed(device, int(control.split(":")[1]) % 128, gesture == "press")
         key = (device, control)
         was_down = key in self.pressed
         row = next((k for k in self.config.get("keys", []) if (k["device"], k["control"]) == key and k.get("enabled", True)), {})
@@ -163,22 +228,32 @@ class Core:
         # release actions for existing individual bindings.
         self.brokers.send_report(*key, "release", 0, switch_only=True)
         if key[1].startswith("key:"):
-            self.hardware.set_pressed(key[0], int(key[1].split(":")[1]), False)
+            self.hardware.set_pressed(key[0], int(key[1].split(":")[1]) % 128, False)
         self.buttons.cancel(key=key)
         self.pressed.pop(key, None)
         self.repeat_due.pop(key, None)
         self.repeats.pop(key, None)
 
-    def release_all(self, device=None):
+    def release_all(self, device=None, disconnected=False):
         self.buttons.cancel(device=device)
         for key in list(self.pressed):
             if device is None or key[0] == device:
                 self.release_key(key)
+        held = {token for token in {*self.deck_routes, *self.navigation_down} if device is None or token[0] == device}
+        for token in held:
+            self.learning_releases.discard((token[0],self.deck_routes.get(token,token[1])))
+        self.deck_routes = {token:value for token,value in self.deck_routes.items() if token not in held}
+        self.navigation_down.difference_update(held)
+        if disconnected:
+            self.deck_ignored_releases = {token for token in self.deck_ignored_releases if device is not None and token[0] != device}
+        else:
+            self.deck_ignored_releases.update(held)
 
     def status(self):
         return {"version": __version__, "pid": __import__("os").getpid(), "updated": time.time(),
                 "started": self.started, "devices": [d for d in self.hardware.inventory if d.get("connection") != "mobile"] + self.mobile.inventory(),
                 "mobile": self.mobile.status(),
+                "deck_pages": {ident:{"page":self.hardware.active_page(ident)+1,"pages":settings.get("deck_page_count",1)} for ident,settings in self.config["devices"].items() if settings.get("deck_info") or settings.get("deck_page_count",1)>1},
                 "brokers": dict(self.brokers.states),
                 "errors": {**self.hardware.errors, **{"Discovery " + key: value for key, value in self.brokers.discovery_errors.items()}},
                 "events": list(self.events)}
@@ -212,7 +287,13 @@ class Core:
                             self.config = updated
                             self.pressed.clear()
                             self.repeat_due.clear()
+                            from .deck import page_slots
+                            old_slots={ident:page_slots(old,ident)[self.hardware.active_page(ident)] for ident in old['devices']}
                             self.hardware.config = updated
+                            for ident,slot in old_slots.items():
+                                slots=page_slots(updated,ident)
+                                self.hardware.page_states[ident]=slots.index(slot) if slot in slots else 0
+                            self.hardware.page_feedback.clear()
                             self.mobile.configure(updated)
                             self.hardware.refresh_decks()
                             scan_at = 0
@@ -223,8 +304,8 @@ class Core:
                     try:
                         self.hardware.scan(self.config)
                         present = {d["id"] for d in self.hardware.inventory}
-                        for device in {key[0] for key in [*self.pressed, *self.buttons.keys] if key[0] not in present}:
-                            self.release_all(device)
+                        for device in {key[0] for key in [*self.pressed, *self.buttons.keys, *self.deck_routes, *self.navigation_down, *self.deck_ignored_releases] if key[0] not in present}:
+                            self.release_all(device, disconnected=True)
                         self.pressed = {key: value for key, value in self.pressed.items() if key[0] in present}
                     except Exception:
                         LOG.exception("USB-Erkennung fehlgeschlagen")

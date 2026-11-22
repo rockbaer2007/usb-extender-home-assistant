@@ -1,5 +1,17 @@
 # Prüfungen
 
+## 0.1.28: Seiten und Mobile-Stabilität
+
+- 168 lokale Python-Tests erfolgreich; JavaScript-/DOM-Prüfungen für Seiten,
+  Tastenliste, Mobile, Iconbibliothek und Iconauswahl erfolgreich.
+- Verschlüsselte Protokolltests für getrennte Geräte, Vor/Zurück/Home/Gehe zu,
+  8×8 mit 144×144-Bildern, Erhalt der Topics und keine MQTT-Ausgabe bei Navigation.
+- Langsame Bildübertragung simuliert: kleine Pakete lassen den Empfang und
+  Heartbeat zwischen den Sendeabschnitten wieder zum Zug kommen.
+- [15-Minuten-Praxistest am SM-T580](docs/tests/mobile-0.1.28-15min-20261122.md)
+  bestanden: Navigation und Leerlauf, kein neuer Heartbeat-Timeout und keine
+  Trennung im Journal. Grenzen und alle Messwerte stehen im verlinkten Bericht.
+
 ## Importoptimierung 0.1.22
 
 Gesicherter alter Quellstand gegen aktuellen Stand, jeweils neue temporäre Ablage,

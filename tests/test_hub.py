@@ -453,9 +453,9 @@ class CoreTests(TemporaryHome):
         c.config["devices"]["deck"] = {"receive_broker": "broker2"}
         try:
             c.display_message("broker1", "ugso/usbhub/1/display/deck/set", '{"text":"wrong"}')
-            c.hardware.display.assert_not_called()
+            c.hardware.display_logical.assert_not_called()
             c.display_message("broker2", "ugso/usbhub/2/display/deck/set", '{"text":"right"}')
-            c.hardware.display.assert_called_once_with("deck", 0, "", "right", None)
+            c.hardware.display_logical.assert_called_once_with("deck", 0, "", "right", None)
         finally:
             c.brokers.close()
 

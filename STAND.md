@@ -1,5 +1,156 @@
 # Aktueller Stand
 
+## Veröffentlichung 0.1.28
+
+- Öffentliches Testrelease mit ZIP/Prüfsumme, Changelog und README DE/EN.
+- Enthält die bisher lokalen Zwischenstände 0.1.23–0.1.27 und die begrenzte
+  Mobile-Bildübertragung aus 0.1.28. Einstellungen/Topics und Kopplungen erhalten.
+- 168 lokale Python-Tests bestanden, DOM-Prüfungen und Paketbau erfolgreich.
+- Reale 15-Minuten-Prüfung am SM-T580 bestanden; Messwerte und Grenzen unten.
+- Externe Doku in DE/EN/FR um Seiten, Navigation, Iconauswahl und Test ergänzt.
+
+## 0.1.28: 15-Minuten-Praxistest bestanden
+
+- SM-T580 auf .112 vom 22.11.2026, 11:39:17 bis 11:54:17 laut Pi-Uhr,
+  volle 900 Sekunden mit monotonem Timer und 16 Messpunkten begleitet.
+- Anfangs Vor/Zurück, danach 14 Minuten unveränderte Bild-/Context-Zähler
+  (1228/19). Tablet in allen Messpunkten verbunden; Ping/Pong 56/56 → 232/232.
+  Statusalter stets 0 bis 1,9 Sekunden.
+- Abschließendes Journal des gesamten Zeitraums direkt aus dem integrierten
+  SSH-Terminal gelesen: kein Heartbeat-Timeout, keine Trennung, kein Neustart.
+  Ein zusätzlicher `connection open`-Eintrag um 11:48:38 ohne Gerätezuordnung;
+  Tablet-Zähler bleiben durchgehend steigend, keine Rücksetzung.
+- [Vollständiger Testbericht](docs/tests/mobile-0.1.28-15min-20261122.md).
+  Der begrenzte Praxistest ist bestanden, die ursprüngliche Ursache damit nicht
+  rückwirkend bewiesen. Keine Änderungen auf .112, nichts veröffentlicht.
+
+- Aktualisierung des Praxisstands am 22. November: Nutzer meldet 0.1.28
+  installiert. Im integrierten SSH-Terminal gibt `sudo ugso-usbhub --version`
+  tatsächlich 0.1.28 aus. Mehrfaches Vor-/Zurückblättern bislang ohne Abbruch
+  vom Nutzer bestätigt. Journal seit dem aktuellen Dienststart aus dem
+  integrierten Terminal gelesen: Start am 22.11.2026 um 11:34:24, Verbindung
+  geöffnet um 11:34:29 (PID 61379). Bis zur vorliegenden Ausgabe keine weiteren
+  Einträge, keine Trennung und kein Heartbeat-Timeout. Aussage gilt für diesen
+  Beobachtungszeitraum; der anschließende 15-Minuten-Test ist oben dokumentiert.
+
+- Ausgangsfehler mit 0.1.27: Trotz zunächst erfolgreichem Vor/Zurück-Test meldet der Nutzer erneut
+  Verbindungsverlust und Android-Fehler „Channel was closed“. Journaldaten
+  aus seiner SSH-Sitzung bestätigen 11:24:08, SM-T580, Server schließt mit
+  `Mobile heartbeat timeout; no close frame received`. Ursache bleibt offen.
+- Vollständige Programmdatensicherung auf .112 vom Nutzer erstellt:
+  `/var/lib/ugso-usbhub/exports/usb-extender-backup-20261122-111223.tar.gz`.
+- Lokale Quellsicherung vor der Änderung:
+  `M:\repos\_backups\ugso-usb-hub\before-mobile-fair-send-20261122-112932.zip`.
+- Mobile-Sendeschleife verarbeitet maximal vier Bilder bzw. 25 ms Arbeit je
+  Durchlauf (ein bereits laufender Socket-Sendevorgang kann länger dauern).
+  Empfang und Heartbeat erhalten zwischen den Paketen wieder einen Durchlauf.
+  Noch ausstehende Bilder bleiben gespeichert, neuere Bilder haben Vorrang.
+- Trennungsprotokoll um Ping/Pong, letzte Nachrichtenart/Alter und Anzahl
+  ausstehender Bilder ergänzt. Keine Nutzdaten oder Schlüssel protokolliert.
+- Lokal langsame Übertragung simuliert sowie 8×8 mit exakt key:7/key:128 und
+  sechs Seitenwechseln geprüft. Praxisbehebung noch nicht bestätigt.
+- Gesamtlauf: 168 Python-Tests erfolgreich (91,077 s), fünf betroffene DOM-
+  Prüfungen erfolgreich und Wheel 0.1.28 gebaut. Erster Gesamtlauf hatte einen
+  Windows-Dateizugriffsfehler beim gleichzeitigen Lesen der Statusdatei;
+  betroffener Test einzeln und wiederholter Gesamtlauf bestanden anschließend.
+- Test-ZIP: `M:\icons\USB-Extender-Home-Assistant-0.1.28-Raspi4.zip`.
+- Paket vom Nutzer auf .112 installiert; keine Veröffentlichung. Einstellungen,
+  MQTT-Topics und Kopplungen durch die lokale Codeänderung nicht verändert.
+
+## Vorheriger Teiltest mit 0.1.27 (durch erneuten Abbruch überholt)
+
+- Am 22. November auf ausdrücklichen Nutzerauftrag in der Oberfläche von .112
+  geprüft: 0.1.27, letzte Trennung SM-T580 mit `Mobile heartbeat timeout;
+  no close frame received`, 64 Bilder / 1 Metadatenpaket. Letzte Eingaben:
+  key:7 Navigation, danach key:128 Navigation. Keine Gerätefehler angezeigt.
+- Die nachfolgend vom Nutzer ausgegebenen Journaldaten unterscheiden die
+  ursprünglichen Abbrüche um 10:51 (kein Close-Frame) vom späteren Timeout
+  um 10:53 in einer neuen Sitzung. Der Timeout allein erklärt den Fehler nicht.
+- Nutzer führt SSH-Befehle im integrierten Terminal aus; dessen Ausgabe wurde
+  direkt gelesen. Sicherung erfolgreich erstellt:
+  `/var/lib/ugso-usbhub/exports/usb-extender-backup-20261122-111223.tar.gz`.
+- Nach dem vom Nutzer vorgenommenen Dienstneustart erneuter Vor-/Zurück-Test
+  mit 0.1.27: Tablet SM-T580, 8×8, 144×144-Bilder, zwei Seiten [0,1].
+  Navigation key:7 = Vor, key:128 = Zurück. Status danach: Seite 1/2,
+  eine autorisierte Sitzung mit geöffnetem Deck, 192 Bilder / 3 Context-Pakete,
+  149 Ping / 149 Pong, keine Trennungen, keine Gerätefehler und keine
+  Journaleinträge in den letzten zwei Minuten. Dieser Durchlauf ist erfolgreich.
+- Ursprünglichen Fehler nicht als behoben markieren: Ursache ungeklärt,
+  derzeit nicht reproduzierbar. Kein Laufzeitpatch oder neues Update auf .112,
+  Einstellungen und Kopplungen erhalten; nichts veröffentlicht.
+
+- Nutzer meldet Abbruch beim Zurückblättern; Vor funktioniert.
+- Sicherung: `M:\repos\_backups\ugso-usb-hub\before-back-navigation-20261122-105703.zip`.
+- Verschlüsselten Zwei-Geräte-Test um drei Wechsel zurück auf Seite 1 und
+  wieder vor erweitert: erfolgreich, Verbindung bleibt erhalten, kein MQTT.
+- Zusätzlich lokaler verschlüsselter 8×8-Test mit genau key:7/key:128,
+  sechs Vor-/Zurück-Wechseln, erfolgreich. Keine spekulative Laufzeitänderung.
+
+## 0.1.27 – 22. November 2026: Gehe zu (nur lokal)
+
+- Vorher gesichert: `M:\repos\_backups\ugso-usb-hub\before-goto-page-20261122-102833.zip`.
+- Gestaltung → Tastenfunktion: Vor, Zurück, Home und Gehe zu mit Zielseitenauswahl.
+  Nach Speichern navigieren die Tasten direkt am Gerät, ohne MQTT-Ausgabe.
+- Gelöschte Sprungziele führen zu Seite 1; nachfolgende Ziele werden nachgeführt.
+- 61 Python-Tests (Seiten, Gestaltung, Mobile) und beide betroffenen DOM-Prüfungen
+  erfolgreich. Speichern/Neuladen, Geräteisolation und Zielvalidierung geprüft.
+- Einstellungen erhalten, keine Veröffentlichung und kein Zugriff auf .112.
+  Praxistest der neuen Sprungtaste am Tablet bleibt offen.
+
+## 0.1.26 – 22. November 2026: Deck-Seiten und kompakter Editor (nur lokal)
+
+Sicherung vor Beginn einschließlich unveröffentlichter 0.1.25:
+`M:\repos\_backups\ugso-usb-hub\before-deck-pages-20261122-094654.zip`.
+
+- Nutzer bestätigt Kopplung und Betrieb von Handy und Tablet mit dem vorherigen
+  Stand. Die neuen Seitenfunktionen sind noch nicht auf diesen echten Geräten geprüft.
+- Ansicht und Menü heißen „USB / Virtuelle Geräte“. Jeder Deck-Editor bietet
+  bis zu acht Seiten, Neue Seite, Löschen nach Rückfrage und geschützte Seite 1.
+- Fortlaufende sichtbare Tastennummern (z. B. 1–15, 16–30). Automatische Namen
+  werden entsprechend aktualisiert; selbst benannte Tasten bleiben erhalten.
+- Stabile interne Seitenslots: Löschen einer mittleren Seite ändert die IDs und
+  Topics verbleibender Seiten nicht. Eigene Gestaltung und Belegungen je Seite.
+- Navigationstypen Vor/Zurück/Home statt MQTT, optionaler Zähler wie 2/3 auf den
+  Tasten. Grenzen ohne Umlauf; Home auf Seite 1. Editorbuttons wechseln nur die
+  Vorschau. Nach Dienstneustart beginnt das Gerät auf Seite 1.
+- Seitenwechsel beenden gehaltene Tasten und offene Klickfolgen. Späte Releases
+  werden nicht als Aktionen auf der neuen Seite ausgeführt. Rückmeldungen bleiben
+  der passenden Seite zugeordnet. Trennen/erneutes Verbinden löst keine Sperre aus.
+- Native Mobile-Seitenbefehle und Kontextmetadaten ergänzt. Lokal mit zwei
+  verschlüsselten Testclients geprüft: unabhängige Seiten, passende Bildübertragung,
+  keine neue Verbindung und keine MQTT-Aktion für Navigation.
+- Farbfelder 64×28 mit Hexwert; weitere Gestaltungsfelder kompakter. Suche und
+  Icon-Miniaturcache sowie Material-Vault-Deduplizierung bleiben enthalten.
+- 164 Python-Tests, acht Node-/DOM-Prüfläufe und Chrome erfolgreich. HTTP-Speichern,
+  Wiederladen, Seitenlöschung und übrige IDs/Topics geprüft. GUI-Test mit 15/16
+  Tasten, zwei simulierten Geräten sowie schmaler Ansicht. Bestehende Seite 1 und
+  ursprüngliches MQTT-Topic unverändert. Python-Wheel gebaut.
+- README DE/EN und Roadmap aktualisiert. Neues lokales ZIP unter M:\icons.
+  Nichts veröffentlicht oder gepusht; keine Änderungen/Tests auf .112.
+
+## 0.1.25 – Nachtrag: Material-Vault-Dubletten (nur lokal)
+
+Sicherung vor der Korrektur:
+`M:\repos\_backups\ugso-usb-hub\before-icon-dedup-20261121-214959.zip`.
+
+- Die vom Nutzer genannten Originalarchive Material Vault Black/White vollständig
+  lokal geprüft. Je 6.862 Dateien, aber nur 5.576 unterschiedliche Dateiinhalte.
+  Die mehrfach markierten Kacheln hatten dieselbe inhaltsbasierte Icon-ID.
+- Der Such-/Auswahlkatalog fasst gleiche IDs je Paket zusammen; auch die
+  Bibliotheksanzeige zeigt nur eine Kachel. Zusätzliche Dateinamen/Tags bleiben
+  als Aliase suchbar und im Tooltip sichtbar. Lizenzhinweise bleiben erhalten.
+- Originaldateien und Importprotokoll/Dateizuordnungen im Rohindex bleiben erhalten.
+  Kein Umschreiben gespeicherter IDs oder Geräteeinstellungen und kein Neuimport nötig.
+  Echte Stilvarianten und verschiedene Pakete werden nicht zusammengelegt.
+- Realtest: beide vollständigen Archive importiert, insgesamt 13.724 Quelldateien
+  und 11.152 Katalogicons. Je 1.286 alternative Dateieinträge zusammengefasst.
+  Vorhandene Konfigurationsdatei blieb bytegleich; vorhandene Home-ID blieb gültig.
+- Chrome mit echten Paketmetadaten und 48px-Miniaturen: Suchwort home liefert je
+  Farbe 19 eindeutige Kacheln, statt 21 Dateieinträgen. Genau eine Kachel derselben
+  ID markiert. Suche nach alternativem Dateinamen und Übernahme derselben ID geprüft.
+- 153 Python-Tests und sieben Node-/DOM-Prüfläufe erfolgreich. .112 unverändert,
+  Farbsets unverändert; nichts veröffentlicht. Lokales ZIP 0.1.25 unter M:\icons.
+
 ## Tagesabschluss – 21. November 2026
 
 Arbeitsstand: 0.1.24, ausschließlich lokal. Quellcode, lokale Git-Historie,

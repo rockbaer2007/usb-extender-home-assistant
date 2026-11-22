@@ -37,8 +37,8 @@ def device_topic_names(config):
 
 def validate_keys(config):
     keys = config.get("keys", [])
-    if not isinstance(keys, list) or len(keys) > 1000:
-        raise ValueError("Maximal 1000 Tasten sind vorgesehen")
+    if not isinstance(keys, list) or len(keys) > 4096:
+        raise ValueError("Maximal 4096 Tasten sind vorgesehen")
     seen, identities = set(), {b["id"] for b in config.get("bindings", [])}
     for key in keys:
         ident = key.get("id", "")
@@ -66,7 +66,7 @@ def validate_keys(config):
             topic = key.get(mode + "_topic", "")
             if not isinstance(topic, str) or any(x in topic for x in ("#", "+", "\x00")):
                 raise ValueError("Sende-Topic darf keine Wildcards enthalten")
-        for name in ("enabled", "press", "release", "switch", "press_plus", "release_plus", "repeat", *EXTRA_MODES):
+        for name in ("enabled", "press", "release", "switch", "press_plus", "release_plus", "repeat", "deck_auto_label", *EXTRA_MODES):
             if name in key and not isinstance(key[name], bool):
                 raise ValueError("Tastenoptionen müssen ein/aus sein")
         for name, default, low, high in (("repeat_delay", 500, 200, 5000), ("repeat_interval", 150, 100, 2000),
@@ -83,7 +83,7 @@ def ensure_deck_keys(config, devices):
     """Fill missing key rows for enabled decks; never replace saved mappings."""
     names = device_topic_names(config)
     rows = config.setdefault("keys", [])
-    known = {(k["device"], k["control"]) for k in rows}
+    known = {(k["device"], k["control"]):k for k in rows}
     added = 0
     for device in devices:
         ident = device.get("id")
@@ -97,27 +97,34 @@ def ensure_deck_keys(config, devices):
         if len(layout)==2 and all(type(n) is int and 1<=n<=16 for n in layout) and layout[0]*layout[1]==count:
             config["devices"][ident]["deck_info"]={"model":str(info.get("model","Stream Deck"))[:100],"keys":count,"layout":list(layout),"visual":bool(info.get("visual",True)),"size":info.get("size",[72,72])}
             config["devices"][ident]["deck_connection"]=device.get("connection","usb")
-        for index in range(count):
+        from .deck import page_slots
+        for page, storage_page, slot in ((page, storage, slot) for page,storage in enumerate(page_slots(config,ident)) for slot in range(count)):
+            index = storage_page*128+slot
             control = f"key:{index}"
             if (ident, control) in known:
+                if known[(ident,control)].get('deck_auto_label'):
+                    known[(ident,control)]['name']=f"Taste {page*count+slot+1}"
                 continue
             token = hashlib.sha256(f"{ident}/{control}".encode()).hexdigest()[:24]
             row = {"id":"auto-deck-"+token, "device":ident, "control":control,
-                   "name":f"Taste {index+1}", "enabled":True, "topic_version":2,
+                   "name":f"Taste {page*count+slot+1}", "deck_auto_label":True, "enabled":True, "topic_version":2,
                    "device_topic":names[ident], "targets":None, "switch_mode":"toggle",
                    "repeat":False, "double_ms":300, "hold_ms":700}
             for mode in ("press", "release", "switch", "press_plus", "release_plus", *EXTRA_MODES):
                 row[mode] = True
-                row[mode+"_topic"] = names[ident]+"-"+topic_slug(control)+"/"+mode.replace("_", "-")
+                stem = topic_slug(control) if index < 128 else f"page-{index//128+1}-key-{index%128}"
+                row[mode+"_topic"] = names[ident]+"-"+stem+"/"+mode.replace("_", "-")
             rows.append(row)
-            known.add((ident, control))
+            known[(ident, control)]=row
             added += 1
     return added
 
 
-def key_bindings(config):
+def key_bindings(config, device=None, control=None):
     result = []
     for key in config.get("keys", []):
+        if device is not None and key["device"] != device or control is not None and canonical_control(key["control"]) != control:
+            continue
         if not key.get("enabled", True):
             continue
         named = key.get("topic_version") == 2
@@ -152,5 +159,7 @@ def key_bindings(config):
     return result
 
 
-def all_bindings(config):
-    return config.get("bindings", []) + key_bindings(config)
+def all_bindings(config, device=None, control=None):
+    from .deck import binding_allowed
+    bindings=[b for b in config.get("bindings", []) if (device is None or b["device"]==device) and (control is None or canonical_control(b["control"])==control)]
+    return [b for b in bindings + key_bindings(config,device,control) if binding_allowed(config, b["device"], b["control"])]

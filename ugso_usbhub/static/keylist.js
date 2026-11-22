@@ -55,7 +55,7 @@ function drawKeyList(parent, rows, draft=false) {
     const tr=el('tr');
     function cell(){const td=el('td');tr.append(td);return td;}
     field(cell(),'Aktiv',k.enabled,v=>k.enabled=v,'checkbox');
-    const name=cell();name.append(el('small',config.devices[k.device]?.name||k.device),el('div',k.control,'device-id'));field(name,'Name',k.name,v=>{k.name=v;updateTitle();});
+    const name=cell();name.append(el('small',config.devices[k.device]?.name||k.device),el('div',k.control,'device-id'));field(name,'Name',k.name,v=>{k.name=v;k.deck_auto_label=false;updateTitle();});
     const groups=[['press','press_plus'],['release','release_plus'],['switch','state'],['button','button_plus'],['click','double_click','hold']];
     const labels={press:'Press',press_plus:'Press+ · danach leer',release:'Release',release_plus:'Release+ · danach leer',
       switch:'Switch · Drücken schaltet um',state:'Tastenzustand · gedrückt ON',button:'Button · alle Gesten',button_plus:'Button+ · danach leer',

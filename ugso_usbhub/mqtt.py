@@ -201,7 +201,7 @@ class Brokers:
         delivered = 0
         matched = 0
         transmissions = []
-        for binding in all_bindings(self.config):
+        for binding in all_bindings(self.config, device=device, control=control):
             if switch_only and binding.get("key_mode") not in ("switch", "state"):
                 continue
             if repeat_key and binding.get("key_mode") not in ("press", "press_plus"):

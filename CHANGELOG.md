@@ -1,5 +1,53 @@
 # Änderungen
 
+## 0.1.28 – 22. November 2026 (öffentliches Testrelease)
+
+Erste Veröffentlichung seit 0.1.22; enthält auch die unten dokumentierten,
+bisher lokalen Zwischenstände 0.1.23–0.1.27: grafische 48×48-Iconauswahl mit
+Miniaturcache, Duplikatbereinigung je Paket, MDI-Favoriten, USB / Virtuelle Geräte,
+bis zu acht Deck-Seiten, fortlaufende Tasten und Vor/Zurück/Home/Gehe zu.
+
+- Mobile-Bildübertragung pro Durchlauf auf vier Bilder und ein Zeitbudget
+  begrenzt. Zwischen Paketen werden Eingaben und Heartbeat wieder bearbeitet;
+  neue Bilder ersetzen weiterhin ältere noch ausstehende Bilder derselben Taste.
+- Ausführlichere Trennungsdiagnose ohne Nachrichteninhalte oder Zugangsdaten:
+  Ping/Pong-Zähler, letzte Nachrichtenart, deren Alter und Bildwarteschlange.
+- 15-Minuten-Praxistest am SM-T580 bestanden: 8×8, zwei Seiten, mehrfach
+  Vor/Zurück und danach rund 14 Minuten Leerlauf; alle 16 Messpunkte verbunden,
+  Ping/Pong 56/56 → 232/232. Kein neuer Heartbeat-Timeout und keine Trennung
+  im abschließenden Journal; keine erneuten Bilder/Metadaten im Leerlauf.
+- Testbericht mit Messwerten und Grenzen unter
+  `docs/tests/mobile-0.1.28-15min-20261122.md`. Keine allgemeine Zusage für
+  Bildschirmabschaltung, Hintergrundbetrieb oder alle Geräte/Netzbedingungen.
+
+## 0.1.27 – 22. November 2026 (lokales ZIP, nicht veröffentlicht)
+
+- Unter Gestaltung → Tastenfunktion: MQTT, Vor, Zurück, Home und neu „Gehe zu“
+  mit Auswahl der Zielseite. Navigationstasten blättern am Tablet ohne MQTT.
+- Beim Löschen einer Seite werden Sprungziele nachgeführt; eine gelöschte
+  Zielseite wird durch Seite 1 ersetzt. Andere Geräte bleiben unabhängig.
+
+## 0.1.26 – 22. November 2026 (lokales ZIP, nicht veröffentlicht)
+
+- Geräteansicht in „USB / Virtuelle Geräte“ umbenannt.
+- Bis zu acht Seiten je Deck, fortlaufende Tastennummern und getrennte Belegungen
+  für Handy/Tablet. Neue Seite und Löschen nach Rückfrage; erste Seite geschützt.
+- Vor-/Zurück-/Home-Tasten ohne MQTT-Aktion, optionaler Seitenzähler am Tastenbild.
+- Verbleibende IDs/Topics beim Löschen einer anderen Seite erhalten. Seite 1 ist
+  zu alten Konfigurationen kompatibel; keine automatische Migration bestehender Topics.
+- Native Mobile-Seitenbefehle und Seitenmetadaten, ohne die Verbindung neu aufzubauen.
+- Gestaltungs- und Farbfelder kompakter. Seitenwechsel beenden gehaltene Aktionen;
+  MQTT-Rückmeldungen bleiben ihrer Seite zugeordnet.
+
+## 0.1.25 – 21. November 2026 (lokales ZIP, nicht veröffentlicht)
+
+- Doppelte Icon-IDs im Such-/Auswahlkatalog und der Bibliotheksanzeige je Paket
+  zusammenfassen. Gleicher Inhalt unter verschiedenen Namen erzeugt nur eine Kachel.
+- Alle alternativen Dateinamen/Suchbegriffe und Lizenzhinweise erhalten. Originale,
+  Importzuordnungen und gespeicherte Icon-IDs bleiben unverändert; kein Neuimport nötig.
+- Material Vault Black/White enthalten jeweils 6.862 Dateien, davon 5.576 eindeutige
+  Dateiinhalte. Echte Stilvarianten und unterschiedliche Pakete bleiben getrennt.
+
 ## 0.1.24 – 21. November 2026 (lokales ZIP, nicht veröffentlicht)
 
 - Grafische Iconauswahl statt langer Selectlisten: Pakete, Suche, 48×48-Raster,

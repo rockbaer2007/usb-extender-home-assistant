@@ -176,10 +176,13 @@ class Handler(BaseHTTPRequestHandler):
                         raise ValueError("Ungültige Vorschaugröße")
                     out = io.BytesIO()
                     pressed=body.get("pressed") is True
+                    page, pages = body.get("page", 0), body.get("pages", 1)
+                    if type(page) is not int or type(pages) is not int or not 1 <= pages <= 8 or not 0 <= page < pages:
+                        raise ValueError("Ungültige Vorschauseite")
                     icon=(style.get("pressed_icon") or style.get("icon", "")) if pressed else style.get("icon", "")
                     durations=icons.animation(icon)
                     frames=[key_image(tuple(size), style, style.get("icon", ""), style.get("text", ""),
-                                      pressed=pressed, frame_index=index) for index in range(len(durations) or 1)]
+                                      pressed=pressed, frame_index=index, page=page, pages=pages) for index in range(len(durations) or 1)]
                     kind="image/webp" if durations else "image/png"
                     if durations:
                         frames[0].save(out, format="WEBP", save_all=True, append_images=frames[1:], duration=durations, loop=0, lossless=True)

@@ -6,7 +6,7 @@ import select
 import sys
 import threading
 import time
-from .deck import artwork, key_image
+from .deck import artwork, key_image, logical_key, page_count, page_slot
 from .storage import canonical_control
 from .keymap import all_bindings
 
@@ -73,6 +73,28 @@ class Hardware:
         self.pressed_keys = set()
         self.display_contents = {}
         self.animations = {}
+        self.page_states = {}
+        self.page_feedback = {}
+
+    def active_page(self, ident):
+        return max(0, min(self.page_states.get(ident, 0), page_count(self.config, ident)-1))
+
+    def set_page(self, ident, page):
+        page = max(0, min(page, page_count(self.config, ident)-1))
+        if page == self.active_page(ident):
+            return False
+        self.page_states[ident] = page
+        self.pressed_keys = {token for token in self.pressed_keys if token[0] != ident}
+        self.animations = {token:job for token,job in self.animations.items() if token[0] != ident}
+        self.refresh_decks(ident)
+        if self.mobile:
+            self.mobile.page_changed(ident)
+        return True
+
+    def display_logical(self, ident, key, icon="", label="", brightness=None):
+        self.page_feedback[(ident, key)] = (icon, label)
+        if key // 128 == page_slot(self.config, ident, self.active_page(ident)):
+            self.display(ident, key % 128, icon, label, brightness)
 
     def scan(self, config):
         self.config = config
@@ -133,16 +155,22 @@ class Hardware:
         if added:
             self.refresh_decks()
 
-    def refresh_decks(self):
+    def refresh_decks(self, only=None):
         decks = {**self.decks, **(self.mobile.decks() if self.mobile else {})}
         for ident, deck in list(decks.items()):
+            if only is not None and ident != only:
+                continue
             try:
+                self.page_states[ident] = self.active_page(ident)
                 deck.set_brightness(int(self.config["devices"].get(ident, {}).get("brightness", 30)))
                 bindings = all_bindings(self.config)
                 for key in range(deck.key_count()):
-                    style = artwork(self.config, ident, key)
-                    b = next((b for b in bindings if b["device"] == ident and b["control"] == f"key:{key}"), {})
-                    self.display(ident, key, style.get("icon", b.get("icon", "")), style.get("text", b.get("text", "")))
+                    page = self.active_page(ident)
+                    logical = logical_key(key, page_slot(self.config,ident,page))
+                    style = artwork(self.config, ident, key, page)
+                    b = next((b for b in bindings if b["device"] == ident and b["control"] == f"key:{logical}"), {})
+                    icon, label = self.page_feedback.get((ident, logical), (style.get("icon", b.get("icon", "")), style.get("text", b.get("text", ""))))
+                    self.display(ident, key, icon, label)
             except Exception as exc:
                 self.errors[ident] = str(exc)
 
@@ -158,7 +186,8 @@ class Hardware:
             if not 0 <= key < deck.key_count() or not deck.is_visual():
                 return
             from StreamDeck.ImageHelpers import PILHelper
-            style = artwork(self.config, ident, key)
+            page = self.active_page(ident)
+            style = artwork(self.config, ident, key, page)
             from .icons import animation
             pressed = (ident, key) in self.pressed_keys
             selected = (style.get("pressed_icon") or icon) if pressed else icon
@@ -169,7 +198,7 @@ class Hardware:
             else:
                 self.animations.pop((ident, key), None)
             image = key_image(deck.key_image_format()["size"], style, icon, label,
-                              pressed=(ident, key) in self.pressed_keys)
+                              pressed=(ident, key) in self.pressed_keys, page=page, pages=page_count(self.config, ident))
             deck.set_key_image(key, PILHelper.to_native_format(deck, image))
 
     def animate(self, now=None):
@@ -191,9 +220,9 @@ class Hardware:
                     continue
                 try:
                     from StreamDeck.ImageHelpers import PILHelper
-                    image = key_image(deck.key_image_format()["size"], artwork(self.config, ident, key),
+                    image = key_image(deck.key_image_format()["size"], artwork(self.config, ident, key, self.active_page(ident)),
                                       job["icon"], job["label"], pressed=(ident,key) in self.pressed_keys,
-                                      frame_index=index)
+                                      frame_index=index, page=self.active_page(ident), pages=page_count(self.config, ident))
                     deck.set_key_image(key, PILHelper.to_native_format(deck, image))
                     job["index"] = index
                 except Exception as exc:
@@ -209,11 +238,12 @@ class Hardware:
                 self.pressed_keys.add(token)
             else:
                 self.pressed_keys.discard(token)
-            style = artwork(self.config, ident, key)
+            page = self.active_page(ident)
+            style = artwork(self.config, ident, key, page)
             if not any(style.get(name) for name in ("pressed_icon", "pressed_background", "pressed_text_color")):
                 return
             binding = next((b for b in all_bindings(self.config)
-                            if b["device"] == ident and b["control"] == f"key:{key}"), {})
+                            if b["device"] == ident and b["control"] == f"key:{logical_key(key,page_slot(self.config,ident,page))}"), {})
             icon, label = self.display_contents.get(token, (style.get("icon", binding.get("icon", "")),
                                                            style.get("text", binding.get("text", ""))))
             try:

@@ -120,11 +120,17 @@ def validate(c):
         layout=device.get("mobile_layout")
         if layout is not None and (not isinstance(layout,dict) or any(type(layout.get(axis)) is not int or not 1<=layout[axis]<=8 for axis in ("rows","columns"))):
             raise ValueError("Mobile-Raster: 1–8 Spalten und Zeilen")
+        pages = device.get("deck_page_count", 1)
+        if type(pages) is not int or not 1 <= pages <= 8:
+            raise ValueError("Deck-Seiten: 1 bis 8")
+        order = device.get("deck_page_order", list(range(pages)))
+        if not isinstance(order, list) or len(order) != pages or any(type(n) is not int or not 0 <= n < 8 for n in order) or len(set(order)) != pages or order[0] != 0:
+            raise ValueError("Ungültige Seitenreihenfolge; Seite 1 muss erhalten bleiben")
         deck_keys = device.get("deck_keys", {})
-        if not isinstance(deck_keys, dict) or len(deck_keys) > 128:
-            raise ValueError("Maximal 128 gestaltete Tasten je Gerät")
+        if not isinstance(deck_keys, dict) or len(deck_keys) > 1024:
+            raise ValueError("Maximal 8 Seiten mit je 128 gestalteten Tasten")
         for key, style in deck_keys.items():
-            if not isinstance(key, str) or not key.isascii() or not key.isdecimal() or str(int(key)) != key or not 0 <= int(key) < 128:
+            if not isinstance(key, str) or not key.isascii() or not key.isdecimal() or str(int(key)) != key or not 0 <= int(key) < 1024:
                 raise ValueError("Ungültige Stream-Deck-Taste")
             validate_artwork(style)
     seen = set()

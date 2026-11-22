@@ -1,5 +1,28 @@
 # Experimenteller Mobile-Server – Befunde und Implementierungsgrenze
 
+## Aktuelle Untersuchung: Abbruch mit 0.1.27 (22. November 2026)
+
+Am echten SM-T580 auf .112 meldet das Journal um 11:24:08 einen vom Server
+veranlassten Heartbeat-Timeout. Zuvor funktionierte Start/Vor/Zurück mit 8×8,
+144×144-Bildern und zwei Seiten (192 Bilder, drei Context-Pakete, 149/149
+Ping/Pong). Der erfolgreiche Durchlauf schließt einen späteren Abbruch nicht aus.
+„Channel was closed“ in Android erklärt dessen Ursache nicht näher.
+
+0.1.28 begrenzt Bildarbeit je Empfangsschleife auf maximal vier Bilder und ein
+weiches Budget von 25 ms. Ein bereits begonnener Socket-Sendevorgang kann länger
+dauern. Zwischen Bildpaketen werden Heartbeat und eingehende Nachrichten wieder
+bedient. Ausstehende Bilder bleiben erhalten und werden durch neuere ersetzt;
+identische Bilder werden weiterhin nicht erneut übertragen. Der Timeout bleibt
+bei 20 Sekunden. Das Trennungsprotokoll enthält zusätzliche Zähler und die letzte
+empfangene Nachrichtenart, jedoch keine Inhalte oder Schlüssel.
+
+Langsame Übertragung und wiederholte 8×8-Seitenwechsel sind lokal geprüft.
+Anschließend wurde der reale [15-Minuten-Test am SM-T580](tests/mobile-0.1.28-15min-20261122.md)
+mit Navigation und rund 14 Minuten Leerlauf bestanden: 16 Messpunkte verbunden,
+Ping/Pong 56/56 → 232/232, keine neue Trennung oder Heartbeat-Timeout im Journal.
+Dies belegt diesen Zeitraum, nicht die Ursache aller früheren Tablet-Fehler.
+Keine Veränderung der Hersteller-App oder Kaufstufe.
+
 Stand 21. November 2026. Unabhängige Implementierung für Interoperabilität;
 keine Elgato-Programmdateien, APKs, nativen Bibliotheken oder kopierten
 Herstellerimplementierungen werden im Projekt/ZIP verteilt.
@@ -101,7 +124,8 @@ Ping senden solange einer offen ist; nach 20 Sekunden ohne Antwort schließen.
 Kein Context/Icon für Keepalive. Eigene Ping/Pong-Zähler machen das sichtbar.
 Echter lokaler WebSocket mit unabhängigem 10-Sekunden-Frame-Empfangswächter bleibt
 16,2 Sekunden ohne Datenframes verbunden, bekommt drei leere Pings und kann danach
-weiter Tasten senden. Die erneute Praxisprüfung mit Android steht noch aus.
+weiter Tasten senden. Dieser Stand betraf 0.1.15; der spätere reale
+15-Minuten-Test mit 0.1.28 ist oben verlinkt.
 
 APK-Metadaten `Messages.ClientMessage`: AssignShortcut=31 (ProfileID=1,
 ShortcutID=2, Index=3), RemoveShortcut=32 (RequestID=1, ShortcutID=2),

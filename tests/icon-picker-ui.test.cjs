@@ -33,6 +33,16 @@ const click=async name=>{const b=[...w.document.querySelectorAll('button')].find
  w.document.querySelector('.icon-picker-dialog').dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
  assert.equal(w.document.querySelector('.icon-picker-dialog'),null);assert.equal(w.chosen,items[6800].id);
  assert.deepEqual(config,{schema:1,devices:{},brokers:[],default_targets:[],bindings:[]});
+ const dup={id:'f'.repeat(32),name:'Home',filename:'home.svg',collection:'Black',package_folder:'black',tags:['home']};
+ vm.runInContext('iconList='+JSON.stringify([dup,{...dup,name:'Home outlined',filename:'home_outlined.svg',tags:['outlined']},{...dup,name:'White home',collection:'White',package_folder:'white'}])+';pickerSource=null;changed=false',context);
+ trigger.click();await settle();
+ const aliasSearch=w.document.querySelector('.icon-picker-dialog input');aliasSearch.value='outlined';aliasSearch.dispatchEvent(new w.Event('input'));await new Promise(r=>setTimeout(r,150));
+ assert.equal(w.document.querySelectorAll('.icon-picker-tile').length,1);
+ assert.match(w.document.querySelector('.icon-picker-tile').title,/home_outlined.svg/);
+ aliasSearch.value='';aliasSearch.dispatchEvent(new w.Event('input'));await new Promise(r=>setTimeout(r,150));
+ assert.equal(w.document.querySelectorAll('.icon-picker-package').length,2,'Different packs remain separate');
+ assert.equal(w.document.querySelectorAll('.icon-picker-tile').length,1,'One tile for repeated IDs inside a package');
+ await click('Abbrechen');assert.equal(vm.runInContext('changed',context),false);
  console.log('Icon picker: 6862 entries, bounded 96 tiles, search, draft/cancel/apply, paging, focus and Escape OK');
  dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1;});

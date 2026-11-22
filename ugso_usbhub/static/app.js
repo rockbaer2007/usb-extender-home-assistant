@@ -8,7 +8,7 @@ async function api(path, data) {
   const r = await fetch('/api/' + target, data === undefined ? {} : {method:'POST', headers:{'Content-Type':'application/json','X-UGSo-Request':'1'},body:JSON.stringify(data)});
   let value = await r.json();
   if (!r.ok) { if(r.status === 401 && path !== 'login') showLogin(); throw new Error(value.error || 'Anfrage fehlgeschlagen'); }
-  if(path==='icons'&&Array.isArray(value.items))value=value.items.map(item=>({...item,license:item.license??value.licenses?.[item.package_folder||item.collection||'Eigene Icons']?.[item.license_ref]??''}));
+  if(path==='icons'&&Array.isArray(value.items))value=value.items.map(item=>({...item,license:item.license??(item.license_refs||[item.license_ref]).map(ref=>value.licenses?.[item.package_folder||item.collection||'Eigene Icons']?.[ref]||'').filter(Boolean).join('\n\n---\n\n')}));
   return value;
 }
 function error(e) { $('#error').textContent = e.message || String(e); $('#error').hidden = false; }
@@ -26,22 +26,36 @@ function renderStorage(){
 function card(title, parent=$('#content')) { const c=el('article',undefined,'card'); if(title)c.append(el('h2',title)); parent.append(c); return c; }
 function field(parent, label, value, change, type='text', choices=null) {
   const l=el('label', label), input=el(choices?'select':'input');
+  input.setAttribute('aria-label',label);
   if(choices) choices.forEach(([v,t])=>{const o=el('option',t);o.value=v;input.append(o);}); else input.type=type;
   if(type==='checkbox') { l.className='check';input.checked=!!value; l.prepend(input); } else {input.value=value??'';l.append(input);}
   input.addEventListener(type==='text'||type==='password'||type==='number'?'input':'change',()=>{change(type==='checkbox'?input.checked:type==='number'?Number(input.value):input.value);dirty();});
   parent.append(l);return input;
 }
 let pickerSource, pickerIndex, activeIconPicker, pickerLastPackage='', pickerFieldNumber=0;
+function uniqueIconEntries(items){
+  const result=[],seen=new Map();
+  for(const item of items){
+    const key=JSON.stringify([item.package_folder||item.collection||'Eigene Icons',item.id]);
+    if(!seen.has(key)){const copy={...item,tags:[...(item.tags||[])],aliases:[...(item.aliases||[])]};seen.set(key,copy);result.push(copy);continue;}
+    const primary=seen.get(key),alias={name:item.name,filename:item.filename,subfolder:item.subfolder,tags:item.tags||[],original_path:item.original_path};
+    if(!primary.aliases.some(a=>a.filename===alias.filename&&a.original_path===alias.original_path))primary.aliases.push(alias);
+    primary.aliases.push(...(item.aliases||[]));primary.tags=[...new Set([...primary.tags,...(item.tags||[])])];
+  }
+  return result;
+}
+function iconSearchText(item){return [item.name,item.filename,item.collection,item.package_folder,item.subfolder,...(item.tags||[]),...(item.aliases||[]).flatMap(a=>[a.name,a.filename,a.subfolder,...(a.tags||[])])].filter(Boolean).join(' ').toLocaleLowerCase();}
+function iconAliasText(item){return (item.aliases||[]).map(a=>a.filename||a.name).filter(Boolean).join(', ');}
 function iconPickerIndex(){
   if(pickerSource===iconList)return pickerIndex;
   pickerSource=iconList;const byId=new Map(),packs=new Map();
-  for(const item of iconList){
+  for(const item of uniqueIconEntries(iconList)){
     const key=item.package_folder||item.collection||'Eigene Icons';
     if(!packs.has(key))packs.set(key,{key,name:item.collection||key,items:[]});
-    const entry={item,search:[item.name,item.filename,item.collection,item.subfolder,...(item.tags||[])].join(' ').toLocaleLowerCase()};
+    const entry={item,search:iconSearchText(item)};
     packs.get(key).items.push(entry);byId.set(item.id,item);
   }
-  return pickerIndex={byId,packs:[...packs.values()]};
+  return pickerIndex={byId,packs:[...packs.values()],items:[...packs.values()].flatMap(p=>p.items.map(e=>e.item))};
 }
 function iconField(parent,label,value,change,emptyLabel='Kein Icon'){
   const wrap=el('div',undefined,'icon-picker-field'),caption=el('span',label),id='icon-field-'+(++pickerFieldNumber);
@@ -78,7 +92,7 @@ function openIconPicker({label,value='',emptyLabel='Kein Icon',onChoose}){
   const accept=button(actions,'Übernehmen',apply,'primary');button(actions,'Abbrechen',close);
   function showSelection(){
     preview.replaceChildren();const item=index.byId.get(chosen);
-    if(item){const img=image(item);observer?.unobserve(img);img.src=img.dataset.src;preview.append(img);const text=el('span');text.append(el('strong',item.name),el('small',[item.collection,item.filename,item.animated?'Animation · Miniatur zeigt erstes Bild':''].filter(Boolean).join(' · ')));preview.append(text);}
+    if(item){const img=image(item);observer?.unobserve(img);img.src=img.dataset.src;preview.append(img);const text=el('span');text.append(el('strong',item.name),el('small',[item.collection,item.filename,item.aliases?.length?'Weitere Namen: '+iconAliasText(item):'',item.animated?'Animation · Miniatur zeigt erstes Bild':''].filter(Boolean).join(' · ')));text.title=text.textContent;preview.append(text);}
     else preview.append(el('span',chosen?'Gespeichertes Icon bleibt erhalten':emptyLabel));
     accept.disabled=false;
     dialog.querySelectorAll('.icon-picker-tile').forEach(tile=>{tile.setAttribute('aria-pressed',String(tile.dataset.icon===chosen));});
@@ -100,7 +114,7 @@ function openIconPicker({label,value='',emptyLabel='Kein Icon',onChoose}){
         for(const {item} of pack.items.slice(start,start+96)){
           const tile=button(grid,'',()=>{chosen=item.id;showSelection();},'icon-picker-tile');tile.dataset.icon=item.id;
           tile.setAttribute('aria-label',item.name+' · '+(item.filename||item.name));tile.setAttribute('aria-pressed',String(item.id===chosen));
-          tile.title=[item.name,item.filename,item.subfolder,item.animated?'Animiert · Auswahl zeigt erstes Bild':''].filter(Boolean).join('\n');tile.append(image(item));tile.ondblclick=()=>{chosen=item.id;apply();};
+          tile.title=[item.name,item.filename,item.subfolder,item.aliases?.length?'Weitere Namen: '+iconAliasText(item):'',item.animated?'Animiert · Auswahl zeigt erstes Bild':''].filter(Boolean).join('\n');tile.append(image(item));tile.ondblclick=()=>{chosen=item.id;apply();};
           const failed=tile.querySelector('img');failed.onerror=()=>{tile.classList.add('icon-picker-failed');tile.title+='\nMiniatur konnte nicht geladen werden';};
         }
         if(pack.items.length>96){const pager=el('div',undefined,'icon-picker-pager');content.append(pager);
@@ -138,14 +152,14 @@ function render() {
   updateDeckTab();
   $('#content').replaceChildren(); $('#notice').hidden=true;
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
-  $('#page-title').textContent={overview:'Dein Hub im Überblick',devices:'USB-Geräte',bindings:'Tasten & Anzeigen',streamdeck:'Stream Deck',mobile:'Stream Deck Mobile',brokers:'Bis zu drei MQTT-Broker',icons:'Deine Iconbibliothek',system:'System & Betrieb'}[page];
+  $('#page-title').textContent={overview:'Dein Hub im Überblick',devices:'USB / Virtuelle Geräte',bindings:'Tasten & Anzeigen',streamdeck:'Stream Deck',mobile:'Stream Deck Mobile',brokers:'Bis zu drei MQTT-Broker',icons:'Deine Iconbibliothek',system:'System & Betrieb'}[page];
   ({overview,devices,bindings,streamdeck,mobile,brokers,icons,system})[page]();
 }
 function overview() {
   const grid=el('div',undefined,'grid');$('#content').append(grid);
-  [['USB-Geräte',status.devices.length,'Vom Linux-System erkannt'],['Aktive Belegungen',config.bindings.length+(config.keys||[]).filter(k=>k.enabled!==false).length,'Tasten, Mediensteuerung und Anzeigen'],['MQTT-Verbindungen',Object.values(status.brokers).filter(x=>x==='online').length+' / 3','Jeder Broker arbeitet unabhängig']].forEach(([t,v,s])=>{const c=card(t,grid);c.append(el('div',String(v),'stat'),el('small',s));});
+  [['USB / Virtuelle Geräte',status.devices.length,'Vom Linux-System erkannt'],['Aktive Belegungen',config.bindings.length+(config.keys||[]).filter(k=>k.enabled!==false).length,'Tasten, Mediensteuerung und Anzeigen'],['MQTT-Verbindungen',Object.values(status.brokers).filter(x=>x==='online').length+' / 3','Jeder Broker arbeitet unabhängig']].forEach(([t,v,s])=>{const c=card(t,grid);c.append(el('div',String(v),'stat'),el('small',s));});
   const c=card('So richtest du deinen Hub ein');
-  const list=el('ol');['Unter „MQTT-Broker“ mindestens eine Verbindung einrichten.','Unter „USB-Geräte“ das gewünschte Gerät ausdrücklich freigeben.','Taste drücken und das Ereignis unter „Tasten & Anzeigen“ übernehmen.','Zielbroker, Belegung und bei Stream Decks ein Icon auswählen.','Speichern. Danach kann die Weboberfläche per CLI abgeschaltet werden.'].forEach(t=>list.append(el('li',t)));c.append(list);
+  const list=el('ol');['Unter „MQTT-Broker“ mindestens eine Verbindung einrichten.','Unter „USB / Virtuelle Geräte“ das gewünschte Gerät ausdrücklich freigeben.','Taste drücken und das Ereignis unter „Tasten & Anzeigen“ übernehmen.','Zielbroker, Belegung und bei Stream Decks ein Icon auswählen.','Speichern. Danach kann die Weboberfläche per CLI abgeschaltet werden.'].forEach(t=>list.append(el('li',t)));c.append(list);
   if(!serviceAlive())c.append(el('p','USB-/MQTT-Dienst ist nicht aktiv oder liefert keinen aktuellen Status. Mit sudo systemctl status ugso-usbhub prüfen.','warning'));
   const note=card('Unterstützung');note.append(el('p','Alle USB-Geräte werden aufgelistet. Tastaturen und Medientasten werden über Linux evdev verarbeitet; unterstützte physische Stream Decks über den HID-Treiber. Andere Geräte sind zunächst nur in der Bestandsliste. Stream Deck Mobile ist kein direkt gekoppeltes USB-Gerät.'));
 }
@@ -216,7 +230,7 @@ function addBinding(event) {
   const deck=event&&status.devices.find(d=>d.id===event.device&&d.kind==='streamdeck'&&d.deck);
   if(deck){ensureDeckKeys(deck);dirty();render();return;}
   const device=event?.device||Object.keys(config.devices)[0];
-  if(!device)throw new Error('Zuerst unter USB-Geräte ein Gerät freigeben.');
+  if(!device)throw new Error('Zuerst unter USB / Virtuelle Geräte ein Gerät freigeben.');
   // getRandomValues also works on plain HTTP LAN addresses (randomUUID does not).
   const id=Array.from(crypto.getRandomValues(new Uint8Array(16)),n=>n.toString(16).padStart(2,'0')).join('');
   config.bindings.push({id,device,control:event?.control||'key:0',gesture:event?.gesture||'press',targets:null,text:'',icon:'',topic:'',payload:''});dirty();render();
@@ -291,7 +305,7 @@ function icons() {
   const opened=new Set();
   function draw(){
     popup.hidden=true;list.replaceChildren();const query=search.value.toLowerCase().trim(),packs=new Map();
-    iconList.filter(i=>[i.name,i.filename,i.collection,i.package_folder,i.subfolder,...(i.tags||[])].join(' ').toLowerCase().includes(query)).forEach(i=>{const name=i.package_folder||i.collection||'Eigene Icons';if(!packs.has(name))packs.set(name,[]);packs.get(name).push(i);});
+    iconPickerIndex().items.filter(i=>iconSearchText(i).includes(query)).forEach(i=>{const name=i.package_folder||i.collection||'Eigene Icons';if(!packs.has(name))packs.set(name,[]);packs.get(name).push(i);});
     for(const [name,items] of packs){
       const pack=el('details',undefined,'icon-package'),summary=el('summary'),heading=el('span',undefined,'icon-package-heading');
       const allItems=iconList.filter(i=>(i.package_folder||i.collection||'Eigene Icons')===name);
@@ -317,7 +331,7 @@ function icons() {
           for(const i of icons){
             const tile=el('article',undefined,'icon-card'),img=el('img');img.src='/icons/'+i.id+(i.animated?'.webp':'.png');img.alt=i.filename||i.name;img.loading='lazy';tile.tabIndex=0;
             tile.append(img,el('strong',i.filename||i.name));tile.setAttribute('aria-label',(i.filename||i.name)+(i.animated?' · animiert':''));
-            tile.title=(i.filename||i.name)+' · '+name+(i.animated?' · animiert':'' );
+            tile.title=(i.filename||i.name)+' · '+name+(i.aliases?.length?' · Weitere Namen: '+iconAliasText(i):'')+(i.animated?' · animiert':'' );
             const show=()=>{popup.replaceChildren();const preview=el('img');preview.src=img.src;preview.alt=img.alt;popup.append(preview,el('strong',i.filename||i.name),el('small',name+(path?' / '+path:'')));if(i.animated)popup.append(el('small','Animiert · '+i.frames+' Bilder'));popup.hidden=false;};
             tile.onmouseenter=show;tile.onfocus=show;tile.onmouseleave=()=>popup.hidden=true;tile.onblur=()=>popup.hidden=true;
             grid.append(tile);

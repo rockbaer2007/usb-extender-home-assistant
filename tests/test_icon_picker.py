@@ -24,11 +24,27 @@ class ThumbnailTests(TemporaryHome):
         self.assertLess(len(json.dumps(wire)),len(json.dumps(original))*.2)
         for item,packed in zip(original,wire['items']):
             key=packed.get('package_folder') or packed['collection']
-            restored={k:v for k,v in packed.items() if k!='license_ref'}
+            restored={k:v for k,v in packed.items() if k not in ('license_ref','license_refs')}
             restored['license']=wire['licenses'][key][packed['license_ref']]
             self.assertEqual(restored,item)
         icons.add(gif(),'another.gif')
         self.assertEqual(len(icons.catalog()['items']),41)
+
+    def test_identical_file_aliases_group_per_package_without_touching_originals_or_settings(self):
+        first=icons.add(gif(),'home.svg.gif','Material Black',tags=['home'],license_text='MIT',package_folder='black')
+        second=icons.add(gif(),'home-outlined.gif','Material Black',tags=['outlined'],license_text='Apache',package_folder='black')
+        third=icons.add(gif(),'home.gif','Other pack',package_folder='other')
+        self.assertEqual(first,second);self.assertEqual(second,third)
+        before=load_config();raw=icons.library()
+        wire=icons.catalog();self.assertEqual(len(wire['items']),2)
+        black=wire['items'][0]
+        self.assertEqual(black['aliases'][0]['filename'],'home-outlined.gif')
+        self.assertEqual(black['tags'],['home','outlined'])
+        self.assertEqual(black['license_refs'],[0,1])
+        self.assertEqual(icons.library(),raw);self.assertEqual(load_config(),before)
+        self.assertEqual(len(list((home()/'icons/IconPacks').rglob('*.gif'))),3)
+        icons.add(gif(),'home-outlined.gif','Material Black',tags=['outlined'],license_text='Apache',package_folder='black')
+        self.assertEqual(len(icons.catalog()['items']),2)
 
     def test_small_still_cache_no_animation_or_full_preview_and_parallel_reuse(self):
         ident=icons.add(gif(),'signal.gif')

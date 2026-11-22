@@ -2,7 +2,59 @@
 
 **USB-Geräte und Stream Decks über MQTT verbinden – für Raspberry Pi.**
 
-Version **0.1.24** · Lokales Testpaket, noch nicht veröffentlicht · Stand 21. November 2026
+Version **0.1.28** · Öffentliches Testrelease · Stand 22. November 2026 · [ZIP herunterladen](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.28)
+
+0.1.28 teilt die Mobile-Bildübertragung bei Seitenwechseln in kleine Pakete,
+damit der Empfang von Eingaben und die Verbindungspflege dazwischen weiterlaufen.
+Das Dienstprotokoll enthält zusätzliche Angaben zu Verbindungsabbrüchen.
+**15-Minuten-Praxistest bestanden:** SM-T580, 8×8 und zwei Seiten, zunächst
+mehrfach Vor/Zurück, anschließend rund 14 Minuten Leerlauf. Das Tablet blieb in
+allen 16 Messpunkten verbunden, Ping/Pong stieg von 56/56 auf 232/232.
+Im abschließenden Journal gab es keinen neuen Heartbeat-Timeout und keine
+Trennung. Im Leerlauf blieben Bild- und Metadatenzähler konstant.
+[Messwerte und Testgrenzen](docs/tests/mobile-0.1.28-15min-20261122.md).
+Das Ergebnis gilt für diesen Aufbau und Zeitraum; Bildschirmabschaltung,
+App-Hintergrundbetrieb und andere Netzbedingungen wurden nicht geprüft.
+
+**USB / Virtuelle Geräte und Deck-Seiten:** Im Gerätebereich werden USB-Geräte
+und gekoppelte virtuelle Mobile-Decks gemeinsam verwaltet. Jedes Deck erhält bis
+zu **acht eigene Seiten**, unabhängig von anderen Geräten.
+
+1. Im Stream-Deck-Editor **Neue Seite** wählen. Die neue Seite wird sofort im
+   Editor geöffnet. Das Raster kommt weiterhin vom Gerät bzw. der Android-App.
+2. Tasten werden fortlaufend nummeriert: bei 15 Tasten 1–15, dann 16–30 usw.
+   Jede Seite hat eigene Gestaltung und MQTT-Zuordnungen.
+3. Unter **Tastenfunktion** zwischen **MQTT / normale Taste**, **Vor**, **Zurück**
+   und **Home** wählen. Mit **Gehe zu** zusätzlich die gewünschte **Zielseite**
+   auswählen. Nach **Speichern** navigieren diese Tasten direkt am Tablet.
+   Beim Löschen der Zielseite führt der Sprung auf Seite 1; nachfolgende
+   Zielseiten werden nachgeführt. Navigationstasten senden keine MQTT-Aktion; bisherige
+   Zuordnungen bleiben gespeichert und werden beim Zurückstellen auf MQTT wieder aktiv.
+4. **Seitennummer anzeigen** blendet einen kleinen Zähler wie 2/3 auf der Taste
+   ein. Bei Navigationstasten ist er zunächst eingeschaltet. **Home** führt auf
+   Seite 1; Vor/Zurück bleiben an der ersten/letzten Seite stehen.
+5. **Aktuelle Seite löschen** entfernt nach Rückfrage deren Gestaltung und
+   Belegungen. **Seite 1 bleibt geschützt.** Die übrigen Seiten behalten ihre
+   IDs und Topics, auch wenn sich ihre sichtbare Seiten-/Tastennummer verschiebt.
+6. Oben **Speichern**. Vorher bleibt die gespeicherte Gerätekonfiguration erhalten.
+
+Die Editorbuttons Vor/Zurück/Home wechseln nur die Vorschau. Auf dem Deck dienen
+die entsprechend zugewiesenen Tasten zur Navigation; Mobile-Seitenbefehle werden
+ebenfalls verarbeitet. Im Verbindungsstatus steht die am Gerät aktive Seite.
+Nach Dienstneustart startet jedes Deck auf Seite 1. Beim Seitenwechsel werden
+gehaltene Tasten und offene Klickfolgen beendet; Rückmeldungen anderer Seiten
+überschreiben nicht die sichtbare Seite. Die Gestaltungsfelder sind kompakter,
+Farbfelder zeigen eine kleine Auswahl und den Hexwert.
+
+Neue MQTT-Kanäle weiterer Seiten haben einen stabilen Seitenteil, z. B.
+`tablet-page-2-key-0/press`. Die Topics werden beim Löschen einer anderen Seite
+bewusst nicht umbenannt. Die bisherigen Topics von Seite 1 bleiben erhalten.
+Die Seitenfunktionen sind lokal mit Protokollsimulation geprüft; Vor/Zurück und
+Leerlauf wurden außerdem am echten SM-T580 erfolgreich getestet. Neue Seite,
+Löschen, Home und Gehe zu sind lokal geprüft; deren vollständiger Hardwaretest
+sowie physische Stream Decks bleiben weitere Prüfpunkte.
+
+![Deck-Seiten und kompakte Gestaltung – lokale Simulation](docs/screenshots/deck-pages.png)
 
 **Grafische Iconauswahl:** Im Stream-Deck-Editor, in der Tastenliste und bei
 MQTT-Rückmeldungen öffnet der Iconbutton ein kompaktes Auswahlfenster statt einer
@@ -17,6 +69,10 @@ und werden auf dem Pi sowie im angemeldeten Browser wiederverwendet. Nur sichtba
 Kacheln werden geladen; pro geöffnetem Paket stehen höchstens 96 Kacheln je Seite.
 Die Vollbilder und Animationen für das tatsächliche Deck bleiben unverändert.
 Die Bibliotheksdaten übertragen gleiche Paketlizenztexte nur einmal.
+Der Such-/Auswahlindex zeigt gleiche Icon-IDs **je Paket nur einmal**, auch bei
+mehreren Dateinamen oder wiederholten Einträgen. Alternative Namen bleiben in der
+Suche und im Hovertext erhalten. Originaldateien und gespeicherte IDs werden nicht
+gelöscht oder umgeschrieben. Unterschiedliche Stile sowie Schwarz/Weiß bleiben getrennt.
 
 ![Grafische Iconauswahl mit 48×48-Miniaturen – lokale Demo](docs/screenshots/icon-picker.png)
 
@@ -99,7 +155,8 @@ Unter **Gedrückt** im Stream-Deck-Editor je Taste ein zweites Icon sowie eigene
 Hintergrund- und Schriftfarben wählen. Beim Loslassen erscheint wieder die normale
 Darstellung. Ohne eigene Auswahl werden normale Werte übernommen. **Vorschau:
 Taste gedrückt** sendet kein MQTT. Oben speichern, um die Gestaltung auf USB- und
-Mobile-Decks anzuwenden. Der echte Tablet-Test steht noch aus.
+Mobile-Decks anzuwenden. Die vollständige Hardwareprüfung aller eigenen
+Gedrückt-Icon-/Farbkombinationen bleibt offen.
 
 Der Stream-Deck-Tab bleibt sichtbar. Bei Verbindungstrennung zeigt er **Offline**
 und behält Tastenansicht, Auswahl und ungespeicherte Texte. Statuswechsel ersetzen
@@ -192,8 +249,8 @@ kein USB-over-IP-Tunnel und leitet keine beliebigen USB-Protokolle weiter.
 
 Der eingebundene Treiber `python-elgato-streamdeck` 0.10.0 kennt unter anderem
 Original/MK.2, Mini, XL, Neo, Pedal und Plus. Das ist **keine bestätigte Hardware-
-Testliste** dieses Projekts. Aktuell gibt es eine feste Belegung; Profil-/Seitenwechsel
-sind noch nicht umgesetzt. Animierte Tastenicons sind ab 0.1.18 lokal implementiert.
+Testliste** dieses Projekts. Deck-Seiten sind ab 0.1.26 lokal implementiert;
+zusätzliche Profile bleiben offen. Animierte Tastenicons sind ab 0.1.18 lokal implementiert.
 
 ## Im Paket
 
@@ -219,7 +276,7 @@ sind noch nicht umgesetzt. Animierte Tastenicons sind ab 0.1.18 lokal implementi
 
 ## Tasten anlernen (ab 0.1.3)
 
-1. Unter **USB-Geräte** das Gerät freigeben, seine Zielbroker wählen und speichern.
+1. Unter **USB / Virtuelle Geräte** das Gerät freigeben, seine Zielbroker wählen und speichern.
 2. Unter **Tasten & Anzeigen** das Gerät wählen und **Anlernen starten** drücken.
 3. Gewünschte Tasten nacheinander drücken und loslassen. Jede neue Taste erscheint
    einmal als Listenzeile; bereits vorhandene Belegungen werden nicht verdoppelt.
@@ -336,8 +393,8 @@ Installationspaket, kein vollständig offline installierbares ARM-Abbild.
    ```bash
    # Falls unzip noch nicht vorhanden ist:
    sudo apt-get update && sudo apt-get install -y unzip
-   unzip USB-Extender-Home-Assistant-0.1.24-Raspi4.zip
-   cd USB-Extender-Home-Assistant-0.1.24
+   unzip USB-Extender-Home-Assistant-0.1.28-Raspi4.zip
+   cd USB-Extender-Home-Assistant-0.1.28
    sudo bash install.sh
    ```
 
@@ -419,7 +476,7 @@ MQTT-Server mit demselben Topic zeigen, entstehen doppelte Nachrichten.
 
 ### 2. USB-Gerät freigeben
 
-Gerät einstecken, **USB-Geräte** öffnen. Bei neu eingesteckten Geräten die Seite
+Gerät einstecken, **USB / Virtuelle Geräte** öffnen. Bei neu eingesteckten Geräten die Seite
 über einen anderen Menüpunkt erneut aufrufen. Die Bestandsliste wird im Dienst
 alle fünf Sekunden erneuert. Namen vergeben, **Gerät für Eingaben freigeben**
 aktivieren, MQTT-Ziele wählen, speichern.
@@ -503,20 +560,19 @@ vom Nutzer auf Android bestätigt. Rasterabgleich und vollständige MQTT-Bedienu
 sind weiter praktisch zu prüfen. Ein unabhängiger Protokollsimulator prüft
 QR-Daten, verschlüsselte Kopplung, Bilder, Tasten und MQTT. Es gibt
 keine Kaufoption oder Pro-Stufe im Server; eigene Beschränkungen der Android-App
-werden nicht aufgehoben. Das Raster ist serverseitig von 1×1 bis 8×8 einstellbar,
-zunächst eine Seite. Neue Voreinstellung ab 0.1.9: **5 Spalten × 3 Zeilen**.
-Vorhandene Einstellungen bleiben erhalten. Meldet Android sein eigenes Raster,
-übernimmt der Editor dieses; die Servervorgabe überschreibt die App-Ansicht nicht.
+werden nicht aufgehoben. Das Raster wird von Android bis 8×8 übernommen; bis zur
+ersten Rastermeldung gilt für neue Geräte **5 Spalten × 3 Zeilen**. Je Deck sind
+bis zu acht Seiten möglich. Das Raster direkt in Android einstellen; der Editor
+überschreibt die App-Ansicht nicht. Vorhandene Einstellungen bleiben erhalten.
 
 1. Neues ZIP auf den Pi kopieren und wie unten beschrieben mit `sudo bash install.sh`
    aktualisieren. Der Installer sichert bestehende Daten und erhält Einstellungen.
-2. Weboberfläche öffnen und **Mobile-Server** wählen. Der Server ist nach dem Update
-   zunächst aus; bestehende USB-Geräte und MQTT-Broker benötigen keine Umstellung.
+2. Weboberfläche öffnen und **Mobile-Server** wählen. Bei erstmaliger Einrichtung
+   ist der Server aus; eine gespeicherte Aktivierung bleibt bei Updates erhalten.
 3. Die im WLAN/LAN erreichbare **IPv4-Adresse oder den Hostnamen des Raspberry Pi**
    eintragen. Nicht `127.0.0.1` verwenden, wenn Android auf einem anderen Gerät läuft.
    Standardport ist **28198**, getrennt von der Weboberfläche auf 8098.
-4. Bei Bedarf unter **Rastervorgabe** Spalten/Zeilen für Geräte ohne eigene
-   Rastermeldung einstellen. Das Android-Raster direkt in der App ändern.
+4. Das Android-Raster direkt in der App ändern.
    **Stream-Deck-Mobile-Server aktivieren**
    anhaken und oben **Speichern**. Auf **Mobile-Dienst aktiv** warten. Ein belegter
    Port wird als Fehler angezeigt und beendet nicht den USB-/MQTT-Dienst.
@@ -528,13 +584,13 @@ Vorhandene Einstellungen bleiben erhalten. Meldet Android sein eigenes Raster,
    Ab 0.1.8 erscheint die Bestätigung bereits nach der Begrüßung, auch wenn das
    Tablet seine zusätzliche Authentifizierungsnachricht erst später sendet.
 7. In Android ein virtuelles Deck anlegen bzw. auswählen. Es erscheint unter
-   **USB-Geräte** und im grafischen **Stream Deck**-Tab. Gerät dort freigeben und
+   **USB / Virtuelle Geräte** und im grafischen **Stream Deck**-Tab. Gerät dort freigeben und
    speichern, dann Icons gestalten und MQTT-Aktionen zuordnen. Auch das bisherige
    Anlernen mit Press/Release, Switch und Button-Gesten kann genutzt werden.
    Bei einem neu verbundenen Mobile-Deck öffnet sich der Editor automatisch, sofern
    kein ungespeicherter Entwurf oder Anlernvorgang unterbrochen würde. MQTT wird
-   dadurch nicht automatisch freigegeben. Änderungen der Rastervorgabe trennen
-   ab 0.1.9 weder Tablet noch geöffnetes Deck; eine neue Auswahl ist nicht nötig.
+   dadurch nicht automatisch freigegeben. Rasteränderungen in Android werden ohne
+   erneute Kopplung übernommen. Neue Deck-Seiten werden separat im Editor verwaltet.
 8. Zum Ausschalten die Server-Checkbox abwählen und speichern. Der separate
    Mobile-Port und seine Verbindungen werden geschlossen; USB/MQTT bleiben aktiv.
 
@@ -583,7 +639,7 @@ Die Vorschau nutzt dieselbe Bildaufbereitung wie die Hardware und sendet keine
 MQTT-Aktion. Gestaltung und MQTT-Belegungen werden getrennt gespeichert. Abziehen
 zeigt Offline; Editor und Einstellungen bleiben für das erneute Anschließen erhalten.
 Ein Pedal ohne Display bietet MQTT-Zuordnung, keine Bildgestaltung.
-Seitenwechsel und ein grafischer Touchstreifen-Editor sind nicht enthalten.
+Deck-Seiten sind vorhanden; ein grafischer Touchstreifen-Editor ist nicht enthalten.
 
 Automatisierte Hardware-Simulation und lokaler Chrome-Test liegen vor. Der neue
 Tab ist noch nicht mit einem physischen Stream Deck auf dem Pi bestätigt.
@@ -707,7 +763,7 @@ bleiben technische Kennungen. Der sichtbare Produktname ist
   (u. a. Original/MK.2, Mini, XL, Neo, Pedal, Plus und weitere dort unterstützte
   Modelle). Physische Geräte sind in diesem Projekt noch nicht praktisch geprüft.
   Der Touchscreen wird als Ereignisquelle angebunden, nicht als frei gestaltbarer
-  Displaybereich. Es gibt zunächst eine feste Belegung ohne Profil-/Seitenwechsel.
+  Displaybereich. Deck-Seiten sind implementiert; zusätzliche Profile stehen noch aus.
 - Stream Deck Mobile ist kein USB-Gerät. Ab 0.1.7 gibt es einen optionalen
   experimentellen Netzwerkserver mit QR-Kopplung; Kopplung und Iconanzeige sind
   vom Nutzer bestätigt, weitere Android-Praxisprüfungen stehen aus.

@@ -165,7 +165,7 @@ def library():
 
 @lru_cache(maxsize=2)
 def _catalog(path, stamp):
-    items, licenses, refs = [], {}, {}
+    items, licenses, refs, unique = [], {}, {}, {}
     for item in read_json(Path(path), []):
         key = item.get("package_folder") or item.get("collection") or "Eigene Icons"
         text = item.get("license", "")
@@ -173,7 +173,20 @@ def _catalog(path, stamp):
         if reference not in refs:
             licenses.setdefault(key, []).append(text)
             refs[reference] = len(licenses[key]) - 1
-        items.append({**{k:v for k,v in item.items() if k != "license"}, "license_ref":refs[reference]})
+        identity = (key, item["id"])
+        alias = {k:item.get(k) for k in ("name", "filename", "subfolder", "tags", "original_path")}
+        if identity in unique:
+            primary = unique[identity]
+            canonical = {k:primary.get(k) for k in alias if k != "tags"}
+            if {k:v for k,v in alias.items() if k != "tags"} != canonical and alias not in primary.setdefault("aliases", []):
+                primary["aliases"].append(alias)
+            primary["tags"] = list(dict.fromkeys([*primary.get("tags", []), *item.get("tags", [])]))
+            if refs[reference] not in primary["license_refs"]:
+                primary["license_refs"].append(refs[reference])
+        else:
+            packed = {**{k:v for k,v in item.items() if k != "license"}, "license_ref":refs[reference], "license_refs":[refs[reference]]}
+            items.append(packed)
+            unique[identity] = packed
     return {"items":items, "licenses":licenses}
 
 

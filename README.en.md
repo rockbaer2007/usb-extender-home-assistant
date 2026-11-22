@@ -2,7 +2,54 @@
 
 **Connect USB input devices and Stream Decks through MQTT — for Raspberry Pi.**
 
-Version **0.1.24** · Local test package, not published · [Deutsch](README.md) · **English** · [Published releases](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/latest)
+Version **0.1.28** · Public test release · [Deutsch](README.md) · **English** · [Download ZIP](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.28)
+
+0.1.28 sends Mobile images in small batches, allowing input and connection
+maintenance between batches. Disconnect logs include additional counters.
+**15-minute hardware test passed:** SM-T580, 8×8 grid and two pages, repeated
+next/previous navigation followed by about 14 minutes idle. The tablet stayed
+connected in all 16 samples; Ping/Pong increased from 56/56 to 232/232.
+The final journal contained no new heartbeat timeout or disconnect. Image and
+metadata counters remained unchanged while idle.
+[Measurements and limits](docs/tests/mobile-0.1.28-15min-20261122.md).
+This result applies to that setup and interval; screen-off, background operation
+and other network conditions were not tested.
+
+**USB / Virtual Devices and deck pages:** USB devices and paired virtual Mobile
+decks share the device view. Each deck supports up to **eight independent pages**.
+
+1. Choose **Neue Seite** in the Stream Deck editor. It opens the new editor page;
+   the grid still comes from the device or Android app.
+2. Key numbers continue across pages: with 15 keys, 1–15 then 16–30. Each page
+   has its own artwork and MQTT assignments.
+3. Set **Tastenfunktion** to MQTT, **Vor** (next), **Zurück** (previous), **Home**,
+   or **Gehe zu** (go to) and select **Zielseite** (target page). After saving,
+   navigation works directly on the tablet without MQTT. Deleting the target
+   redirects the key to page 1; later targets follow their pages when renumbered.
+   Navigation keys send no MQTT action. Existing assignments are preserved and
+   become active again when the key is changed back to MQTT.
+4. **Seitennummer anzeigen** adds a small counter such as 2/3. Navigation keys
+   initially enable it. Home returns to page 1; next/previous stop at the boundaries.
+5. **Aktuelle Seite löschen** removes that page's artwork and assignments after
+   confirmation. **Page 1 is protected.** Remaining pages retain their IDs and
+   topics even when their displayed page/key numbers change.
+6. Click **Speichern**. Until then, the stored device configuration is unchanged.
+
+Editor navigation buttons change the preview only. Assigned deck keys navigate
+the actual device; Mobile page commands are supported too. Connection status shows
+the device's active page. After service restart, each deck starts on page 1.
+Page changes clear held keys and pending click sequences. Feedback for another
+page never overwrites the visible page. Artwork controls are smaller, with compact
+colour inputs and readable hex values.
+
+Additional page topics have stable identifiers, e.g. `tablet-page-2-key-0/press`.
+Deleting another page does not rename them. Existing page-1 topics are preserved.
+Page features are verified locally with protocol simulation. Next/previous and
+idle operation were also tested successfully on the real SM-T580. New/delete
+page, Home and Go to have local coverage; their complete hardware verification
+and physical Stream Deck testing remain open.
+
+![Deck pages and compact artwork controls – local simulation](docs/screenshots/deck-pages.png)
 
 **Visual icon selection:** Icon buttons in the Stream Deck editor, key list and
 MQTT feedback open a compact picker instead of a long dropdown. Expand packages,
@@ -15,6 +62,10 @@ on demand in `icons/.cache/thumbnails/` and reused on the Pi and in the authenti
 browser. Only visible tiles load images; each open package displays at most 96
 tiles per page. Full images and animations for the actual deck are unchanged.
 Library metadata transfers repeated package licence text once.
+The search/picker index shows identical icon IDs **once per package**, even when
+multiple filenames or repeated records exist. Alternative names remain searchable
+and appear in tooltips. Originals and stored IDs are not deleted or rewritten.
+Different styles and black/white packages remain separate.
 
 ![Visual icon selection with 48×48 thumbnails – local demo](docs/screenshots/icon-picker.png)
 
@@ -83,7 +134,8 @@ preserving edits to other keys.
 Each Stream Deck key now supports a second icon and separate background and text
 colors while pressed. Releasing restores the normal appearance. Unspecified values
 inherit the normal appearance. The pressed preview sends no MQTT actions. Save to
-apply the artwork to USB or Mobile decks. Real tablet testing is still pending.
+apply the artwork to USB or Mobile decks. Complete hardware verification of
+every custom pressed-icon/colour combination remains open.
 
 The Stream Deck tab stays visible. Disconnecting shows **Offline** while keeping
 the editor, selected key and unsaved text. Status changes no longer rebuild the
@@ -169,8 +221,8 @@ permission are required before events become MQTT messages.
 
 The included `python-elgato-streamdeck` 0.10.0 driver supports models including
 Original/MK.2, Mini, XL, Neo, Pedal and Plus. This is a driver capability list,
-**not a hardware-tested list for this project**. There is one fixed key layout;
-profile/page switching is not implemented. Animated key icons are locally supported since 0.1.18.
+**not a hardware-tested list for this project**. Deck pages are locally implemented
+since 0.1.26; additional profiles remain open. Animated key icons are locally supported since 0.1.18.
 
 ## Installation and updates
 
@@ -181,8 +233,8 @@ The ZIP is an installation package, not an offline firmware image.
 
 ```bash
 sudo apt-get update && sudo apt-get install -y unzip
-unzip USB-Extender-Home-Assistant-0.1.24-Raspi4.zip
-cd USB-Extender-Home-Assistant-0.1.24
+unzip USB-Extender-Home-Assistant-0.1.28-Raspi4.zip
+cd USB-Extender-Home-Assistant-0.1.28
 sudo bash install.sh
 ```
 
@@ -201,7 +253,7 @@ and open `http://<raspberry-pi-address>:8098` in your browser.
 
 1. Open **MQTT-Broker**, configure up to three brokers and save. Enable HA discovery
    on HA brokers; select **Aus – nur MQTT-Daten senden** for ioBroker.
-2. Open **USB-Geräte**, name and explicitly enable the input device, select its
+2. Open **USB / Virtuelle Geräte**, name and explicitly enable the input device, select its
    destination brokers and save. Inventory detection alone does not enable input.
 3. Open **Tasten & Anzeigen**, select the device and click **Anlernen starten**.
 4. Press and release each wanted key once. Existing assignments and repeated
@@ -264,22 +316,22 @@ editor follows it; server defaults do not change the Android app's own grid.
 1. Update using the new ZIP and `sudo bash install.sh`; settings are backed up and retained.
 2. Open **Mobile-Server** in the web UI. This feature is disabled by default.
 3. Enter the Pi's reachable IPv4 address or hostname (not `127.0.0.1` for a phone),
-   keep port **28198** or choose another free port. **Rastervorgabe** supplies a
-   fallback for clients without their own grid; change Android's grid in the app.
+   keep port **28198** or choose another free port. Set Android's grid in the app;
+   deck pages are managed separately in the editor.
 4. Check **Stream-Deck-Mobile-Server aktivieren**, click the top **Speichern** button,
    and wait for **Mobile-Dienst aktiv**. A port conflict leaves USB/MQTT running.
 5. Click **Kopplung starten · QR-Code** to allow pairing for two minutes. Choose
    Add computer in Android and scan the QR code. Confirm the expected device and
    six-character hexadecimal fingerprint with **Gerät vertrauen**, or reject it.
 6. Create/open a virtual deck in Android. Enable and save the new device under
-   **USB-Geräte** or **Stream Deck**, then assign artwork and MQTT actions. Existing
+   **USB / Virtuelle Geräte** or **Stream Deck**, then assign artwork and MQTT actions. Existing
    learned key rows and gestures can also be used. Scanning alone enables no actions.
    Since 0.1.8, the confirmation is available as soon as the client greets the
    server, including clients that send their Authenticate request later.
    From 0.1.9 a new Mobile deck automatically opens the graphical editor when
    there are no unsaved drafts or learning sessions to interrupt. MQTT inputs
-   still need explicit permission. Changing fallback grid settings keeps the
-   connection and opened deck alive, without selecting the deck again in Android.
+   still need explicit permission. Android grid changes are adopted without
+   pairing again. Deck pages are managed separately in the editor.
 7. Uncheck the activation checkbox and save to close the Mobile port/connections;
    USB and MQTT remain active. Configuration and trusted clients are retained.
 
@@ -322,7 +374,7 @@ guessing a layout.
 The preview shares the hardware image renderer and never publishes MQTT actions.
 Artwork is stored separately from mappings. Unplugging shows Offline and retains
 the tab, editor and settings for reconnection. A Pedal offers MQTT mappings but no image editor.
-Pages and a graphical touch-strip editor are not included.
+Deck pages are supported; a graphical touch-strip editor is not included.
 
 The new tab has automated simulated-device and local Chrome checks. Physical
 Stream Deck operation on a Pi still needs practical verification.
@@ -346,7 +398,8 @@ messages, individual ioBroker states and HA Switch/pressed-state values after
 key use. They visibly include `press`, `release`, `click`, `hold`, `ON` and `OFF`.
 They do not establish every function on every physical device. Double-click,
 restart persistence and failure paths have automated tests; physical Stream Deck
-verification remains open. There are **61 Python tests** plus JavaScript/DOM checks.
+verification remains open. There are **168 Python tests** plus JavaScript/DOM checks;
+the 0.1.28 real-tablet navigation/idle test is documented at the top of this README.
 
 ## Web UI and backups
 

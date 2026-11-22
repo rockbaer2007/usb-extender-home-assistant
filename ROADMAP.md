@@ -2,6 +2,11 @@
 
 ## Als Nächstes: Praxisprüfung auf dem Raspberry Pi 4
 
+- 0.1.26 auf echtem Handy/Tablet oder physischem Deck prüfen: eigene Seiten,
+  fortlaufende Nummern, Vor/Zurück/Home ohne MQTT-Aktion, Zähler, neue Seite und
+  bestätigtes Löschen (Seite 1 geschützt). IDs/Topics übriger Seiten, Rückmeldungen
+  und erneute Verbindung prüfen. Lokale GUI-/Protokolltests sind abgeschlossen.
+
 - Nach Nutzerfreigabe: 0.1.24-Auswahl mit großer Bibliothek auf dem Pi testen;
   erstmalige/wiederholte Miniaturen, Suche, Paketwechsel und Speicherung prüfen.
   Lokale 6.862-Einträge-/Cache-Prüfung ist abgeschlossen; .112 blieb unverändert.
@@ -26,7 +31,7 @@
   den gemeldeten Receive-Timeout praktisch nachtesten,
   Iconfarben/-größe und MQTT-Tastendruck,
   App-eigene Rastergrenzen und erneute Verbindung nach Pi-/App-Neustart.
-- Androidseitiges Löschen virtueller Decks und optionale Seiten-/Shortcut-Befehle
+- Androidseitiges Löschen virtueller Decks und optionale Shortcut-Befehle
   erst nach dem grundlegenden Mobile-Praxistest ergänzen.
 
 - Gespeicherte Tasten nach einem Pi-Neustart und USB-Wiederanstecken praktisch prüfen.
@@ -56,7 +61,7 @@
 
 ## Mögliche Erweiterungen nach der Praxisprüfung
 
-- Profil-/Seitenwechsel für Stream Decks.
+- Zusätzliche Profile für Stream Decks; Deck-Seiten sind bereits implementiert.
 - Gestaltbare Stream-Deck-Plus-Touchscreen-Anzeigen.
 - Weitere USB-Adapter anhand konkret vorhandener Geräte, zum Beispiel serielle
   Bedienelemente. Eine allgemeine USB-Erkennung ersetzt keine Protokollanbindung.

@@ -1,7 +1,7 @@
 """Independent VSD2 wire definitions from observed field contracts.
 
 No vendor application code or binaries are distributed. The implemented subset
-provides a configurable single page; optional shortcut features remain unsupported.
+provides device-isolated deck pages; optional shortcut features remain unsupported.
 """
 import secrets
 from google.protobuf import descriptor_pb2, descriptor_pool, message_factory
