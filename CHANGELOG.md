@@ -10,6 +10,8 @@ bis zu acht Deck-Seiten, fortlaufende Tasten und Vor/Zurück/Home/Gehe zu.
 - Mobile-Bildübertragung pro Durchlauf auf vier Bilder und ein Zeitbudget
   begrenzt. Zwischen Paketen werden Eingaben und Heartbeat wieder bearbeitet;
   neue Bilder ersetzen weiterhin ältere noch ausstehende Bilder derselben Taste.
+- MDI-Paketgenerator verwendet ein festes ZIP-Systemkennzeichen, damit das
+  gebündelte Favoritenpaket unter Windows und Linux bytegleich reproduzierbar ist.
 - Ausführlichere Trennungsdiagnose ohne Nachrichteninhalte oder Zugangsdaten:
   Ping/Pong-Zähler, letzte Nachrichtenart, deren Alter und Bildwarteschlange.
 - 15-Minuten-Praxistest am SM-T580 bestanden: 8×8, zwei Seiten, mehrfach

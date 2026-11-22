@@ -43,6 +43,8 @@ class FavouriteTests(TemporaryHome):
         config_bytes = (home() / "config.json").read_bytes()
         bundled = Path(icons.__file__).parent / "bundled/ha-mdi-favorites.streamDeckIconPack"
         self.assertEqual(bundled.read_bytes(), builder.build_pack("steelblue")[2])
+        with zipfile.ZipFile(bundled) as archive:
+            self.assertTrue(all(info.create_system == 0 for info in archive.infolist()))
         self.assertEqual(icons.import_favorites()["imported"], 40)
         self.assertEqual([x["id"] for x in icons.library()], [x["id"] for x in items])
         self.assertEqual((home() / "config.json").read_bytes(), config_bytes)

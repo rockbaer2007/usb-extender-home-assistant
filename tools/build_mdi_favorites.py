@@ -87,6 +87,8 @@ def build_pack(color):
     with zipfile.ZipFile(result, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for name, data in sorted(files.items()):
             info = zipfile.ZipInfo(folder + "/" + name, date_time=(2026, 11, 21, 0, 0, 0))
+            # Match the shipped pack, independent of the build host OS.
+            info.create_system = 0
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
             archive.writestr(info, data)
