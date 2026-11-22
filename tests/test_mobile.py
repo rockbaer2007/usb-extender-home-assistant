@@ -222,6 +222,26 @@ class MobileTests(hub.TemporaryHome):
         self.assertFalse(self.server.status()["active"])
         self.assertFalse(settings(load_config())["enabled"])
 
+    def test_removed_deck_closes_only_its_session_and_keeps_trust(self):
+        first=self.pair();one=self.create(first)
+        second=self.pair();two=self.create(second)
+        from ugso_usbhub.devices import administer
+        before=read_json(home()/'mobile-trust.json',{})
+        administer({'action':'remove','device':one},{})
+        self.server.synchronize_storage()
+        wait_for(lambda:not any(s.device==one for s in self.server.sessions))
+        self.assertTrue(any(s.device==two and not s.closed for s in self.server.sessions))
+        self.assertEqual(read_json(home()/'mobile-trust.json',{}),before)
+
+    def test_revoked_client_closes_session_but_retains_deck(self):
+        peer=self.pair();ident=self.create(peer)
+        session=next(s for s in self.server.sessions if s.device==ident)
+        from ugso_usbhub.devices import administer
+        administer({'action':'revoke','device':session.client_id},{})
+        self.server.synchronize_storage()
+        wait_for(lambda:not self.server.sessions)
+        self.assertIn(ident,read_json(home()/'mobile-devices.json',{}))
+
     def test_qr_contains_static_endpoint_and_workstation(self):
         info=pairing_info(self.config)
         query=parse_qs(urlsplit(info["url"]).query)

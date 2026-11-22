@@ -1,5 +1,97 @@
 # Aktueller Stand
 
+## Release 0.1.31
+
+- Bündelt 0.1.29–0.1.31 mit ZIP/Prüfsumme, Changelog und README DE/EN.
+- Freigabeprüfung: 204 lokale Python-Tests, neun Node-/DOM-Prüfungen und
+  Installer-Umask-Regression bestanden; Linux-CI prüft zusätzlich den Installer.
+- T650-Hardwareprüfung und korrigierte Installation auf Raspberry Pi 4 bestätigt;
+  Grenzen von Live-Prüfung und Replay bleiben im Prüfbericht dokumentiert.
+- Dokumentation DE/EN/FR wird aus einer Quelle auf beiden Domains veröffentlicht.
+
+## 0.1.31: diagonale Slides und T650-Praxisprüfung
+
+- Installation auf .112 jetzt abgeschlossen und Terminalausgabe geprüft:
+  CLI und laufender Status 0.1.31, USB-/MQTT und Web active/running,
+  beide NRestarts=0. Mobile aktiv, Fehlerliste leer. Alle fünf SHA256-Prüfungen
+  für config, switches, Mobile-Identität, Vertrauen und Geräte unverändert.
+  Installer-Sicherung: `/var/backups/ugso-usbhub-20261122-153636.tar.gz`.
+  Dienststart 15:38:13, Webstart 15:38:16 laut Pi-Journal.
+- Installation auf .112 beauftragt. Erster Versuch scheitert vor Umschaltung
+  in Schritt 6 mit Permission denied beim Dienstbenutzer. Ursache: von meinem
+  Prüfblock vererbte umask 077; Python-Umgebung dadurch nur für root zugänglich.
+  Installer auf Programm-Umask 022 und private Archiv-Umask 077 korrigiert.
+  Lokaler Shell-Regressionstest bestanden; erneute Installation danach erfolgreich.
+- Vollständige isolierte T650-Messung am 22.11.2026 auf .112 abgeschlossen und
+  Terminalausgabe gelesen. Alle acht erwarteten Richtungen erkannt, kein Tipp
+  in Slide-Phasen; separater Tipptest 4 Tipps ohne X/Y. Drei Loopback-Broker
+  erhielten jeweils 752 identische Nachrichten; Metadatenvergleich unverändert.
+- Live Empfindlichkeit 5, Senderate maximal 10/s; andere Empfindlichkeiten und Raten mit
+  denselben realen Aufnahmen im Replay geprüft. Zwei benachbarte Richtungsaktionen
+  sowie ein anfängliches Halten mitprotokolliert; keine exklusive Richtungsprüfung.
+  Grenzen und Messwerte im [Hardware-Prüfbericht](docs/tests/t650-0.1.31-20261122.md).
+  Zur Messzeit lief der installierte Dienst .30; inzwischen auf .31 aktualisiert.
+  Veröffentlichung anschließend gesondert vom Nutzer beauftragt.
+
+- Erster realer RIGHT-Durchlauf: 14 Slides, 17 X/Y-Paare, kein Tipp; minimale
+  Live-Abstände 0,100007 s. LEFT hing vor Messbeginn wegen nicht konsumiertem
+  evdev-Generator beim Pufferleeren. Nur das Messwerkzeug korrigiert und mit
+  18 betroffenen Tests geprüft; danach alle Phasen und den Endbericht ausgewertet.
+
+- Quellsicherung: `M:\repos\_backups\ugso-usb-hub\before-diagonal-slide-20261122-144443.zip`.
+- Acht Ein-Finger-Richtungen lokal umgesetzt, 199 Python-Tests bestanden.
+  Geführtes Messwerkzeug zusätzlich lokal auf Replay, Ausschluss des K400 und
+  Dienstwiederherstellung bei Fehlern geprüft (16 Slide-/Werkzeugtests grün).
+- .112 vor der Installation im integrierten SSH-Terminal: 0.1.30, echtes T650 unter
+  `/dev/input/event13` mit eindeutiger HID++-Kennung, Type-B-Slot-/X/Y-/Trackingdaten
+  vorhanden, Achsenbereiche X 0–2832, Y 0–2364. K400/T400 nicht Teil der Messung.
+- Erste Sicherung aller alten Releases wegen konservativer Platzprüfung
+  abgebrochen; keine Installation. Freier Platz 1,8 GB. Aktives Programm 57 MB,
+  komplette Nutzdaten 253 MB. Nutzer bestätigt aktive Sicherung; gzip-/tar-
+  Prüfung vor dem späteren Teststart erfolgreich durchlaufen.
+- Hardware-Bewegungs-/MQTT-Test im oben beschriebenen Umfang abgeschlossen.
+  Geführte Prüfung mit Loopback-Brokern und temporärer Konfiguration, frühere
+  Dienste werden wiederhergestellt. Kein Push und keine Veröffentlichung.
+- Abschließender Gesamtlauf einschließlich Messwerkzeug: 202 Python-Tests grün.
+  Relevante DOM-/Chrome-Prüfungen und Wheel erfolgreich. Die vorbereitete aktive
+  Sicherung ist auch als `tools/backup_active.sh` im Paket enthalten.
+  [Abgeschlossener Hardware-Prüfbericht](docs/tests/t650-0.1.31-20261122.md).
+
+## 0.1.30: Ein-Finger-Slide (lokal)
+
+- Quellstand vor Änderungen gesichert und ZIP-CRC geprüft:
+  `M:\repos\_backups\ugso-usb-hub\before-one-finger-slide-20261122-142013.zip`.
+- Vier anlernbare Richtungen, Empfindlichkeit 1–10, Obergrenze 1–30 Aktionen bzw.
+  X/Y-Paare pro Sekunde. Nach erkannter Bewegung kein Tipp beim Abheben.
+- Optionale X/Y-Zahlenwerte 0–100 mit gespeicherten Topics an Geräte-Zielbroker.
+  Standard aus, kein JSON/Retain, kein Nachsenden an getrennte Broker.
+- Lokale Prüfungen und Paketabschluss siehe
+  [Prüfbericht](docs/tests/slide-0.1.30-local-20261122.md).
+  T650-Hardwaretest noch offen. .112 und vorhandene Einstellungen unverändert.
+  Keine Veröffentlichung und kein Push.
+- 197 Python-Tests, danach 27 betroffene Tests erneut grün; neun Node-/DOM-
+  Prüfungen und lokaler Chrome-Test erfolgreich. Drei echte lokale MQTT-Broker
+  bestätigen Richtungen und Zahlenwerte; Routing und Offline-Fall geprüft.
+
+## 0.1.29: lokaler Gerätestand
+
+- Vollständige Quellsicherung vor Änderungen:
+  `M:\repos\_backups\ugso-usb-hub\before-device-gesture-update-20261122-132149.zip`.
+- Schrittfilter 1–5 für Lautstärke/Helligkeit/Tastaturlicht, Gerätegruppen mit
+  Einzel-Aufklappfunktion, Serien-/HID++-Erkennung und manuelle Offline-Zuordnung.
+- Geräteverwaltung sichert Metadaten vor Entfernen/Zuordnen/Widerrufen.
+  Icons bleiben erhalten; Mobile-Vertrauen und Deck-Entfernung sind getrennt.
+- Experimenteller Type-B-Multitouch-Auswerter für T650 und ähnliche Touchpads,
+  ausdrücklich einschaltbar. Lokale synthetische Ereignisse, keine MQTT-Rohdaten.
+- Nutzer: T650 noch nicht bereit, zunächst lokal testen. .112 unverändert,
+  kein Push und keine Veröffentlichung. Der reale .28-Test gilt nicht für .29.
+- 186 Python-Tests im wiederholten Gesamtlauf bestanden. Anschließend 35 Mobile-
+  Tests nach der letzten Trennungsänderung erneut grün, ebenso 16 Geräte-/Gesten-
+  Tests. Neun Node-/DOM-Prüfungen plus Chrome auf Desktop/schmalem Fenster grün.
+  Wheel und Syntaxprüfungen erfolgreich. Ein einmaliger Windows-Lesekonflikt
+  im ersten Gesamtlauf ist im [lokalen Prüfbericht](docs/tests/devices-0.1.29-local-20261122.md)
+  dokumentiert. Metadaten-Rücksetzung und Erhalt übriger Daten lokal geprüft.
+
 ## Veröffentlichung 0.1.28
 
 - Öffentliches Testrelease mit ZIP/Prüfsumme, Changelog und README DE/EN.

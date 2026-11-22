@@ -4,6 +4,7 @@ let deckPreviewPressed = false;
 const deckPreviewCache=new Map();
 let seenMobileDecks=new Set(),pendingMobileEditor='';
 const knownDecks=new Map();
+const forgottenDecks=new Set();
 const editorPages=new Map();
 function editorPage(ident){return Math.max(0,Math.min(editorPages.get(ident)||0,(config.devices[ident]?.deck_page_count||1)-1));}
 function editorPageSlots(ident){return config.devices[ident]?.deck_page_order||Array.from({length:config.devices[ident]?.deck_page_count||1},(_,i)=>i);}
@@ -23,7 +24,7 @@ function availableDecks() {
   }
   for(const d of status.mobile?.known_decks||[])knownDecks.set(d.id,{...knownDecks.get(d.id),...d});
   for(const d of connectedDecks())knownDecks.set(d.id,{...knownDecks.get(d.id),...d,deck:d.deck||knownDecks.get(d.id)?.deck});
-  return [...knownDecks.values()];
+  return [...knownDecks.values()].filter(d=>!forgottenDecks.has(d.id));
 }
 function deckSignature() { return JSON.stringify(availableDecks().map(d=>[d.id,d.deck?.keys,d.deck?.layout,d.deck?.visual])); }
 function renderDeckConnection() {

@@ -1,5 +1,30 @@
 # Offene Schritte
 
+## Nach abgeschlossener isolierter T650-Messung
+
+Die acht Richtungen, Tippunterdrückung, X/Y und drei lokale MQTT-Ziele sind am
+echten T650 geprüft. Live mit Empfindlichkeit 5/Rate 10, weitere Werte per Replay.
+Ergebnis und Grenzen: [Prüfbericht](docs/tests/t650-0.1.31-20261122.md).
+
+- Nach Bedarf separat: sämtliche Empfindlichkeiten/Raten in der laufenden
+  Weboberfläche umschalten und neue physische Aufnahmen vergleichen. Dieser
+  Live-Umschalttest ist durch Replay nicht ersetzt.
+- Einzelne benachbarte Richtungsereignisse wurden protokolliert. Eine optionale
+  Richtungsstabilisierung erst bei entsprechendem Nutzerwunsch untersuchen.
+Die anschließend beauftragte Installation von .31 auf .112 ist abgeschlossen:
+beide Dienste laufen, keine Neustarts, Mobile aktiv, fünf Metadaten-Prüfsummen
+unverändert. Die Veröffentlichung von 0.1.31 ist anschließend beauftragt.
+
+## 0.1.29: Nächste Praxisprüfung (lokal umgesetzt)
+
+- Weitere T650-Mehrfingergesten und erneutes Einstecken praktisch prüfen.
+  Ein-Finger-Slides und die vorhandene HID++-Kennung sind inzwischen nachgewiesen.
+- Schrittfilter 1–5 mit Vol+/Vol−, Helligkeit und Tastaturlicht sowie gehaltenen
+  Tasten praktisch prüfen. Pro Taste getrennte Zähler und Stopp beim Loslassen.
+- USB-Hub/Portwechsel, explizite Offline-Zuordnung und Entfernen praktisch prüfen.
+  Mobile-Deck entfernen und Vertrauen separat widerrufen, andere Geräte erhalten.
+- Neues ZIP erst nach Freigabe auf .112 installieren. Noch nichts veröffentlichen.
+
 ## Als Nächstes: Praxisprüfung auf dem Raspberry Pi 4
 
 - 0.1.26 auf echtem Handy/Tablet oder physischem Deck prüfen: eigene Seiten,

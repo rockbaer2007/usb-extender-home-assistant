@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 export DEBIAN_FRONTEND=noninteractive
+# Public program files must remain readable by the unprivileged service user,
+# even when invoked from a root shell with a restrictive inherited umask.
+umask 022
 TOTAL=9
 STEP=0
 BASE=/opt/ugso-usbhub
@@ -78,7 +81,7 @@ systemctl stop ugso-usbhub-web.service ugso-usbhub.service 2>/dev/null || true
 if [[ -d "$STATE" ]]; then
   BACKUP="/var/backups/ugso-usbhub-$(date +%Y%m%d-%H%M%S).tar.gz"
   mkdir -p /var/backups
-  tar -czf "$BACKUP" -C /var/lib ugso-usbhub
+  (umask 077; tar -czf "$BACKUP" -C /var/lib ugso-usbhub)
   chmod 600 "$BACKUP"
   printf '  Sicherung: %s\n' "$BACKUP"
 else

@@ -2,7 +2,108 @@
 
 **USB-Geräte und Stream Decks über MQTT verbinden – für Raspberry Pi.**
 
-Version **0.1.28** · Öffentliches Testrelease · Stand 22. November 2026 · [ZIP herunterladen](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.28)
+Version **0.1.31** · Öffentliches Testrelease · Stand 22. November 2026 · [ZIP herunterladen](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.31)
+
+Dieses Release enthält auch die zuvor lokalen Änderungen aus 0.1.29 und 0.1.30:
+Schrittfilter, Gerätegruppen und Gerätezuordnung sowie Ein-Finger-Slide und X/Y.
+
+### Neu in 0.1.31: diagonale Ein-Finger-Slides
+
+Zusätzlich zu links/rechts/oben/unten sind `TOUCHPAD_SLIDE_UP_LEFT`,
+`TOUCHPAD_SLIDE_UP_RIGHT`, `TOUCHPAD_SLIDE_DOWN_LEFT` und
+`TOUCHPAD_SLIDE_DOWN_RIGHT` anlernbar. Acht gleich große Richtungssektoren
+(je 45°) unterscheiden gerade und diagonale Bewegungen. X/Y, Empfindlichkeit,
+Senderate und die Unterdrückung zusätzlicher Tippaktionen gelten weiterhin.
+
+`tools/t650_check.py` bietet eine geführte Hardwareprüfung aus dem entpackten
+Quellpaket. Sie prüft Namen und eindeutige Kennung des T650, verwendet temporäre
+Einstellungen sowie drei Loopback-MQTT-Broker und schreibt einen JSON-Bericht.
+Vorher geprüfte Sicherung angeben. Mit `--pause-service` wird der USB-Dienst
+während der Messung pausiert und anschließend wieder gestartet, sofern er vorher
+lief. K400/T400 werden nicht gelesen oder umkonfiguriert; während der Pause
+ruht auch deren USB-/MQTT-Weiterleitung. Keine Änderung vorhandener Einstellungen.
+Hardwareerfolg erst nach Auswertung des tatsächlichen Berichts bestätigen.
+
+**T650-Praxisprüfung abgeschlossen:** Alle acht Richtungen erkannt, keine Tipps
+in Slide-Phasen, separater Tipptest korrekt. Drei Loopback-Broker erhielten je
+752 identische Nachrichten; Einstellungen unverändert. Live mit Empfindlichkeit
+5 und maximal 10/s, weitere Werte anhand echter Aufnahmen im Replay geprüft.
+Einzelne benachbarte Richtungsereignisse und einmal Halten mitprotokolliert.
+[Messwerte und Grenzen](docs/tests/t650-0.1.31-20261122.md). Der .31-Quellstand wurde
+isoliert geprüft und anschließend auf dem Raspberry Pi installiert: USB/MQTT
+und Web laufen ohne Neustarts, Mobile aktiv, Fehlerliste leer. Alle fünf
+Prüfsummen für Einstellungen, Schaltzustände, Mobile-Identität, Vertrauen und
+gespeicherte Geräte blieben unverändert.
+
+**Installer-Korrektur:** Eine vom aufrufenden Terminal vererbte `umask 077`
+konnte die neue Python-Umgebung für den Dienstbenutzer unzugänglich machen.
+Der Installer setzt nun ausdrücklich `umask 022` für Programmdateien und
+`umask 077` für Sicherungsarchive. Der korrigierte Installationslauf auf dem
+Raspberry Pi 4 (64 Bit) ist erfolgreich geprüft. Beim Update bleiben Einstellungen,
+Icons und Kopplungen erhalten; vorab wird eine Sicherung unter `/var/backups/` erstellt.
+
+### Neu in 0.1.30: Ein-Finger-Slide
+
+Unter **USB / Virtuelle Geräte** das Touchpad freigeben, **Touchpad-Gesten
+auswerten** aktivieren und **Ein-Finger-Slide und optionale X/Y-Werte** öffnen:
+
+- **Slide-Empfindlichkeit 1–10:** 10 reagiert auf kleinere Bewegungen, 1 benötigt
+  größere. Standard 5 entspricht 4 % der normierten Touchpad-Fläche als Weg;
+  1 entspricht 20 %, 10 entspricht 2 %. Unabhängig von der Sensorauflösung.
+- **Senderate 1–30/s:** Obergrenze pro Richtungsaktionsstrom und X/Y-Wertepaar,
+  Standard 10/s. Zwischenstände werden zusammengefasst, nicht aufgestaut.
+- Vier anlernbare Aktionen: `TOUCHPAD_SLIDE_LEFT`, `TOUCHPAD_SLIDE_RIGHT`,
+  `TOUCHPAD_SLIDE_UP`, `TOUCHPAD_SLIDE_DOWN`. Nach Bewegung über der Schwelle
+  wird beim Abheben kein zusätzlicher Tipp ausgelöst, auch nicht nach Rückkehr
+  zum Ausgangspunkt. Zweifinger-Scrollen und andere Gesten bleiben getrennt.
+- **X/Y zusätzlich senden** ist standardmäßig aus. Bei Aktivierung werden beim
+  Speichern automatisch lesbare Topics angelegt, z. B. `t650-touchpad/x` und
+  `t650-touchpad/y`. Eigene Topics sind möglich; gespeicherte Topics bleiben bei
+  Umbenennung erhalten. Erst Einstellungen speichern, dann Gesten anlernen.
+- X/Y sind reine ganzzahlige MQTT-Nutzdaten **0–100**, ohne JSON. X: links 0,
+  rechts 100; Y: oben 0, unten 100. Absolute Position auf dem Touchpad,
+  keine relative Lautstärkeänderung. Geräte-Zielbroker gelten für beide Achsen.
+  Kein Retain und kein Nachsenden an einen zuvor getrennten Broker.
+- X/Y beginnt erst bei erkannter Ein-Fingerbewegung. Unveränderte Positionen
+  senden nicht erneut. Der letzte noch ausstehende Wert darf nach dem Abheben
+  einmal im nächsten Sendeintervall folgen. Mehrfingerkontakt, mechanischer
+  Klick, Eingabefehler oder geänderte Optionen verwerfen ausstehende Werte.
+  Im Anlernmodus werden Richtungen erfasst, X/Y wird nicht an MQTT gesendet.
+
+Einstellungen bleiben erhalten. Lokal simuliert und mit drei lokalen MQTT-
+Brokern geprüft. Der anschließende echte T650-Praxistest ist oben dokumentiert.
+
+### Neu in 0.1.29: Geräte und Tasten
+
+- **Schrittfilter 1–5:** Bei Lauter/Leiser, Bildschirmhelligkeit und Tastaturlicht
+  wählt „Jeden … Schritt senden“ den Abstand. Bei 3 werden der dritte, sechste usw.
+  Tastendruck gesendet. Jede Taste und jedes Gerät zählt getrennt. Loslassen stoppt
+  immer die Haltewiederholung; übersprungene Druck-/Loslasszyklen senden nichts.
+  Die vorhandene Lautstärke-Haltewiederholung zählt ebenfalls als Schritte und
+  sendet nur Press/Press+, ohne zusätzliche Umschalt- oder Klickaktionen.
+- **Tasten & Anzeigen:** Alphabetische Gerätegruppen, zunächst eingeklappt.
+  Jeweils nur eine Gruppe und eine Taste offen, einschließlich Einzelbelegungen.
+- **Umstecken/USB-Hub:** Eindeutige Seriennummern oder Logitech-HID++-Kennungen
+  erhalten die Zuordnung. Ohne eindeutige Kennung unter „USB / Virtuelle Geräte“
+  das angeschlossene Gerät ausdrücklich einem gespeicherten Offline-Gerät
+  zuordnen. IDs, Topics, Seiten und Tasten bleiben erhalten. Gleiche Modell-IDs
+  allein reichen nicht; doppelte Seriennummern werden nicht automatisch zugeordnet.
+- **Gerät entfernen:** Papierkorb und Bestätigung entfernen Geräteeinstellungen,
+  Tasten, Seiten und Zuordnungen. Gemeinsame Icons bleiben. Angeschlossene USB-Geräte
+  erscheinen anschließend nicht freigegeben. Mobile-Vertrauen separat unter
+  „Mobile-Server“ widerrufen; dadurch bleiben gespeicherte Decks erhalten.
+  Vor diesen Aktionen werden die betroffenen Metadaten unter
+  `backups/device-actions` im Datenordner gesichert.
+- **T650/Multitouch, experimentell:** „Touchpad-Gesten auswerten“ am freigegebenen
+  Eingabegerät einschalten und speichern, dann Gesten anlernen. Linux-Type-B-
+  Multitouch kann Tippen/Halten, Zweifinger-Scrollen und Pinch sowie Wischen mit
+  drei/vier Fingern als `TOUCHPAD_*`-Tasten liefern. Rohe Koordinaten werden nicht
+  an MQTT gesendet. Kein Desktop nötig; kein allgemeiner Gestentreiber für jedes
+  Touchpad. T650-Ein-Finger-Slide inzwischen praktisch geprüft; andere
+  Mehrfingergesten bleiben ohne allgemeinen Hardware-Nachweis.
+
+Bestehende Einstellungen bleiben beim Update erhalten. 0.1.29 wurde bisher nur
+lokal geprüft; der folgende reale 15-Minuten-Test betrifft ausdrücklich 0.1.28.
 
 0.1.28 teilt die Mobile-Bildübertragung bei Seitenwechseln in kleine Pakete,
 damit der Empfang von Eingaben und die Verbindungspflege dazwischen weiterlaufen.
@@ -393,8 +494,8 @@ Installationspaket, kein vollständig offline installierbares ARM-Abbild.
    ```bash
    # Falls unzip noch nicht vorhanden ist:
    sudo apt-get update && sudo apt-get install -y unzip
-   unzip USB-Extender-Home-Assistant-0.1.28-Raspi4.zip
-   cd USB-Extender-Home-Assistant-0.1.28
+   unzip USB-Extender-Home-Assistant-0.1.31-Raspi4.zip
+   cd USB-Extender-Home-Assistant-0.1.31
    sudo bash install.sh
    ```
 
@@ -487,8 +588,9 @@ Es wird kein Linux-Eingabegerät exklusiv gesperrt; das Betriebssystem kann weit
 darauf reagieren. Zwei Treiber verarbeiten dasselbe Stream Deck nicht parallel.
 
 Geräte werden nach USB-Hersteller-/Produkt-ID und, wenn vorhanden, Seriennummer
-erkannt. Ohne USB-Seriennummer gehört die Zuordnung zum physischen USB-Port:
-nach Umstecken gegebenenfalls neu zuordnen. Mehrere gleichartige Geräte bleiben
+erkannt. Ohne eindeutige Kennung gehört die Erkennung zum physischen USB-Port:
+nach Umstecken über „Vorhandenem Gerät zuordnen“ den Offline-Eintrag wählen.
+Mehrere gleichartige Geräte bleiben
 an unterschiedlichen Ports unterscheidbar. Stream Decks ohne USB-Seriennummer
 werden zusätzlich über ihren aktuellen libusb-Bus-/Adresspfad geöffnet.
 

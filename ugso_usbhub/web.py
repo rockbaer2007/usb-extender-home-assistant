@@ -153,8 +153,13 @@ class Handler(BaseHTTPRequestHandler):
                     if time.time()-snapshot.get("updated",0)<15 and not snapshot.get("stopped"):
                         from .keymap import ensure_deck_keys
                         ensure_deck_keys(config, snapshot.get("devices", []))
+                        from .devices import remember_hardware
+                        remember_hardware(config,snapshot.get('devices',[]))
                     save_config(config)
                     self.reply(200, {"ok": True})
+                elif route == "/api/devices":
+                    from .devices import administer
+                    self.reply(200,administer(body,read_json(status_path(),{})))
                 elif route == "/api/learning":
                     from .learning import command
                     self.reply(200, command(body, load_config()))

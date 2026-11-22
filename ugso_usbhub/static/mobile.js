@@ -46,5 +46,8 @@ function renderMobileStatus(parent) {
   (value.clients||[]).filter(client=>client.pings_sent!==undefined).forEach(client=>parent.append(el('small','Keepalive: '+client.pings_sent+' Ping / '+client.pongs_received+' Pong · Verbindungspflege ohne Bildübertragung.')));
   (status.devices||[]).filter(d=>d.connection==='mobile'&&d.deck).forEach(d=>parent.append(el('p',d.name+' · '+d.deck.layout[0]+' Zeilen hoch × '+d.deck.layout[1]+' Spalten breit · '+(d.deck.layout_source==='tablet'?'vom Tablet gemeldet':'noch keine Rastermeldung vom Tablet'))));
   if(value.recent_disconnects?.length){const last=value.recent_disconnects.at(-1);parent.append(el('p','Letzte Trennung: '+last.name+' · '+last.reason+' · '+last.images_sent+' Bilder / '+last.contexts_sent+' Metadatenpakete','muted'));}
-  if(value.trusted?.length)parent.append(el('small','Gespeichertes Vertrauen: '+value.trusted.map(c=>c.name).join(', ')+'. Bleibt nach Neustart erhalten.'));
+  if(value.trusted?.length){
+    parent.append(el('small','Gespeichertes Vertrauen bleibt nach Neustart erhalten. Widerrufen sperrt dieses Mobilgerät; Decks und Zuordnungen bleiben gespeichert.'));
+    for(const client of value.trusted){const row=el('div',undefined,'row');row.append(el('span',client.name));button(row,'Kopplung widerrufen',async()=>{if(confirm('Vertrauen für „'+client.name+'“ widerrufen? Aktive Verbindungen werden geschlossen. Erneute Nutzung erfordert eine neue Bestätigung.'))await deviceAction('revoke',client.id);},'danger');parent.append(row);}
+  }
 }

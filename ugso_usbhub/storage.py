@@ -111,6 +111,21 @@ def validate(c):
             raise ValueError("Unbekanntes MQTT-Ziel")
     targets(c.get("default_targets", []))
     for device in c.get("devices", {}).values():
+        if 'touchpad_gestures' in device and type(device['touchpad_gestures']) is not bool:
+            raise ValueError('Touchpad-Gesten müssen ein/aus sein')
+        if 'touchpad_xy' in device and type(device['touchpad_xy']) is not bool:
+            raise ValueError('Touchpad-X/Y muss ein/aus sein')
+        for name,default,low,high in [('touchpad_sensitivity',5,1,10),('touchpad_rate',10,1,30)]:
+            value=device.get(name,default)
+            if type(value) is not int or not low<=value<=high:
+                raise ValueError('Touchpad: Empfindlichkeit 1–10, Senderate 1–30 pro Sekunde')
+        for name in ('touchpad_x_topic','touchpad_y_topic'):
+            topic=device.get(name,'')
+            if not isinstance(topic,str) or len(topic.encode('utf-8'))>512 or any(c in topic for c in ('#','+','\x00')):
+                raise ValueError('Ungültiges Touchpad-X/Y-Topic')
+        hardware=device.get('hardware',{})
+        if not isinstance(hardware,dict) or any(not isinstance(v,str) or len(v)>512 for v in hardware.values()):
+            raise ValueError('Ungültige Hardwarezuordnung')
         targets(device.get("targets", []))
         if device.get("receive_broker", "") not in ["", *ids]:
             raise ValueError("Ungültiger Empfangsbroker")
@@ -150,8 +165,17 @@ def validate(c):
             raise ValueError("Unbekannte Eingabeart")
         if any(x in b.get("topic", "") for x in ("#", "+", "\x00")):
             raise ValueError("Sende-Topic darf keine Wildcards enthalten")
-    from .keymap import validate_keys
-    return validate_keys(c)
+    from .keymap import validate_keys, device_topic_names
+    validate_keys(c)
+    names=device_topic_names(c)
+    for ident,device in c.get('devices',{}).items():
+        if device.get('touchpad_xy'):
+            for axis in ('x','y'):
+                if not device.get('touchpad_'+axis+'_topic'):
+                    device['touchpad_'+axis+'_topic']=names[ident]+'-touchpad/'+axis
+            if device['touchpad_x_topic']==device['touchpad_y_topic']:
+                raise ValueError('Touchpad-X und -Y benötigen unterschiedliche Topics')
+    return c
 
 
 def save_config(c):

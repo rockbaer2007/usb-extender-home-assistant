@@ -196,6 +196,26 @@ class Brokers:
     def send(self, device, control, gesture, value=1):
         return self.send_report(device, control, gesture, value)["delivered"]
 
+    def send_position(self, device, x, y):
+        settings=self.config.get('devices',{}).get(device,{})
+        transmissions=[];delivered=0
+        if not all(settings.get(name,False) for name in ('enabled','touchpad_gestures','touchpad_xy')):
+            return {'delivered':0,'matched':0,'reason':'disabled','transmissions':[]}
+        if any(type(v) is not int or not 0<=v<=100 for v in (x,y)):raise ValueError('Touchpad-X/Y: 0–100')
+        for broker in self.config['brokers']:
+            if broker['id'] not in resolve_targets(self.config,device,{}):continue
+            client=self.clients.get(broker['id'])
+            for axis,value in (('x',x),('y',y)):
+                topic=settings['touchpad_'+axis+'_topic']
+                transmission={'broker':broker['id'],'name':broker['name'],'topic':topic,
+                              'state':'offline' if broker.get('enabled') else 'disabled'}
+                transmissions.append(transmission)
+                if client and client.is_connected():
+                    result=client.publish(topic,str(value),qos=0,retain=False)
+                    transmission['state']='sent' if result.rc==mqtt.MQTT_ERR_SUCCESS else 'failed'
+                    delivered+=result.rc==mqtt.MQTT_ERR_SUCCESS
+        return {'delivered':delivered,'matched':2,'reason':'sent' if delivered else 'no_targets' if not transmissions else 'not_connected','transmissions':transmissions}
+
     def send_report(self, device, control, gesture, value=1, repeat_key=False, switch_only=False):
         control = canonical_control(control)
         delivered = 0

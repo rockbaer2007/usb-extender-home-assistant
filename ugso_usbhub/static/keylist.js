@@ -1,11 +1,13 @@
 'use strict';
 let learning = null, learnedDraft = [], learningDevice = '', learnSequence = 0;
 let openKeyEntry = null;
+let openKeyDevice = null;
+const stepKeys=['KEY_VOLUMEUP','KEY_VOLUMEDOWN','KEY_BRIGHTNESSUP','KEY_BRIGHTNESSDOWN','KEY_KBDILLUMUP','KEY_KBDILLUMDOWN','KEY_KBDILLUMTOGGLE'];
 const keyEditBaseline = new Map();
 function refreshKeyEditIndicators(){
   document.querySelectorAll('.key-entry').forEach(entry=>entry.updateEditState?.());
 }
-const keyNames = {KEY_VOLUMEUP:'Lauter',KEY_VOLUMEDOWN:'Leiser',KEY_MUTE:'Stumm',KEY_PLAYPAUSE:'Play/Pause'};
+const keyNames = {KEY_VOLUMEUP:'Lauter',KEY_VOLUMEDOWN:'Leiser',KEY_MUTE:'Stumm',KEY_PLAYPAUSE:'Play/Pause',TOUCHPAD_SLIDE_LEFT:'Slide links',TOUCHPAD_SLIDE_RIGHT:'Slide rechts',TOUCHPAD_SLIDE_UP:'Slide hoch',TOUCHPAD_SLIDE_DOWN:'Slide runter',TOUCHPAD_SLIDE_UP_LEFT:'Slide links oben',TOUCHPAD_SLIDE_UP_RIGHT:'Slide rechts oben',TOUCHPAD_SLIDE_DOWN_LEFT:'Slide links unten',TOUCHPAD_SLIDE_DOWN_RIGHT:'Slide rechts unten'};
 function keyId() { return Array.from(crypto.getRandomValues(new Uint8Array(12)), n=>n.toString(16).padStart(2,'0')).join(''); }
 function learnedKey(device, control, topicName=learning?.topic_name) {
   if(!topicName)throw new Error('Gerätename für Topics fehlt. Anlernmodus neu starten.');
@@ -34,8 +36,28 @@ function collectLearned() {
   }
   return added;
 }
-function drawKeyList(parent, rows, draft=false) {
+function deviceKeyGroup(parent,id){
+  const existing=[...document.querySelectorAll('.key-device')].find(g=>g.dataset.deviceId===id);
+  if(existing)return existing;
+  const name=config.devices[id]?.name||id,group=el('details',undefined,'key-device');
+  group.dataset.deviceId=id;group.name='usb-key-devices';
+  const count=[...(config.keys||[]),...config.bindings].filter(k=>k.device===id).length;
+  group.append(el('summary',name+' · '+count+' Tasten / Belegungen'));group.open=openKeyDevice===id;
+  group.addEventListener('toggle',()=>{if(!group.isConnected)return;if(group.open){openKeyDevice=id;document.querySelectorAll('.key-device').forEach(other=>{if(other!==group)other.open=false;});}else if(openKeyDevice===id)openKeyDevice=null;});
+  parent.append(group);
+  [...parent.querySelectorAll(':scope > .key-device')].sort((a,b)=>(config.devices[a.dataset.deviceId]?.name||a.dataset.deviceId).localeCompare(config.devices[b.dataset.deviceId]?.name||b.dataset.deviceId,'de',{numeric:true})).forEach(g=>parent.append(g));
+  return group;
+}
+function drawKeyList(parent, rows, draft=false, grouped=false) {
   if(!rows.length){parent.append(el('p',draft?'Noch keine neue Taste angelernt.':'Noch keine Tastenliste. Anlernmodus starten; vorhandene Einzelbelegungen bleiben unten erhalten.'));return;}
+  if(!draft&&!grouped){
+    const groups=new Map();for(const row of rows){if(!groups.has(row.device))groups.set(row.device,[]);groups.get(row.device).push(row);}
+    const names=id=>config.devices[id]?.name||id;
+    for(const [id,keys] of [...groups].sort(([a],[b])=>names(a).localeCompare(names(b),'de',{numeric:true})||a.localeCompare(b))){
+      const group=deviceKeyGroup(parent,id);drawKeyList(group,keys,false,true);
+    }
+    return;
+  }
   const list=el('div',undefined,'key-list');parent.append(list);
   rows.forEach(k=>{
     if(!keyEditBaseline.has(k.id))keyEditBaseline.set(k.id,cloneConfig(k));
@@ -87,8 +109,8 @@ function drawKeyList(parent, rows, draft=false) {
     });
     const icon=cell();
     iconField(icon,'Icon',k.icon,v=>k.icon=v);
-    button(icon,'Bearbeiten',()=>{const details=tr.nextElementSibling;details.hidden=!details.hidden;});table.append(tr);
-    const detailRow=el('tr');detailRow.hidden=true;const details=el('td');details.colSpan=8;detailRow.append(details);table.append(detailRow);
+    button(icon,'Bearbeiten',()=>{detailRow.hidden=!detailRow.hidden;});table.append(tr);
+    const detailRow=el('div',undefined,'key-options');detailRow.hidden=true;const details=detailRow;
     field(details,'Switch-Verhalten',k.switch_mode||'toggle',v=>k.switch_mode=v,'select',[['toggle','Umschalter: Drücken ON, nächstes Drücken OFF'],['momentary','Kompatibilität: Drücken ON, Loslassen OFF']]);
     if(k.topic_version===2){
       const times=el('div',undefined,'fields');details.append(times);
@@ -105,8 +127,9 @@ function drawKeyList(parent, rows, draft=false) {
       const interval=field(fields,'Abstand (ms)',k.repeat_interval,v=>k.repeat_interval=v,'number');interval.min=100;interval.max=2000;
       details.append(el('small','Wiederholt die aktiven Press-/Press+-Kanäle, nicht Release oder Switch. Das Zielsystem legt den Lautstärkeschritt fest. Sicherheitsstopp nach 30 Sekunden ohne Loslassen.'));
     }
-    button(details,'Aus Liste entfernen',()=>{rows.splice(rows.indexOf(k),1);dirty();render();},'danger');
-    wrap.append(table);entry.append(wrap);
+    if(stepKeys.includes(k.control))field(details,'Jeden … Schritt senden',k.step_every??1,v=>k.step_every=Number(v),'select',[1,2,3,4,5].map(n=>[String(n),n===1?'1 · jeden Schritt':n+' · jeden '+n+'. Schritt']));
+    button(details,'Aus Liste entfernen',()=>{const source=draft?learnedDraft:config.keys;source.splice(source.indexOf(k),1);dirty();render();},'danger');
+    wrap.append(table);entry.append(wrap,detailRow);
     const actions=el('div',undefined,'key-edit-actions');
     const reminder=el('p','Änderungen noch nicht gespeichert. Speichern übernimmt alle geänderten Einstellungen.','warning');reminder.setAttribute('role','status');
     if(!draft){
@@ -114,7 +137,7 @@ function drawKeyList(parent, rows, draft=false) {
       const save=button(buttons,'Speichern',()=>$('#save').onclick(),'primary');
       const cancel=button(buttons,'Abbrechen',()=>{
         const original=(savedConfig?.keys||[]).find(row=>row.id===k.id)||keyEditBaseline.get(k.id);
-        rows[rows.indexOf(k)]=cloneConfig(original);
+        const source=draft?learnedDraft:config.keys;source[source.indexOf(k)]=cloneConfig(original);
         changed=JSON.stringify(config)!==JSON.stringify(savedConfig);
         $('#save').disabled=!changed||!!learning;$('#dirty').textContent=changed?'Ungespeicherte Änderungen':'Gespeichert';
         render();
@@ -157,7 +180,7 @@ function learningPanel() {
     button(c,'Anlernliste verwerfen',()=>{learnedDraft=[];render();});
   }
   c.append(el('small','Neue Tasten erhalten alle Topics: press/release und Plus, switch als Umschalter, state als Tastenzustand, button/button-plus sowie click/double-click/hold. Alle Kanäle sind einzeln abschaltbar. Bestehende Zusatzkanäle bleiben aus, bis du sie aktivierst.'));
-  const list=card('Gespeicherte Tasten');drawKeyList(list,config.keys||[]);
+  const list=card('Gespeicherte Tasten');list.id='saved-keys';drawKeyList(list,config.keys||[]);
 }
 async function endLearning() {
   if(!learning)return;

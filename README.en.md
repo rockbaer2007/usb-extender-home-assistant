@@ -2,7 +2,97 @@
 
 **Connect USB input devices and Stream Decks through MQTT — for Raspberry Pi.**
 
-Version **0.1.28** · Public test release · [Deutsch](README.md) · **English** · [Download ZIP](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.28)
+Version **0.1.31** · Public test release · [Deutsch](README.md) · **English** · [Download ZIP](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.31)
+
+This release includes the previously local 0.1.29 and 0.1.30 changes: step filters,
+device groups and reassignment, plus one-finger slides and optional X/Y output.
+
+### New in 0.1.31: diagonal one-finger slides
+
+Learn `TOUCHPAD_SLIDE_UP_LEFT`, `TOUCHPAD_SLIDE_UP_RIGHT`,
+`TOUCHPAD_SLIDE_DOWN_LEFT` and `TOUCHPAD_SLIDE_DOWN_RIGHT` in addition to the four
+cardinal directions. Eight equal 45° sectors distinguish direction. Existing X/Y,
+sensitivity, rate limits and tap suppression apply unchanged.
+
+`tools/t650_check.py` runs a guided hardware check from the extracted source
+package. It verifies the T650 name and unique identifier, uses temporary settings
+and three loopback MQTT brokers, and writes a JSON report. Supply a verified
+backup first. `--pause-service` pauses USB processing for the measurement and
+restarts it if previously active. K400/T400 are neither read nor reconfigured;
+their USB/MQTT forwarding also pauses while the service is stopped. Saved settings
+are not modified. Hardware success requires reviewing the actual report.
+
+**T650 hardware check completed:** all eight directions detected, no taps during
+slide phases, separate tap check passed. Three loopback brokers received 752
+identical messages each; settings were unchanged. Live sensitivity 5 and a 10/s
+limit were checked; other settings were replayed using actual recordings.
+Occasional adjacent direction events and one hold were also recorded.
+[Measurements and limits](docs/tests/t650-0.1.31-20261122.md). The .31 source was
+tested in isolation and subsequently installed on the Raspberry Pi: USB/MQTT and
+Web are running without restarts, Mobile is active and the error list is empty.
+All five checksums for settings, switch states, Mobile identity, trust and saved
+devices remained unchanged.
+
+**Installer correction:** an inherited `umask 077` could make the new Python
+environment inaccessible to the service account. The installer now explicitly
+uses `umask 022` for program files and `umask 077` for backup archives. The corrected
+installation passed on a 64-bit Raspberry Pi 4. Updates preserve settings, icons
+and pairings and first create a backup under `/var/backups/`.
+
+### New in 0.1.30: one-finger slide
+
+In **USB / Virtual Devices**, enable the touchpad and **Touchpad-Gesten auswerten**,
+then open **Ein-Finger-Slide und optionale X/Y-Werte**:
+
+- **Sensitivity 1–10:** 10 responds to smaller movements; 1 requires larger ones.
+  Default 5 uses a 4% normalized travel threshold; 1 uses 20%, 10 uses 2%.
+  This is independent of sensor resolution.
+- **Rate 1–30/s:** maximum per direction-action stream and X/Y pair, default 10/s.
+  Intermediate updates are coalesced rather than queued.
+- Learn `TOUCHPAD_SLIDE_LEFT`, `TOUCHPAD_SLIDE_RIGHT`, `TOUCHPAD_SLIDE_UP` and
+  `TOUCHPAD_SLIDE_DOWN`. A recognized slide never produces an additional tap on
+  release, including after returning to the starting point. Multitouch stays separate.
+- **Additional X/Y MQTT output** is off by default. Saving with it enabled generates
+  readable topics, e.g. `t650-touchpad/x` and `t650-touchpad/y`. Custom topics are
+  supported; saved topics survive device renaming. Save settings before learning.
+- Payloads are plain integers **0–100**, no JSON. X: left 0, right 100; Y: top 0,
+  bottom 100. These are absolute touchpad positions, not relative volume changes.
+  Both axes use device target brokers, QoS 0, no retain and no offline replay.
+- Coordinates start after recognized one-finger movement. Unchanged values are
+  not retransmitted. One pending final pair may follow release at the next rate
+  interval. Multiple fingers, mechanical clicks, input loss or option changes
+  cancel pending values. Learning captures directions while suppressing X/Y MQTT.
+
+Settings are preserved. Synthetic local input and three local MQTT brokers were
+tested. The subsequent physical T650 check is documented above.
+
+### New in 0.1.29: devices and keys
+
+- **Every 1st–5th step:** volume, display brightness and keyboard illumination keys
+  have independent counters per device/key. Setting 3 sends steps 3, 6, 9, etc.
+  Skipped press/release cycles stay silent; release always stops held-key repeat.
+  Existing volume auto-repeat counts as steps, sending Press/Press+ only, without
+  additional toggle or click actions.
+- **Keys & Displays:** alphabetically sorted device groups, collapsed initially;
+  only one device and one key expanded, including existing individual bindings.
+- **USB hubs and port changes:** unique serial numbers and available Logitech
+  HID++ identifiers preserve identity. Otherwise explicitly assign the connected
+  device to a saved offline entry in USB / Virtual Devices. IDs, topics, pages and
+  mappings remain intact. Model IDs alone and duplicated serials cannot identify
+  a unit safely.
+- **Remove device:** confirmed trash action removes settings and mappings, retaining
+  shared icons. A connected USB device returns disabled. Revoke Mobile trust
+  separately in Mobile Server; saved decks remain. A metadata backup is created in
+  `backups/device-actions` inside the data directory before these actions.
+- **Experimental T650/multitouch:** enable the device and its touchpad gesture option,
+  save, then learn gestures. Linux type-B multitouch supports virtual `TOUCHPAD_*`
+  keys for taps/holds, two-finger scroll/pinch and three/four-finger swipes. Raw
+  coordinates never go to MQTT. No desktop required; this is not a universal
+  touchpad driver. One-finger slides were subsequently verified on a T650;
+  other multitouch gestures still lack a general hardware verification.
+
+Updates preserve existing settings. 0.1.29 has only been tested locally; the real
+15-minute test below applies specifically to 0.1.28.
 
 0.1.28 sends Mobile images in small batches, allowing input and connection
 maintenance between batches. Disconnect logs include additional counters.
@@ -233,8 +323,8 @@ The ZIP is an installation package, not an offline firmware image.
 
 ```bash
 sudo apt-get update && sudo apt-get install -y unzip
-unzip USB-Extender-Home-Assistant-0.1.28-Raspi4.zip
-cd USB-Extender-Home-Assistant-0.1.28
+unzip USB-Extender-Home-Assistant-0.1.31-Raspi4.zip
+cd USB-Extender-Home-Assistant-0.1.31
 sudo bash install.sh
 ```
 

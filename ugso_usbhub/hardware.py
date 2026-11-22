@@ -25,6 +25,15 @@ def identity(vendor, product, serial, port):
     return vendor + "-" + product + "-" + hashlib.sha256(token.encode()).hexdigest()[:12]
 
 
+def unique_id(value):
+    value=value.strip()
+    return value if value.lower() not in ('none','(null)','unknown') and value.replace(':','').replace('-','').strip('0 ') else ''
+
+
+def hardware_key(vendor, product, serial):
+    return vendor+'-'+product+'-'+hashlib.sha256(serial.encode()).hexdigest() if serial else ''
+
+
 def inventory():
     from StreamDeck.ProductIDs import USBProductIDs
     deck_products = {f"{value:04x}" for key, value in vars(USBProductIDs).items() if key.startswith("USB_PID_STREAMDECK_")}
@@ -33,18 +42,40 @@ def inventory():
         if not (path / "idVendor").exists() or text(path / "bDeviceClass") == "09":
             continue
         vendor, product = text(path / "idVendor"), text(path / "idProduct")
-        serial = text(path / "serial")
+        serial = unique_id(text(path / "serial"))
         real = path.resolve()
         inputs = []
         for event in Path("/sys/class/input").glob("event*"):
             if event.resolve().is_relative_to(real):
                 inputs.append("/dev/input/" + event.name)
-        devices.append({"id": identity(vendor, product, serial, path.name),
+        record={"id": identity(vendor, product, serial, path.name),
                         "vendor": vendor, "product_id": product, "serial": serial,
                         "bus": int(text(path / "busnum") or 0), "address": int(text(path / "devnum") or 0),
                         "port": path.name, "name": text(path / "product") or f"USB {vendor}:{product}",
                         "inputs": inputs, "kind": "streamdeck" if vendor == "0fd9" and product in deck_products else "input" if inputs else "inventory",
-                        "identity_hint": "Seriennummer" if serial else "USB-Port (beim Umstecken neu zuordnen)"})
+                        "identity_hint": "Seriennummer · portunabhängig" if serial else "Keine eindeutige Seriennummer · bei Umstecken vorhandenem Gerät zuordnen",
+                        "hardware_key":hardware_key(vendor,product,serial)}
+        devices.append(record)
+        # Unifying/Bolt receivers can expose separate paired HID++ input units.
+        # Preserve the receiver as a legacy input route; child routes are opt-in.
+        units={}
+        if vendor=='046d':
+            for event_name in inputs:
+                node=Path('/sys/class/input')/Path(event_name).name/'device'
+                unit_vendor=text(node/'id/vendor');unit_product=text(node/'id/product')
+                if unit_vendor!='046d' or not unit_product or unit_product==product:continue
+                unit=unique_id(text(node/'uniq'))
+                hid=next((p for p in node.resolve().parents if re.match(r'^\w{4}:\w{4}:\w{4}\.',p.name)),node.resolve())
+                group=(unit_product,unit or str(hid))
+                if group not in units:
+                    units[group]={'id':identity(vendor,unit_product,unit,path.name+':'+hid.name),
+                        'vendor':vendor,'product_id':unit_product,'serial':unit,'port':path.name+':'+hid.name,
+                        'bus':record['bus'],'address':record['address'],'name':text(node/'name') or 'Logitech HID++',
+                        'kind':'input','inputs':[],'receiver_id':record['id'],
+                        'hardware_key':hardware_key(vendor,unit_product,unit),
+                        'identity_hint':'Logitech-Gerätekennung · portunabhängig' if unit else 'Logitech-Gerät ohne eindeutige Kennung · manuelle Zuordnung möglich'}
+                units[group]['inputs'].append(event_name)
+        devices.extend(units.values())
     return devices
 
 
@@ -75,6 +106,7 @@ class Hardware:
         self.animations = {}
         self.page_states = {}
         self.page_feedback = {}
+        self.touchpads = {}
 
     def active_page(self, ident):
         return max(0, min(self.page_states.get(ident, 0), page_count(self.config, ident)-1))
@@ -98,12 +130,14 @@ class Hardware:
 
     def scan(self, config):
         self.config = config
-        self.inventory = inventory() + (self.mobile.inventory() if self.mobile else [])
+        from .devices import resolve_inventory
+        self.inventory = resolve_inventory(inventory(),config) + (self.mobile.inventory() if self.mobile else [])
         allowed = {d["id"]: d for d in self.inventory if config["devices"].get(d["id"], {}).get("enabled")}
         paths = {p: ident for ident, d in allowed.items() if d["kind"] == "input" for p in d["inputs"]}
         for path in list(self.inputs):
-            if path not in paths:
+            if path not in paths or self.inputs[path][0]!=paths[path]:
                 self.inputs.pop(path)[1].close()
+                self.touchpads.pop(path,None)
         if sys.platform == "linux":
             import evdev
             for path, ident in paths.items():
@@ -113,6 +147,20 @@ class Hardware:
                         self.errors.pop(path, None)
                     except OSError as exc:
                         self.errors[path] = str(exc)
+            for path,(ident,device) in self.inputs.items():
+                if not config['devices'].get(ident,{}).get('touchpad_gestures'):
+                    self.touchpads.pop(path,None);continue
+                if path in self.touchpads:
+                    self.touchpads[path].configure(config['devices'].get(ident,{}));continue
+                try:
+                    caps=device.capabilities()
+                    codes=[c[0] if isinstance(c,tuple) else c for c in caps.get(evdev.ecodes.EV_ABS,[])]
+                    if all(c in codes for c in (0x2f,0x35,0x36,0x39)) and evdev.ecodes.INPUT_PROP_DIRECT not in device.input_props():
+                        from .touchpad import Touchpad
+                        x,y=device.absinfo(0x35),device.absinfo(0x36)
+                        self.touchpads[path]=Touchpad(lambda control,gesture,value,ident=ident:self.emit(ident,control,gesture,value),(x.min,x.max),(y.min,y.max),config['devices'].get(ident,{}))
+                except (OSError,ValueError) as exc:
+                    self.errors[path]=str(exc)
         self._scan_decks({ident:d for ident,d in allowed.items() if d.get("connection") != "mobile"})
         for device in self.inventory:
             deck = self.decks.get(device["id"])
@@ -252,6 +300,7 @@ class Hardware:
                 self.errors[ident] = str(exc)
 
     def poll(self, timeout=0.05):
+        for pad in self.touchpads.values():pad.tick(time.monotonic())
         if not self.inputs:
             time.sleep(timeout)
             return
@@ -265,19 +314,24 @@ class Hardware:
             path, ident, device = handles[fd]
             try:
                 for event in device.read():
+                    pad=self.touchpads.get(path)
+                    if pad:pad.feed(event.type,event.code,event.value,time.monotonic())
                     if event.type == evdev.ecodes.EV_KEY:
                         control = evdev.ecodes.KEY.get(event.code, evdev.ecodes.BTN.get(event.code, str(event.code)))
                         control = canonical_control(control)
+                        if pad and (control=='BTN_TOUCH' or control.startswith('BTN_TOOL_')):continue
                         self.emit(ident, control, {0: "release", 1: "press", 2: "repeat"}.get(event.value, "press"), event.value)
                     elif event.type == evdev.ecodes.EV_REL and event.value:
                         self.emit(ident, evdev.ecodes.REL.get(event.code, str(event.code)), "rotate_right" if event.value > 0 else "rotate_left", event.value)
             except OSError as exc:
                 self.errors[path] = str(exc)
                 self.inputs.pop(path, None)
+                self.touchpads.pop(path, None)
                 device.close()
 
     def close(self):
         self.animations.clear()
+        self.touchpads.clear()
         for _, device in self.inputs.values():
             device.close()
         for deck in self.decks.values():

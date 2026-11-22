@@ -5,6 +5,7 @@ import unicodedata
 from .storage import canonical_control
 
 VOLUME_KEYS = {"KEY_VOLUMEUP", "KEY_VOLUMEDOWN"}
+STEP_KEYS = VOLUME_KEYS | {"KEY_BRIGHTNESSUP", "KEY_BRIGHTNESSDOWN", "KEY_KBDILLUMUP", "KEY_KBDILLUMDOWN", "KEY_KBDILLUMTOGGLE"}
 EXTRA_MODES = ("state", "button", "button_plus", "click", "double_click", "hold")
 
 
@@ -76,6 +77,9 @@ def validate_keys(config):
                 raise ValueError("Ungültige Zeit: Wiederholung 200–5000/100–2000 ms, Doppelklick 150–1000 ms, Halten 400–5000 ms")
         if key.get("repeat") and key["control"] not in VOLUME_KEYS:
             raise ValueError("Wiederholung beim Halten ist für Lauter/Leiser vorgesehen")
+        every = key.get("step_every", 1)
+        if type(every) is not int or not 1 <= every <= 5 or (every != 1 and key["control"] not in STEP_KEYS):
+            raise ValueError("Schrittfilter: 1 bis 5, nur für Lautstärke/Helligkeit/Tastaturlicht")
     return config
 
 

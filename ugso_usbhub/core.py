@@ -10,7 +10,7 @@ from .hardware import Hardware
 from .mqtt import Brokers
 from .storage import atomic_json, home, load_config, validate, status_path, canonical_control, read_json
 from .learning import current as learning_lease
-from .keymap import VOLUME_KEYS, button_enabled
+from .keymap import VOLUME_KEYS, STEP_KEYS, button_enabled
 from .gestures import Buttons
 
 LOG = logging.getLogger(__name__)
@@ -42,6 +42,15 @@ class Core:
         self.deck_routes = {}
         self.navigation_down = set()
         self.deck_ignored_releases = set()
+        self.step_counts = {}
+        self.step_cycles = {}
+
+    def step_pass(self, key, row):
+        every = row.get("step_every", 1) if key[1] in STEP_KEYS else 1
+        old_every, count = self.step_counts.get(key, (every, 0))
+        count = (count if old_every == every else 0) + 1
+        self.step_counts[key] = (every, count % every)
+        return count % every == 0
 
     def change_page(self, device, target):
         from .deck import page_count
@@ -109,6 +118,13 @@ class Core:
             return
         if not self.config["devices"].get(device, {}).get("enabled"):
             return
+        if control=='_touchpad_position':
+            learning=self.learning if self.learning.get('expires',0)>time.time() else {}
+            if learning.get('device')==device:return
+            if not isinstance(value,(list,tuple)) or len(value)!=2 or any(type(v) is not int or not 0<=v<=100 for v in value):return
+            report=self.brokers.send_position(device,*value)
+            self.record(device,'TOUCHPAD_XY','position',list(value),report)
+            return
         if control == '_deck_page':
             self.hardware.config=self.config
             current=self.hardware.active_page(device)
@@ -154,6 +170,10 @@ class Core:
         row = next((k for k in self.config.get("keys", []) if (k["device"], k["control"]) == key and k.get("enabled", True)), {})
         learning = self.learning if self.learning.get("expires", 0) > time.time() else {}
         suppressed = learning.get("device") == device or key in self.learning_releases
+        if gesture == "press" and not was_down and not suppressed:
+            self.step_cycles[key] = self.step_pass(key, row)
+        skipped = not self.step_cycles.get(key, True)
+        blocked = suppressed or skipped
         if suppressed:
             self.buttons.cancel(key=key)
             self.pressed.pop(key, None)
@@ -165,6 +185,9 @@ class Core:
             report = {"delivered": 0, "matched": 0, "reason": "learning", "transmissions": []}
         else:
             report = None
+        if skipped and not suppressed:
+            self.buttons.cancel(key=key)
+            report = {"delivered":0,"matched":0,"reason":"step_filter","transmissions":[]}
         if gesture == "repeat":
             if now - self.repeats.get(key, 0) < 0.15:
                 return
@@ -178,7 +201,7 @@ class Core:
             self.repeats.pop(key, None)
             self.repeat_due.pop(key, None)
         report = report or self.brokers.send_report(device, control, gesture, value)
-        if not suppressed and gesture == "press" and not was_down and row.get("switch", True) and row and row.get("switch_mode", "toggle") == "toggle":
+        if not blocked and gesture == "press" and not was_down and row.get("switch", True) and row and row.get("switch_mode", "toggle") == "toggle":
             ident = row["id"]
             state = not (self.toggle_states.get(ident) is True)
             updated = {k: v for k, v in self.toggle_states.items() if k in {r["id"] for r in self.config.get("keys", [])}}
@@ -191,9 +214,11 @@ class Core:
                       "reason": "sent" if report["delivered"] + switched["delivered"] else switched["reason"],
                       "transmissions": report["transmissions"] + switched["transmissions"]}
         self.record(device, control, gesture, value, report, learning.get("id") if suppressed else None)
-        if not suppressed and button_enabled(row):
+        if not blocked and button_enabled(row):
             for button_key, action in self.buttons.feed(key, gesture, now, row):
                 self.button_event(button_key, action)
+        if gesture == "release":
+            self.step_cycles.pop(key, None)
 
     def record(self, device, control, gesture, value, report, learning_id=None):
         self.sequence += 1
@@ -220,13 +245,16 @@ class Core:
                 continue
             if now >= due:
                 row = next((k for k in self.config.get("keys", []) if (k["device"], k["control"]) == key), {})
-                self.brokers.send_report(*key, "press", 1, repeat_key=True)
+                if self.step_pass(key, row):
+                    self.brokers.send_report(*key, "press", 1, repeat_key=True)
                 self.repeat_due[key] = now + row.get("repeat_interval", 150) / 1000
 
     def release_key(self, key):
         # Clear momentary state, not the latched toggle. Do not invent physical
         # release actions for existing individual bindings.
-        self.brokers.send_report(*key, "release", 0, switch_only=True)
+        if self.step_cycles.get(key, True):
+            self.brokers.send_report(*key, "release", 0, switch_only=True)
+        self.step_cycles.pop(key, None)
         if key[1].startswith("key:"):
             self.hardware.set_pressed(key[0], int(key[1].split(":")[1]) % 128, False)
         self.buttons.cancel(key=key)
@@ -236,6 +264,8 @@ class Core:
 
     def release_all(self, device=None, disconnected=False):
         self.buttons.cancel(device=device)
+        if disconnected:
+            self.step_counts = {key:value for key,value in self.step_counts.items() if device is not None and key[0]!=device}
         for key in list(self.pressed):
             if device is None or key[0] == device:
                 self.release_key(key)
@@ -273,6 +303,7 @@ class Core:
                 if now >= reload_at:
                     reload_at = now + 1
                     try:
+                        self.mobile.synchronize_storage()
                         updated = validate(load_config())
                         if updated != self.config:
                             old = self.config

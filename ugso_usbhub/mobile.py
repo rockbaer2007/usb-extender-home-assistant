@@ -418,6 +418,19 @@ class MobileServer:
                     session.context_due=True
                     session.context_force=session.context_force or force
 
+    def synchronize_storage(self):
+        """Apply device deletion/revocation without restarting unrelated sessions."""
+        with self.lock:
+            trust=read_json(home()/'mobile-trust.json',{})
+            registry=read_json(home()/'mobile-devices.json',{})
+            self.trust,self.registry=trust,registry
+            closing=[s for s in self.sessions if s.authorized and
+                     (trust.get(s.client_id,{}).get('key')!=s.public.hex() or
+                      (s.device and s.device not in registry))]
+            for session in closing:session.closed=True
+        # Each connection thread performs its own close handshake. An absent
+        # client must not block the USB/MQTT loop or other Mobile heartbeats.
+
     def configure(self, config):
         self.config=config
         options=settings(config)
@@ -471,6 +484,10 @@ class MobileServer:
             session.hello(message.hello)
             count=0;second=time.monotonic()
             while self.server is not None:
+                if session.closed:
+                    reason='Gerät entfernt oder Kopplung widerrufen'
+                    ws.close(1001,reason)
+                    break
                 session.decisions()
                 session.heartbeat()
                 session.flush_images()

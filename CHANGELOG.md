@@ -1,5 +1,61 @@
 # Änderungen
 
+## 0.1.31 – 22. November 2026 (öffentliches Testrelease)
+
+Enthält auch die zuvor lokalen Zwischenstände 0.1.29 und 0.1.30: Schrittfilter
+1–5, eingeklappte Gerätegruppen, stabile/manuelle Gerätezuordnung, bestätigtes
+Entfernen sowie Ein-Finger-Slide mit optionalen X/Y-MQTT-Zahlenwerten.
+
+- Echter T650-Test auf dem Raspberry Pi 4 bestanden: alle acht erwarteten
+  Richtungen erkannt, keine Tipps in Slide-Phasen. Separater Tipptest: vier Tipps,
+  keine X/Y-Ausgabe. Drei Loopback-Broker erhielten je 752 identische Nachrichten.
+- Live Empfindlichkeit 5 und Rate maximal 10/s; andere Werte mit denselben echten
+  Aufnahmen im Replay geprüft. Zwei benachbarte Richtungsereignisse und einmal
+  Halten mitprotokolliert; keine Garantie exklusiver Richtungserkennung.
+- Anschließende Installation geprüft: CLI/Dienst 0.1.31, USB-/MQTT und Web aktiv,
+  keine Neustarts, Mobile aktiv und keine gemeldeten Fehler. Einstellungen und
+  Kopplungen durch fünf unveränderte SHA256-Prüfsummen bestätigt.
+
+- Installer setzt für Programmdateien ausdrücklich umask 022, statt eine
+  restriktive Aufruf-Umask zu erben. Sicherungsarchive entstehen weiterhin mit
+  umask 077. Verhindert nicht zugängliche venv-Dateien für den Dienstbenutzer.
+
+- Messwerkzeug-Korrektur nach erstem T650-Praxistest: evdev-Puffer durch
+  Konsumieren des Generators leeren, mit Zeit-/Ereignisgrenze und sichtbarem
+  Messbeginn/Fortschritt. Verhindert Stillstand beim Wechsel zur nächsten Phase.
+
+- Vier diagonale Ein-Finger-Slides zusätzlich zu den vier geraden Richtungen.
+  Acht Sektoren zu je 45°, mit bisherigen Grenzwerten und ohne Tipp nach Slide.
+- Geführte T650-Hardwareprüfung mit Geräte-/Kennungsprüfung, isolierten lokalen
+  MQTT-Brokern, temporären Einstellungen und JSON-Bericht. Vorherige Dienste
+  werden auch bei Test-/Berichtsfehlern wieder gestartet. K400/T400 ausgeschlossen.
+- [Vollständiger Hardware- und Installationsbericht](docs/tests/t650-0.1.31-20261122.md).
+
+## 0.1.30 – 22. November 2026 (Zwischenstand, enthalten in 0.1.31)
+
+- Ein-Finger-Slide in vier Richtungen als anlernbare Press-/Release-Aktionen;
+  keine zusätzliche Tippaktion nach erkannter Schiebebewegung.
+- Je Gerät Empfindlichkeit 1–10 und Senderate 1–30/s, standardmäßig 5 und 10/s.
+- Optionale absolute X/Y-Werte 0–100 auf getrennten, anpassbaren MQTT-Topics.
+  Standard aus; reine Zahlen an die Geräte-Zielbroker, kein JSON/Retain/Replay.
+  Automatische Topics werden gespeichert und bleiben nach Umbenennung erhalten.
+- Begrenzte Übertragung, letzter X/Y-Wert nach Abheben; Abbruch bei Mehrfinger-
+  kontakt, mechanischem Klick, Eingabeverlust oder Optionsänderung.
+- Lokale Tests mit synthetischen Linux-Ereignissen und echten Loopback-Brokern.
+  Bestehende Einstellungen bleiben erhalten, .112 unverändert.
+
+## 0.1.29 – 22. November 2026 (Zwischenstand, enthalten in 0.1.31)
+
+- Schrittfilter 1–5 für Lautstärke, Bildschirmhelligkeit und Tastaturlicht;
+  getrennte Zähler und sicheres Loslassen, Lautstärke-Haltewiederholung berücksichtigt.
+- Alphabetische, eingeklappte Gerätegruppen mit jeweils einer offenen Taste.
+- Stabile Serien-/HID++-Zuordnung sowie bestätigte manuelle Zuordnung nach
+  Umstecken ohne Verlust von Topics, Belegungen und Deck-Seiten.
+- Geräte mit Sicherung entfernen, gemeinsame Icons behalten. Mobile-Vertrauen
+  separat widerrufen; nur betroffene aktive Mobile-Verbindungen schließen.
+- Experimentelle Linux-Type-B-Touchpad-Gesten zum Anlernen; Koordinaten bleiben
+  lokal. T650-Hardwaretest noch offen, keine Änderungen auf .112.
+
 ## 0.1.28 – 22. November 2026 (öffentliches Testrelease)
 
 Erste Veröffentlichung seit 0.1.22; enthält auch die unten dokumentierten,

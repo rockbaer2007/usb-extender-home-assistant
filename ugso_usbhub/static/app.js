@@ -163,9 +163,22 @@ function overview() {
   if(!serviceAlive())c.append(el('p','USB-/MQTT-Dienst ist nicht aktiv oder liefert keinen aktuellen Status. Mit sudo systemctl status ugso-usbhub prüfen.','warning'));
   const note=card('Unterstützung');note.append(el('p','Alle USB-Geräte werden aufgelistet. Tastaturen und Medientasten werden über Linux evdev verarbeitet; unterstützte physische Stream Decks über den HID-Treiber. Andere Geräte sind zunächst nur in der Bestandsliste. Stream Deck Mobile ist kein direkt gekoppeltes USB-Gerät.'));
 }
+async function deviceAction(action,device,observed_id){
+  if(changed||learning||learnedDraft.length)throw new Error('Änderungen zuerst speichern und Anlernen beenden.');
+  const result=await api('devices',{action,device,observed_id});
+  if(action==='remove'){
+    knownDecks.delete(device);editorPages.delete(device);
+    if(device.startsWith('mobile-'))forgottenDecks.add(device);
+    if(deckDevice===device){deckDevice='';deckKey=0;}
+    if(openKeyDevice===device){openKeyDevice=null;openKeyEntry=null;}
+  }
+  config=await api('config');savedConfig=cloneConfig(config);status=await api('status');keyEditBaseline.clear();render();
+  notice('Gespeichert. Sicherung der betroffenen Einstellungen: '+result.backup);
+}
 function devices() {
   if(!status.devices.length)empty($('#content'),'Noch kein USB-Gerät erkannt','USB-Geräte am Raspi einstecken. Die Bestandsliste wird alle fünf Sekunden aktualisiert.');
-  const all=[...status.devices];Object.keys(config.devices).forEach(id=>{if(!all.some(d=>d.id===id))all.push({id,name:config.devices[id].name||id,kind:'offline',identity_hint:'Nicht verbunden; Einstellungen bleiben erhalten'});});
+  const all=status.devices.filter(d=>!(d.connection==='mobile'&&forgottenDecks.has(d.id)));Object.keys(config.devices).forEach(id=>{if(!all.some(d=>d.id===id))all.push({id,name:config.devices[id].name||id,kind:'offline',identity_hint:'Nicht verbunden; Einstellungen bleiben erhalten'});});
+  for(const d of status.mobile?.known_decks||[])if(!all.some(x=>x.id===d.id)&&!forgottenDecks.has(d.id))all.push({...d,kind:'offline',connection:'mobile'});
   all.forEach(d=>{
     const c=card(), row=el('div',undefined,'row spread');row.append(el('h2',d.name),el('span',d.kind,'badge'+(d.kind==='offline'?' offline':'')));c.append(row,el('div',d.id,'device-id'),el('small',d.identity_hint||''));
     const settings=config.devices[d.id] ||= {name:d.name,enabled:false,targets:[...config.default_targets],receive_broker:'',brightness:30};
@@ -174,8 +187,33 @@ function devices() {
     field(fields,'Gerät für Eingaben freigeben',settings.enabled,v=>settings.enabled=v,'checkbox');
     field(fields,'Broker für Display-Rückmeldungen',settings.receive_broker,v=>settings.receive_broker=v,'select',[['','Keiner'],...config.brokers.map(b=>[b.id,b.name])]);
     const bright=field(fields,'Stream-Deck-Helligkeit (0–100)',settings.brightness,v=>settings.brightness=v,'number');bright.min=0;bright.max=100;
+    if(d.kind==='input'||(d.kind==='offline'&&!d.id.startsWith('mobile-'))){
+      field(fields,'Touchpad-Gesten auswerten',!!settings.touchpad_gestures,v=>settings.touchpad_gestures=v,'checkbox');
+      c.append(el('small','Für T650 und andere Multitouch-Touchpads: Tippen, Ein-Finger-Slide, Scrollen, Wischen und Pinch anlernen. Zuerst freigeben, Gesten aktivieren und speichern.'));
+      const options=el('details',undefined,'touchpad-options');options.append(el('summary','Ein-Finger-Slide und optionale X/Y-Werte'));c.append(options);
+      const controls=el('div',undefined,'fields');options.append(controls);
+      const sensitivity=field(controls,'Slide-Empfindlichkeit (1–10)',settings.touchpad_sensitivity??5,v=>settings.touchpad_sensitivity=v,'number');sensitivity.min=1;sensitivity.max=10;sensitivity.step=1;
+      const rate=field(controls,'Slide-/X/Y-Senderate (1–30/s)',settings.touchpad_rate??10,v=>settings.touchpad_rate=v,'number');rate.min=1;rate.max=30;rate.step=1;
+      field(options,'X/Y-Werte zusätzlich per MQTT senden (0–100)',!!settings.touchpad_xy,v=>settings.touchpad_xy=v,'checkbox');
+      const topics=el('div',undefined,'fields');options.append(topics);
+      for(const axis of ['x','y']){const input=field(topics,axis.toUpperCase()+'-Topic',settings['touchpad_'+axis+'_topic']||'',v=>settings['touchpad_'+axis+'_topic']=v);input.placeholder='Leer = beim Speichern automatisch anlegen';}
+      options.append(el('small','10 = empfindlich, 1 = größere Bewegung nötig. Acht Richtungen im Anlernmodus: TOUCHPAD_SLIDE_LEFT/RIGHT/UP/DOWN sowie UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT. X/Y ist standardmäßig aus, nutzt die Geräte-Zielbroker und sendet reine Zahlen, kein JSON. X: links 0 → rechts 100; Y: oben 0 → unten 100. Kein zusätzlicher Tipp nach Schieben.'));
+    }
     c.append(el('div','Standardziele für dieses Gerät','route-title'));routes(c,settings.targets,v=>settings.targets=v);
     if(d.kind==='inventory')c.append(el('p','Für dieses Gerät gibt es noch keinen Eingabetreiber. Die Freigabe allein ergänzt kein herstellerspezifisches Protokoll.','warning'));
+    const actions=el('div',undefined,'row');c.append(actions);
+    if(savedConfig.devices[d.id]||(status.mobile?.known_decks||[]).some(x=>x.id===d.id)){
+      const remove=button(actions,'🗑 Gerät entfernen',async()=>{
+        if(confirm('„'+settings.name+'“ mit Tasten, Seiten und MQTT-Zuordnungen entfernen? Iconpakete und die Mobile-Kopplung bleiben erhalten. Ein angeschlossenes USB-Gerät erscheint danach nicht freigegeben.'))await deviceAction('remove',d.id);
+      },'danger');remove.setAttribute('aria-label','Gerät entfernen: '+settings.name);
+    }
+    if(d.kind!=='offline'&&d.connection!=='mobile'){
+      const choices=Object.entries(savedConfig.devices).filter(([id,s])=>id!==d.id&&!id.startsWith('mobile-')&&!status.devices.some(x=>x.id===id)&&(!s.hardware?.vendor||s.hardware.vendor===d.vendor));
+      if(choices.length){
+        let target=choices[0][0];field(actions,'Vorhandenem Gerät zuordnen',target,v=>target=v,'select',choices.map(([id,s])=>[id,s.name||id]));
+        button(actions,'Zuordnung übernehmen',async()=>{if(confirm('Dieses USB-Gerät dem gespeicherten Eintrag „'+savedConfig.devices[target].name+'“ zuordnen? Dessen Tasten, Seiten, IDs und Topics bleiben erhalten.'))await deviceAction('reassign',target,d.observed_id||d.id);});
+      }
+    }
   });
 }
 function brokers() {
@@ -202,7 +240,10 @@ function bindings() {
   const recent=el('div');recent.id='learn-events';learn.append(recent);renderEvents(recent,true);
   button(learn,'Leere Belegung hinzufügen',()=>addBinding());
   config.bindings.forEach((b,index)=>{
-    const c=card();const row=el('div',undefined,'row spread');row.append(el('span','BELEGUNG '+(index+1),'binding-number'));button(row,'Entfernen',()=>{config.bindings.splice(index,1);dirty();render();},'danger');c.append(row);
+    const group=deviceKeyGroup($('#saved-keys'),b.device),entry=el('details',undefined,'key-entry');entry.name='usb-key-entries';entry.open=openKeyEntry===b.id;
+    entry.append(el('summary',(config.devices[b.device]?.name||b.device)+' – '+b.control+' – '+(b.text||'Einzelbelegung')));group.append(entry);
+    entry.addEventListener('toggle',()=>{if(entry.isConnected&&entry.open){openKeyEntry=b.id;document.querySelectorAll('.key-entry').forEach(other=>{if(other!==entry)other.open=false;});}});
+    const c=card(undefined,entry);const row=el('div',undefined,'row spread');row.append(el('span','BELEGUNG '+(index+1),'binding-number'));button(row,'Entfernen',()=>{config.bindings.splice(index,1);dirty();render();},'danger');c.append(row);
     const f=el('div',undefined,'fields');c.append(f);
     field(f,'Gerät',b.device,v=>{b.device=v;refreshPreview();},'select',Object.keys(config.devices).map(id=>[id,config.devices[id].name||id]));
     const control=field(f,'Taste / Steuerelement',b.control,v=>b.control=v);
@@ -360,6 +401,7 @@ $('#logout').onclick=async()=>{if(changed&&!confirm('Ungespeicherte Änderungen 
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{if(learning){error(new Error('Anlernmodus zuerst beenden.'));return;}page=b.dataset.page;render();});
 $('#save').onclick=async()=>{try{if(learning||learnedDraft.length)throw new Error('Anlernen zuerst beenden und die Tasten übernehmen oder verwerfen.');await api('config',config);config=await api('config');savedConfig=cloneConfig(config);keyEditBaseline.clear();changed=false;$('#save').disabled=true;$('#dirty').textContent='Gespeichert';$('#error').hidden=true;render();notice('Gespeichert. Der USB-/MQTT-Dienst übernimmt die Einstellungen innerhalb weniger Sekunden.');}catch(e){error(e);}};
 let polling=false;
-setInterval(async()=>{if(!config||polling)return;polling=true;try{const previousDecks=deckSignature(),previousPage=page;status=await api('status');renderStorage();updateDeckTab();if(page!==previousPage)render();else if(page==='streamdeck'&&previousDecks!==deckSignature()){if(changed)refreshDeckGrid();else render();}if(page==='streamdeck')renderDeckConnection();await pollLearning();$('#connection').textContent=serviceAlive()?'● USB-/MQTT-Dienst aktiv':'○ Dienst nicht aktiv';if(page==='bindings'&&$('#learn-events'))renderEvents($('#learn-events'),true);if(page==='system'&&$('#event-log'))renderEvents($('#event-log'));if(page==='mobile'&&$('#mobile-status'))renderMobileStatus($('#mobile-status')); }catch(e){error(e);}finally{polling=false;}},2500);
+function deviceSignature(){return JSON.stringify([status.devices.map(d=>[d.id,d.observed_id,d.name,d.kind,d.identity_hint]),(status.mobile?.known_decks||[]).map(d=>d.id)]);}
+setInterval(async()=>{if(!config||polling)return;polling=true;try{const previousDecks=deckSignature(),previousDevices=deviceSignature(),previousPage=page;status=await api('status');renderStorage();updateDeckTab();if(page!==previousPage)render();else if(page==='devices'&&!changed&&previousDevices!==deviceSignature())render();else if(page==='streamdeck'&&previousDecks!==deckSignature()){if(changed)refreshDeckGrid();else render();}if(page==='streamdeck')renderDeckConnection();await pollLearning();$('#connection').textContent=serviceAlive()?'● USB-/MQTT-Dienst aktiv':'○ Dienst nicht aktiv';if(page==='bindings'&&$('#learn-events'))renderEvents($('#learn-events'),true);if(page==='system'&&$('#event-log'))renderEvents($('#event-log'));if(page==='mobile'&&$('#mobile-status'))renderMobileStatus($('#mobile-status')); }catch(e){error(e);}finally{polling=false;}},2500);
 window.addEventListener('beforeunload',e=>{if(changed||learning||learnedDraft.length){e.preventDefault();e.returnValue='';}});
 enter().catch(()=>{});
