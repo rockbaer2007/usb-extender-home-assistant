@@ -88,13 +88,14 @@ für die feste Unit `ugso-usbhub-web.service`. Keine freien Unitnamen, Pfade ode
 Shellbefehle, keine allgemeinen sudo-Rechte für den MQTT-Prozess. Backups laufen
 weiter als unprivilegierter Dienstbenutzer.
 
-## USB Extender Cards – ein Paket, noch geplant
+## USB Extender Cards – ein separates Paket
 
-Als gemeinsames Home-Assistant-Kartenpaket vorgemerkt: eigenständige Custom Card
-mit Mushroom-/Bubble-Stil, Betriebs-/Autostart-Schaltern, Backup, Status und
-„Webfrontend öffnen“. Die Karte soll beim Benutzerklick einen Wartetab öffnen,
-den Start anfordern und nach aktueller Rückmeldung zur konfigurierten URL wechseln.
-Zeitlimit und Fehleranzeige gehören dazu. HA-Entitäten statt direkter Broker-
-Zugangsdaten im Browser verwenden. Noch keine Karte oder automatisches Browseröffnen
-enthalten. Im Extender steht bereits ein Hinweis; ein Downloadlink folgt erst mit
-dem fertigen Paket. Die native Discovery funktioniert unabhängig von dieser Karte.
+Das [gemeinsame Home-Assistant-Kartenpaket](https://github.com/rockbaer2007/usb-extender-cards)
+bietet eine eigenständige Custom Card mit Mushroom-/Bubble-Stil, Betriebs- und
+Autostart-Schaltern, Backup, Status und „Webfrontend öffnen“. Beim Klick öffnet
+die Karte einen Wartetab, fordert den Start an und wechselt nach Rückmeldung zur
+eingestellten URL. Zeitlimit, Fehleranzeige und Popup-Fallback sind enthalten.
+Sie nutzt HA-Entitäten statt direkter Broker-Zugangsdaten. Karten separat über
+HACS oder manuell installieren; der Pi-Installer verändert kein HA-Dashboard.
+Der Systembereich enthält den Paketlink. Die native Discovery funktioniert auch
+ohne diese Karte. Echte HA-/Companion-Praxisprüfung bleibt im Kartenrepo dokumentiert.

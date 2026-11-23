@@ -1,16 +1,11 @@
 # Offene Schritte
 
-## USB Extender Cards – ein gemeinsames Home-Assistant-Kartenpaket
+## USB Extender Cards – ergänzender Praxistest
 
-- Eine eigenständige Custom Card, wählbarer Mushroom-/Bubble-Stil, gemeinsam als
-  Paket ausliefern. Keine Voraussetzung einer zusätzlichen Mushroom-/Bubble-Installation.
-- Webfrontend öffnen: beim Klick Wartetab gegen Popupblocker öffnen, ON senden,
-  auf aktuelle bestätigte Erreichbarkeit warten, dann URL laden. Zeitlimit,
-  Fehleranzeige und Browser-/Tabletprüfung vor Veröffentlichung.
-- Webbetrieb, Web-Autostart, Backup, Offline-/Start-/Fehlerzustand anzeigen und
-  steuern. Konfigurierbare URL und HA-Entitäten der MQTT-Discovery verwenden.
-- Erst nach fertiger Veröffentlichung Downloadlink im Systembereich ergänzen.
-  Dort steht bis dahin ausdrücklich „geplant / noch nicht verfügbar“.
+- Eigenständiges Paket umgesetzt: https://github.com/rockbaer2007/usb-extender-cards.
+  Mushroom-/Bubble-Stil, bestätigtes Öffnen, Schalter, Backup und Status lokal geprüft.
+- Nach Freigabe Einbau in echtem HA, HACS-Installation und Android-Companion-Verhalten
+  auf dem vorgesehenen Testgerät prüfen. Lokale Browser-/HA-Simulation ersetzt das nicht.
 
 ## MQTT-Systemsteuerung 0.1.37 – zusätzliche Praxisprüfung
 

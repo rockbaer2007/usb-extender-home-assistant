@@ -1,5 +1,14 @@
 # Aktueller Stand
 
+## 0.1.38 – Verweis auf USB Extender Cards
+
+- Eigenständiges gemeinsames Kartenpaket umgesetzt und im Systembereich verlinkt.
+  Separate HA-Installation; keine Dashboardänderung durch den Pi-Installer.
+- Vor Änderung gesichert: `M:\repos-backups\usb-extender-before-038-20261123-150356.zip`.
+  Vorherige Geräte-/MQTT-Einstellungen, Icons und Kopplungen erhalten.
+- Enthält MQTT-Systemsteuerung 0.1.37. Deren echte Socket-/systemd-Prüfung wird
+  vor Release zusätzlich im isolierten Linux-CI-Runner ausgeführt.
+
 ## 0.1.37 – lokale MQTT-Systemsteuerung, noch nicht veröffentlicht
 
 - Web Start/Stop, Autostart enable/disable und Backup per freigegebenem Broker.

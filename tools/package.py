@@ -6,7 +6,7 @@ import subprocess
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.1.37"
+VERSION = "0.1.38"
 NAME = f"USB-Extender-Home-Assistant-{VERSION}"
 FILES = ["README.md", "README.en.md", "STAND.md", "ROADMAP.md", "CHANGELOG.md", "TESTBERICHT.md", "pyproject.toml", "requirements.txt", "install.sh", ".gitattributes", ".gitignore"]
 FOLDERS = ["ugso_usbhub", "systemd", "scripts", "tests", "tools", "docs"]

@@ -1,5 +1,14 @@
 # Änderungen
 
+## 0.1.38 – 23. November 2026 (öffentliches Testrelease)
+
+- Paketverweis auf das neue eigenständige Repository `usb-extender-cards` im
+  Systembereich. Gemeinsame Karte mit Mushroom-/Bubble-Stil, HA-Entitäten und
+  bestätigungsabhängigem Öffnen, ohne zusätzliche Kartenabhängigkeiten.
+- Enthält die zuvor lokale MQTT-Systemsteuerung aus 0.1.37. Zusätzlicher
+  Linux/systemd-Test prüft den begrenzten Web-Helfer über dessen echten Socket.
+- Keine automatische Installation oder Änderung eines HA-Dashboards.
+
 ## 0.1.37 – 23. November 2026 (lokaler Teststand)
 
 - Optionale MQTT-Systemsteuerung je Broker: Webbetrieb und Autostart als getrennte

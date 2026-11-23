@@ -2,10 +2,17 @@
 
 **Connect USB input devices and Stream Decks through MQTT — for Raspberry Pi.**
 
-Version **0.1.37** · Local test build · [Deutsch](README.md) · **English**.
-[Download ZIP and checksum](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.36).
+Version **0.1.38** · Public test release · [Deutsch](README.md) · **English**.
+[Download ZIP and checksum](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.38).
 
-### New locally in 0.1.37: MQTT system control
+### New in 0.1.38: USB Extender Cards
+
+Separate [HA card package](https://github.com/rockbaer2007/usb-extender-cards) with
+Mushroom/Bubble appearances, acknowledged web opening, autostart, backup and status.
+The System tab links to its repository. No additional Mushroom/Bubble installation
+is needed. Install cards separately in HA and assign existing entities and the web URL.
+
+### Included since 0.1.37: MQTT system control
 
 Explicitly enable system control per broker. Fixed `usb-extender/global/…` topics
 control web run state, web autostart and local backups, with separate retained
@@ -15,9 +22,8 @@ does not wait for archiving. Installation includes a restricted local systemd
 helper for the fixed web unit, without granting the MQTT process general sudo access.
 See [full topic and setup reference (German)](docs/mqtt-system-control.md).
 
-One **USB Extender Cards** package with Mushroom/Bubble styles and an open-web
-button is recorded in the roadmap and marked as planned in the System tab.
-No custom card or automatic browser opening is included yet. Public release remains 0.1.36.
+Install **USB Extender Cards** separately through HACS or manually. The Raspberry
+Pi installer does not install a Home Assistant dashboard card.
 
 ### New in 0.1.36: compact USB drives
 

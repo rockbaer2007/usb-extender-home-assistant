@@ -2,10 +2,18 @@
 
 **USB-Geräte und Stream Decks über MQTT verbinden – für Raspberry Pi.**
 
-Version **0.1.37** · Lokaler Teststand · Stand 23. November 2026.
-[Download ZIP und Prüfsumme](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.36) · [English](README.en.md).
+Version **0.1.38** · Öffentliches Testrelease · Stand 23. November 2026.
+[Download ZIP und Prüfsumme](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.38) · [English](README.en.md).
 
-### Neu lokal in 0.1.37: MQTT-Systemsteuerung
+### Neu in 0.1.38: USB Extender Cards
+
+Eigenständiges [HA-Kartenpaket](https://github.com/rockbaer2007/usb-extender-cards)
+mit Mushroom-/Bubble-Stil, bestätigtem Öffnen des Webfrontends, Autostart, Backup
+und Status. Im Systembereich ist der Paketlink hinterlegt. Keine zusätzliche
+Mushroom-/Bubble-Installation nötig. Karten separat in HA installieren und
+vorhandene Systementitäten sowie die Webadresse zuordnen.
+
+### Enthalten seit 0.1.37: MQTT-Systemsteuerung
 
 Webfrontend, Web-Autostart und Backup über feste `usb-extender/global/…`-Topics
 steuern, mit getrennten retained Rückmeldungen. Pro Broker ausdrücklich aktivieren;
@@ -13,9 +21,8 @@ bei HA-Discovery entstehen zwei Schalter, ein Backup-Button und zwei Statussenso
 `webrun=ON` erst nach HTTP-Erreichbarkeit. Backups bleiben lokal; Geräteverarbeitung
 läuft unabhängig weiter. [Topics, Einrichtung und Rechte](docs/mqtt-system-control.md).
 
-Das gemeinsame **USB Extender Cards**-Paket mit Mushroom-/Bubble-Stil und
-„Webfrontend öffnen“ ist in der Roadmap vorgemerkt. Hinweis unter **System**;
-noch keine eigene Karte enthalten. 0.1.36 bleibt das öffentliche Release.
+Das gemeinsame **USB Extender Cards**-Paket wird separat über HACS oder manuell
+installiert. Der Raspberry-Pi-Installer installiert keine HA-Dashboard-Karte.
 
 ### Neu in 0.1.36: kompakte USB-Laufwerke
 
