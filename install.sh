@@ -153,12 +153,15 @@ if bad:
 PY
 install -m 644 "$SOURCE/systemd/ugso-usbhub.service" /etc/systemd/system/ugso-usbhub.service
 install -m 644 "$SOURCE/systemd/ugso-usbhub-web.service" /etc/systemd/system/ugso-usbhub-web.service
+install -m 644 "$SOURCE/systemd/ugso-usbhub-control.socket" /etc/systemd/system/ugso-usbhub-control.socket
+install -m 644 "$SOURCE/systemd/ugso-usbhub-control@.service" /etc/systemd/system/ugso-usbhub-control@.service
 install -m 755 "$SOURCE/scripts/ugso-usbhub" /usr/local/bin/ugso-usbhub
 install -m 755 "$SOURCE/scripts/ugso-usbhub" /usr/local/bin/usb-extender
 systemctl stop ugso-usbhub-web.service ugso-usbhub.service || true
 ln -sfn "$RELEASE" "$BASE/current"
 SWITCHED=1
 systemctl daemon-reload
+systemctl enable --now ugso-usbhub-control.socket
 
 step 'USB-/MQTT-Dienst starten und Status prüfen'
 systemctl enable --now ugso-usbhub.service

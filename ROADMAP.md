@@ -1,5 +1,26 @@
 # Offene Schritte
 
+## USB Extender Cards – ein gemeinsames Home-Assistant-Kartenpaket
+
+- Eine eigenständige Custom Card, wählbarer Mushroom-/Bubble-Stil, gemeinsam als
+  Paket ausliefern. Keine Voraussetzung einer zusätzlichen Mushroom-/Bubble-Installation.
+- Webfrontend öffnen: beim Klick Wartetab gegen Popupblocker öffnen, ON senden,
+  auf aktuelle bestätigte Erreichbarkeit warten, dann URL laden. Zeitlimit,
+  Fehleranzeige und Browser-/Tabletprüfung vor Veröffentlichung.
+- Webbetrieb, Web-Autostart, Backup, Offline-/Start-/Fehlerzustand anzeigen und
+  steuern. Konfigurierbare URL und HA-Entitäten der MQTT-Discovery verwenden.
+- Erst nach fertiger Veröffentlichung Downloadlink im Systembereich ergänzen.
+  Dort steht bis dahin ausdrücklich „geplant / noch nicht verfügbar“.
+
+## MQTT-Systemsteuerung 0.1.37 – zusätzliche Praxisprüfung
+
+- Auf freigegebenem Raspi nach Sicherung: Web Start/Stop, enable/disable und
+  Neustart prüfen. Rückmeldung ON erst bei HTTP-Erreichbarkeit, USB/MQTT weiter aktiv.
+- HA-Discovery mit zwei Schaltern, Backup-Button und Statussensoren praktisch
+  prüfen; CLI-Änderungen, MQTT-Reconnect, Fehlerfall, behaltene Kopplungen.
+- Eingebauter Linux/systemd-Smoke-Test für den isolierten CI-Runner; dessen echter
+  Diensttest ist durch lokale Windows-Mocks nicht ersetzt.
+
 ## Scanner: ergänzende Praxisprüfungen
 
 - Ergänzend zum bestandenen Barcode-/QR-/HA-Tag-Test: Neustart, Abschalten,

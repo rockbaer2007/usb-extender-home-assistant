@@ -1,5 +1,26 @@
 # Prüfungen
 
+## 0.1.37: MQTT-Systemsteuerung (lokal)
+
+- Vollständige Suite: 250 Python-Tests erfolgreich. Abschließende gezielte
+  Systemsteuerungstests nach Detailkorrekturen zusätzlich erfolgreich.
+- 14 Node-/DOM-Prüfprogramme erfolgreich; Opt-in/Speichern, Rückmeldungen und
+  ausdrücklicher Hinweis „Kartenpaket geplant / noch nicht verfügbar“ geprüft.
+- Reale lokale MQTT-Verbindungen, zwei Broker und lokaler HTTP-Server:
+  ON/OFF, Autostart, tatsächliche HTTP-Erreichbarkeit, retained Rückmeldungen,
+  Backupabschluss und unveränderte Konfiguration nachgewiesen. Systemd-Aufrufe
+  sind dabei simuliert, keine Steuerung eines anderen Hosts.
+- Helper-Protokoll, Längenbegrenzung, feste Unit-/Befehlsliste, Ablehnung ungültiger,
+  retained/duplizierter Befehle, volle Queue und Backup-Deduplizierung geprüft.
+- Private, vollständig lesbare Backuparchive mit Konfiguration, Icons und
+  Kopplungsdaten; keine Exportrekursion und keine Inhalte im MQTT-Ergebnis.
+- Desktop 1280 px / Mobil 390 px mit Headless Edge: System- und Brokeransicht ohne
+  horizontale Überläufe oder Seitenfehler; Systemansicht visuell geprüft.
+- Isolierter Wheel-Build, Shell-Syntax, Installer-Umask und `git diff --check` bestanden.
+  Windows hat hier keinen verfügbaren WSL/systemd-Dienst; der Linux-Helferdienst
+  wurde daher nicht real gestartet. CI-Test `tests/management-systemd.test.sh`
+  ist vorbereitet und muss vor einer öffentlichen Freigabe auf Linux laufen.
+
 ## 0.1.36: USB-Laufwerke und kompakte Anzeige
 
 - 241 Python-Tests erfolgreich, darunter USB-Geräte-/Interface-Klasse und

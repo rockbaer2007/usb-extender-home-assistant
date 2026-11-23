@@ -26,7 +26,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('report',type=Path)
     args=parser.parse_args()
-    if __version__ not in ('0.1.32','0.1.33','0.1.34','0.1.35','0.1.36'):parser.error('Quellpaket 0.1.32–0.1.36 erforderlich')
+    if __version__ not in ('0.1.32','0.1.33','0.1.34','0.1.35','0.1.36','0.1.37'):parser.error('Quellpaket 0.1.32–0.1.37 erforderlich')
     source=json.loads(args.report.read_text(encoding='utf-8'))
     if 't650' not in source.get('device','').lower():parser.error('Kein T650-Bericht')
     output=args.report.with_name('values-replay-'+time.strftime('%Y%m%d-%H%M%S')+'.json')

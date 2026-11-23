@@ -19,6 +19,7 @@ function renderStorage(){
   refreshTouchpadVisuals();
   refreshGamepadVisuals();
   refreshScannerVisuals();
+  const management=$('#management-status');if(management){const state=status.management||{};management.textContent=config?.brokers?.some(b=>b.enabled&&b.control_enabled)?'Web: '+(state.webrun||'UNKNOWN')+' · Autostart: '+(state.autorun||'UNKNOWN')+'\n'+(state.state||'Noch keine Statusmeldung'):'MQTT-Systemsteuerung ist deaktiviert.';}
   const node=$('#storage-space');if(!node)return;
   const disk=status.storage;
   if(!disk||!Number.isFinite(disk.free)||!Number.isFinite(disk.total)||disk.total<=0){node.textContent='Speicherplatz derzeit nicht verfügbar';return;}
@@ -368,7 +369,9 @@ function brokers() {
     field(c,'Gespeichertes Passwort löschen',false,v=>b.clear_password=v,'checkbox');
     field(c,'TLS mit Zertifikatsprüfung',b.tls,v=>b.tls=v,'checkbox');
     field(c,'Eigene CA-Datei auf dem Raspi (optional)',b.ca_file,v=>b.ca_file=v);
-    field(c,'Discovery',b.discovery?'ha':'off',v=>b.discovery=v==='ha','select',[['off','Aus – nur MQTT-Daten senden'],['ha','Home Assistant – Geräteauslöser anmelden']]);
+    field(c,'Discovery',b.discovery?'ha':'off',v=>b.discovery=v==='ha','select',[['off','Aus – nur MQTT-Daten senden'],['ha','Home Assistant – Geräte und Entitäten anmelden']]);
+    field(c,'MQTT-Systemsteuerung erlauben (Web/Autostart/Backup)',!!b.control_enabled,v=>b.control_enabled=v,'checkbox');
+    c.append(el('small','Systemsteuerung ist zunächst aus. Nur für vertrauenswürdige Broker aktivieren. Feste globale Topics gelten für den gesamten Extender; mehrere Extender am selben Broker reagieren gemeinsam.'));
     c.append(el('p','Für ioBroker „Aus“ wählen. Die MQTT-Datenübertragung bleibt aktiv. Beim Abschalten werden bekannte eigene Discovery-Ankündigungen zurückgenommen.','muted'));
   });
   const c=card('Vorgabe für neue Geräte');routes(c,config.default_targets,v=>config.default_targets=v);c.append(el('p','Tastendrücke werden nicht gespeichert oder nach einer Verbindungsunterbrechung nachgesendet. MQTT-Rückmeldungen zur Anzeige kommen je Gerät von genau einem ausgewählten Broker.'));
@@ -527,12 +530,18 @@ function icons() {
   search.oninput=draw;draw();
 }
 function system() {
+  const management=card('MQTT-Systemsteuerung');management.append(el('p','Unter MQTT-Broker „MQTT-Systemsteuerung erlauben“ einschalten und speichern. USB-/MQTT-Dienst bleibt beim Stoppen der Weboberfläche aktiv. Rückmeldung webrun=ON erst bei erreichbarer Weboberfläche.'));
+  const managementStatus=el('output',undefined,'scanner-last');managementStatus.id='management-status';management.append(managementStatus);
+  management.append(el('pre','usb-extender/global/web/set          ON / OFF\nusb-extender/global/web/autorun/set  ON / OFF\nusb-extender/global/backup/set       PRESS\nusb-extender/global/web/status/set   PRESS\n\nusb-extender/global/state/webrun\nusb-extender/global/state/state\nusb-extender/global/state/autorun\nusb-extender/global/state/backup'));
+  management.append(el('p','Befehle ohne Retain senden. Rückmeldungen werden retained gesendet. Bei aktiver HA-Discovery entstehen zwei Schalter, ein Backup-Button und zwei Statussensoren. Sicherungen bleiben lokal unter exports; MQTT enthält nur Ergebnis, UTC-Zeit und Dateiname.'));
+  const cards=card('Home-Assistant-Kartenpaket · geplant');cards.append(el('p','Vorgemerkt als gemeinsames USB-Extender-Kartenpaket: Mushroom-/Bubble-Stil, Webfrontend starten und nach bestätigter Erreichbarkeit öffnen, Autostart, Backup und Status. Noch nicht verfügbar; Downloadhinweis folgt mit dem Paket. Die native MQTT-Discovery ist bereits ohne eigene Karte nutzbar.'));
   const c=card('Weboberfläche nur bei Bedarf');c.append(el('p','Das Schließen dieses Browserfensters beendet den Webdienst nicht. Mit „web stop“ wird der HTTP-Listener beendet. USB und MQTT laufen unabhängig weiter.'));
   c.append(el('pre','sudo ugso-usbhub web start    # jetzt starten\nsudo ugso-usbhub web stop     # jetzt abschalten\nsudo ugso-usbhub web status   # Status\nsudo ugso-usbhub web enable   # mit Autostart\nsudo ugso-usbhub web disable  # stoppen, ohne Autostart\nsudo ugso-usbhub backup       # Einstellungen und Icons sichern\nsudo journalctl -u ugso-usbhub -n 50'));
   c.append(el('p','Die Oberfläche verwendet HTTP im lokalen Netz. Nicht ins Internet freigeben. Für fremde Netze VPN oder einen HTTPS-Reverse-Proxy verwenden.','warning'));
   const d=card('Geräte- und Verbindungsdiagnose');Object.entries(status.errors||{}).forEach(([k,v])=>d.append(el('p',k+': '+v,'warning')));if(!Object.keys(status.errors||{}).length)d.append(el('p','Keine Gerätefehler gemeldet.'));
   const e=card('Letzte Eingaben (nur im Arbeitsspeicher)'),log=el('div');log.id='event-log';e.append(log);renderEvents(log);
   const f=card('Datenspeicherung');f.append(el('p','Einstellungen, Zugangsdaten und Icons liegen auf dem Raspi unter /var/lib/ugso-usbhub. Die letzten zehn Konfigurationsstände werden automatisch gesichert. Passwörter werden in der Oberfläche nicht zurückgeliefert. Geräte ohne Seriennummer werden über ihren USB-Port zugeordnet.'));
+  renderStorage();
 }
 async function enter() { config=await api('config'); savedConfig=cloneConfig(config);keyEditBaseline.clear(); status=await api('status');iconList=await api('icons');$('#login').hidden=true;$('#workspace').hidden=false;$('#logout').hidden=false;$('#error').hidden=true;render(); }
 function showLogin(){closeIconPicker();config=null;$('#login').hidden=false;$('#workspace').hidden=true;$('#logout').hidden=true;}

@@ -51,17 +51,8 @@ def main():
             from .hardware import inventory
             print(json.dumps(inventory(), ensure_ascii=False, indent=2))
         elif args.command == "backup":
-            import datetime
-            import tarfile
-            folder = home() / "exports"
-            folder.mkdir(exist_ok=True)
-            target = folder / ("usb-extender-backup-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".tar.gz")
-            with tarfile.open(target, "w:gz") as archive:
-                for path in home().iterdir():
-                    if path.name != "exports":
-                        archive.add(path, arcname="ugso-usbhub/" + path.name)
-            os.chmod(target, 0o600)
-            print(target)
+            from .backup import create_backup
+            print(create_backup())
         elif args.command == "icons":
             from . import icons
             path = Path(args.path)

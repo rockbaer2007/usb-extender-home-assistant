@@ -1,0 +1,16 @@
+[Unit]
+Description=USB Extender restricted web-control request
+
+[Service]
+User=root
+ExecStart=/opt/ugso-usbhub/current/.venv/bin/python -m ugso_usbhub.web_control
+StandardInput=socket
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=35
+RuntimeMaxSec=35
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+UMask=0077

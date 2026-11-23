@@ -1,5 +1,17 @@
 # Aktueller Stand
 
+## 0.1.37 – lokale MQTT-Systemsteuerung, noch nicht veröffentlicht
+
+- Web Start/Stop, Autostart enable/disable und Backup per freigegebenem Broker.
+  Vier getrennte Rückmeldungen, fünf native HA-Discovery-Entitäten, HTTP-Prüfung.
+- Sicherung vorher: `M:\repos-backups\usb-extender-before-037-20261123-143230.zip`,
+  CRC geprüft. Bestehende Einstellungen und Kopplungen werden nicht migriert/gelöscht.
+- Gemeinsames Kartenpaket in ROADMAP und als geplanter Hinweis im Systembereich.
+- Lokale Regression: 250 Python-Tests, 14 Node-/DOM-Prüfprogramme, zusätzlicher
+  MQTT-/HTTP-/Backup-Test gegen zwei Loopback-Broker. Desktop/Mobil ohne Überlauf.
+- Echter Linux/systemd- und Raspi-Test steht aus; entsprechender CI-Smoke-Test ist
+  vorbereitet. Kein Update auf .112 und keine Veröffentlichung dieser Version.
+
 ## 0.1.36 – USB-Laufwerke, System und Hidden
 
 - Neue USB-Speicher ohne voreingestellte Haken; Bestandszuordnungen erhalten.

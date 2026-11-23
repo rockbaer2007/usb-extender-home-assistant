@@ -2,8 +2,20 @@
 
 **USB-Geräte und Stream Decks über MQTT verbinden – für Raspberry Pi.**
 
-Version **0.1.36** · Öffentliches Testrelease · Stand 23. November 2026.
+Version **0.1.37** · Lokaler Teststand · Stand 23. November 2026.
 [Download ZIP und Prüfsumme](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.36) · [English](README.en.md).
+
+### Neu lokal in 0.1.37: MQTT-Systemsteuerung
+
+Webfrontend, Web-Autostart und Backup über feste `usb-extender/global/…`-Topics
+steuern, mit getrennten retained Rückmeldungen. Pro Broker ausdrücklich aktivieren;
+bei HA-Discovery entstehen zwei Schalter, ein Backup-Button und zwei Statussensoren.
+`webrun=ON` erst nach HTTP-Erreichbarkeit. Backups bleiben lokal; Geräteverarbeitung
+läuft unabhängig weiter. [Topics, Einrichtung und Rechte](docs/mqtt-system-control.md).
+
+Das gemeinsame **USB Extender Cards**-Paket mit Mushroom-/Bubble-Stil und
+„Webfrontend öffnen“ ist in der Roadmap vorgemerkt. Hinweis unter **System**;
+noch keine eigene Karte enthalten. 0.1.36 bleibt das öffentliche Release.
 
 ### Neu in 0.1.36: kompakte USB-Laufwerke
 

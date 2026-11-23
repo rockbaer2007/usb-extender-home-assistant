@@ -43,6 +43,7 @@ jobs:
           node tests/keylist-ui.test.cjs
           node tests/devices-ui.test.cjs
           node tests/usb-drives-ui.test.cjs
+          node tests/management-ui.test.cjs
           node tests/faders-ui.test.cjs
           node tests/gamepad-ui.test.cjs
           node tests/scanner-ui.test.cjs
@@ -60,7 +61,7 @@ jobs:
           sudo runuser -u ugso-usbhub -- cat /tmp/usb-extender-input-probe >/dev/null
           sudo rm /tmp/usb-extender-input-probe
           sudo systemctl is-active --quiet ugso-usbhub.service
-          sudo systemd-analyze verify /etc/systemd/system/ugso-usbhub.service /etc/systemd/system/ugso-usbhub-web.service
+          sudo systemd-analyze verify /etc/systemd/system/ugso-usbhub.service /etc/systemd/system/ugso-usbhub-web.service /etc/systemd/system/ugso-usbhub-control.socket /etc/systemd/system/ugso-usbhub-control@.service
           sudo runuser -u ugso-usbhub -- /opt/ugso-usbhub/current/.venv/bin/python - <<'PY'
           from ugso_usbhub.storage import load_config, save_config, password_hash
           config = load_config()
@@ -72,6 +73,7 @@ jobs:
           curl --fail --max-time 5 http://127.0.0.1:8098/ >/dev/null
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8098/api/config)" = 401
           sudo usb-extender web stop
+          bash tests/management-systemd.test.sh
           if curl -s --max-time 2 http://127.0.0.1:8098/ >/dev/null; then exit 1; fi
           sudo systemctl is-active --quiet ugso-usbhub.service
           sudo systemctl restart ugso-usbhub.service
@@ -84,5 +86,5 @@ jobs:
         run: python tools/package.py
       - uses: actions/upload-artifact@v4
         with:
-          name: USB-Extender-Home-Assistant-0.1.36-Raspi4
+          name: USB-Extender-Home-Assistant-0.1.37-Raspi4
           path: dist/*

@@ -39,8 +39,9 @@ def numeric_channels(settings):
 
 
 class Brokers:
-    def __init__(self, config, receive, start=True):
+    def __init__(self, config, receive, start=True, management=None):
         self.config = config
+        self.management = management
         self.receive = receive
         self.clients = {}
         self.states = {}
@@ -75,6 +76,10 @@ class Brokers:
         return client
 
     def start(self):
+        if self.management:
+            self.management.web_config=dict(self.config.get('web',{}))
+            self.management.enabled=any(b.get('enabled') and b.get('control_enabled') for b in self.config['brokers'])
+            if self.management.enabled:self.management.start()
         for broker in self.config["brokers"]:
             client = self.clients.get(broker["id"])
             if client:
@@ -93,6 +98,10 @@ class Brokers:
             self.states[ident] = "online"
             client.publish(broker["prefix"] + "/availability", "online", qos=1, retain=True)
             client.subscribe(broker["prefix"] + "/display/+/set")
+            if broker.get('control_enabled') and self.management:
+                from .management import COMMANDS
+                for topic in COMMANDS:client.subscribe(topic,qos=0)
+                self.publish_management(self.management.snapshot(),broker['id'])
             if broker.get("discovery"):
                 client.subscribe("homeassistant/status")
             for binding in all_bindings(self.config):
@@ -125,6 +134,11 @@ class Brokers:
                 if len(message.payload) > 16384:
                     LOG.warning("Zu großer MQTT-Anzeigeauftrag verworfen")
                     return
+                from .management import COMMANDS
+                if message.topic in COMMANDS:
+                    if broker.get('control_enabled') and self.management and not message.retain and not getattr(message,'dup',False) and len(message.payload)<=32:
+                        self.management.submit(message.topic,message.payload.decode('utf-8'))
+                    return
                 if message.topic == "homeassistant/status" and message.payload == b"online":
                     self.sync_discovery(broker)
                 else:
@@ -137,6 +151,14 @@ class Brokers:
         if binding.get("key_topic"):
             return binding.get("topic") or f"{broker['prefix']}/{binding['key_topic']}"
         return binding.get("topic") or f"{broker['prefix']}/event/{binding['device']}/{binding['id']}"
+
+    def publish_management(self,values,only=None):
+        from .management import BASE
+        for broker in self.config['brokers']:
+            if not broker.get('control_enabled') or (only and broker['id']!=only):continue
+            client=self.clients.get(broker['id'])
+            if client and client.is_connected():
+                for key,value in values.items():client.publish(BASE+'/state/'+key,value,qos=1,retain=True)
 
     def sync_discovery(self, broker):
         try:
@@ -177,6 +199,9 @@ class Brokers:
         client = self.clients[broker["id"]]
         desired = {}
         if broker.get("discovery"):
+            if broker.get('control_enabled'):
+                from .management import discovery
+                desired.update(discovery(self.config['hub_id'],broker['prefix']+'/availability'))
             for ident,settings in self.config.get('devices',{}).items():
                 if broker['id'] not in resolve_targets(self.config,ident,{}):continue
                 from .scanner import topic as scanner_topic
@@ -355,9 +380,18 @@ class Brokers:
         new_brokers = {b["id"]: b for b in replacement["brokers"]}
         for broker in self.config['brokers']:
             client=self.clients.get(broker['id'])
+            updated=new_brokers.get(broker['id'],{})
+            if broker.get('control_enabled') and client and client.is_connected() and not (updated.get('enabled') and updated.get('control_enabled') and all(broker.get(k)==updated.get(k) for k in ('host','port','username'))):
+                from .management import BASE
+                for key,value in {'webrun':'UNKNOWN','autorun':'UNKNOWN','state':'MQTT-Systemsteuerung deaktiviert'}.items():
+                    client.publish(BASE+'/state/'+key,value,qos=1,retain=True).wait_for_publish(timeout=2)
             if not broker.get('discovery') or not client or not client.is_connected():continue
             updated=new_brokers.get(broker['id'],{})
             same_endpoint=all(broker.get(k)==updated.get(k) for k in ('host','port','username'))
+            if broker.get('control_enabled') and not (same_endpoint and updated.get('enabled') and updated.get('discovery') and updated.get('control_enabled')):
+                from .management import discovery
+                for topic in discovery(self.config['hub_id'],broker['prefix']+'/availability'):
+                    client.publish(topic,'',qos=1,retain=True).wait_for_publish(timeout=2)
             for ident,settings in self.config.get('devices',{}).items():
                 if broker['id'] not in resolve_targets(self.config,ident,{}):continue
                 channels=numeric_channels(replacement.get('devices',{}).get(ident,{}))

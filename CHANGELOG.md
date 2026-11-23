@@ -1,5 +1,18 @@
 # Änderungen
 
+## 0.1.37 – 23. November 2026 (lokaler Teststand)
+
+- Optionale MQTT-Systemsteuerung je Broker: Webbetrieb und Autostart als getrennte
+  ON/OFF-Schalter, Backup per PRESS und zusätzliche Statusabfrage.
+- Separate retained Zustände unter `usb-extender/global/state/…`, echte HTTP-
+  Erreichbarkeit, CLI-Abgleich, HA-Discovery für fünf Systementitäten.
+- Hintergrundaufträge und begrenzte Queue, Backup-Deduplizierung während laufendem
+  Auftrag, keine Steuerung durch retained/duplizierte Zustellungen.
+- Eng begrenzter systemd-Socket-Helfer für die feste Web-Unit; keine allgemeine
+  Rechteerhöhung des USB-/MQTT-Dienstes. Gemeinsame lokale CLI-/MQTT-Archivfunktion.
+- Gemeinsames HA-Kartenpaket (Mushroom-/Bubble-Stil) vorgemerkt und Hinweis im
+  Systembereich, ausdrücklich noch nicht verfügbar.
+
 ## 0.1.36 – 23. November 2026
 
 - USB-Massenspeicher über Geräte-/Interface-Klasse erkennen, einschließlich UAS.

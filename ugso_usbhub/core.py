@@ -27,7 +27,9 @@ class Core:
         self.mobile = MobileServer(self.enqueue)
         self.mobile.current_page = self.hardware.active_page
         self.hardware.mobile = self.mobile
-        self.brokers = Brokers(self.config, self.receive)
+        from .management import Management
+        self.management = Management(lambda values: getattr(self,'brokers',None) and self.brokers.publish_management(values))
+        self.brokers = Brokers(self.config, self.receive, management=self.management)
         self.running = True
         self.pressed = {}
         self.repeats = {}
@@ -313,6 +315,7 @@ class Core:
                 "mobile": self.mobile.status(),
                 "deck_pages": {ident:{"page":self.hardware.active_page(ident)+1,"pages":settings.get("deck_page_count",1)} for ident,settings in self.config["devices"].items() if settings.get("deck_info") or settings.get("deck_page_count",1)>1},
                 "brokers": dict(self.brokers.states),
+                "management": self.management.snapshot(),
                 "errors": {**self.hardware.errors, **{"Discovery " + key: value for key, value in self.brokers.discovery_errors.items()}},
                 "events": list(self.events)}
 
@@ -337,13 +340,14 @@ class Core:
                             old = self.config
                             # Validate native TLS setup before closing existing clients.
                             if updated["brokers"] != old["brokers"] or updated["bindings"] != old["bindings"] or updated.get("keys", []) != old.get("keys", []) or updated["devices"] != old["devices"] or updated["default_targets"] != old["default_targets"]:
-                                replacement = Brokers(updated, self.receive, start=False)
+                                replacement = Brokers(updated, self.receive, start=False, management=self.management)
                                 self.release_all()
                                 self.brokers.cleanup_removed(updated)
                                 self.brokers.close()
                                 self.brokers = replacement
                                 self.brokers.start()
                             self.config = updated
+                            self.management.web_config=dict(updated.get('web',{}))
                             self.pressed.clear()
                             self.repeat_due.clear()
                             from .deck import page_slots
@@ -397,6 +401,7 @@ class Core:
             self.release_all()
             self.mobile.close()
             self.hardware.close()
+            self.management.close()
             self.brokers.close()
             snapshot = self.status()
             snapshot["stopped"] = True

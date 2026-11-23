@@ -78,7 +78,7 @@ def defaults():
             "brokers": [{"id": f"broker{i}", "name": f"MQTT {i}", "enabled": False,
                          "host": "", "port": 1883, "username": "", "password": "",
                          "tls": False, "ca_file": "", "prefix": f"ugso/usbhub/{i}",
-                         "discovery": False} for i in range(1, 4)],
+                         "discovery": False, "control_enabled": False} for i in range(1, 4)],
             "default_targets": ["broker1"], "devices": {}, "bindings": []}
 
 
@@ -100,6 +100,7 @@ def validate(c):
     if len(brokers) != 3 or set(ids) != {"broker1", "broker2", "broker3"}:
         raise ValueError("Genau drei Brokerplätze sind vorgesehen")
     for b in brokers:
+        if type(b.get('control_enabled',False)) is not bool:raise ValueError('MQTT-Systemsteuerung muss ein/aus sein')
         if not isinstance(b.get("port"), int) or not 1 <= b["port"] <= 65535:
             raise ValueError("Ungültiger MQTT-Port")
         if b.get("enabled") and not b.get("host", "").strip():
