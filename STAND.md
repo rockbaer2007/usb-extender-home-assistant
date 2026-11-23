@@ -6,8 +6,11 @@
   Separate HA-Installation; keine Dashboardänderung durch den Pi-Installer.
 - Vor Änderung gesichert: `M:\repos-backups\usb-extender-before-038-20261123-150356.zip`.
   Vorherige Geräte-/MQTT-Einstellungen, Icons und Kopplungen erhalten.
-- Enthält MQTT-Systemsteuerung 0.1.37. Deren echte Socket-/systemd-Prüfung wird
-  vor Release zusätzlich im isolierten Linux-CI-Runner ausgeführt.
+- Enthält MQTT-Systemsteuerung 0.1.37. Linux-CI erfolgreich: 250 Python-Tests,
+  14 Node-/DOM-Prüfprogramme, Installation und echter unprivilegierter Socketzugriff
+  mit Start/Stop, enable/disable, ungültiger Befehlsablehnung und Zustandswiederherstellung.
+  [CI-Nachweis](https://github.com/rockbaer2007/usb-extender-home-assistant/actions/runs/45189963469).
+  Kein Update auf dem echten Raspberry Pi; dessen Praxistest bleibt offen.
 
 ## 0.1.37 – lokale MQTT-Systemsteuerung, noch nicht veröffentlicht
 

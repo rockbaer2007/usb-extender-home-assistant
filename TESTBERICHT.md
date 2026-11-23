@@ -1,5 +1,17 @@
 # Prüfungen
 
+## 0.1.38: Kartenpaket und Linux-Dienststeuerung
+
+- Vollständiger Linux-CI-Lauf erfolgreich: 250 Python-Tests, 14 Node-/DOM-Programme,
+  SVG/Syntax, restriktive Installer-Umask und Installation auf isoliertem Ubuntu-Runner.
+- Socket-Helfer als unprivilegierter Dienstbenutzer real geprüft: Status, Start/Stop,
+  enable/disable, Ablehnung fremder Unit-Befehle und ursprünglichen Zustand wiederherstellen.
+- USB-/MQTT-Dienst bleibt aktiv; Neustart erfolgreich; nicht angemeldete API liefert 401.
+- [Reproduzierbarer CI-Lauf](https://github.com/rockbaer2007/usb-extender-home-assistant/actions/runs/45189963469).
+- USB Extender Cards separat geprüft und veröffentlicht: 20 Unit-/DOM-Tests,
+  echte Browser-Tabs/Timeout/Popup-Fallback und beide Ansichten bei Desktop-/Mobilbreite.
+  HA-Entitäten simuliert. Kein neuer Test auf Raspberry Pi oder echter HA-Installation.
+
 ## 0.1.37: MQTT-Systemsteuerung (lokal)
 
 - Vollständige Suite: 250 Python-Tests erfolgreich. Abschließende gezielte
