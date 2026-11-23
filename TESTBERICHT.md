@@ -1,5 +1,17 @@
 # Prüfungen
 
+## 0.1.36: USB-Laufwerke und kompakte Anzeige
+
+- 241 Python-Tests erfolgreich, darunter USB-Geräte-/Interface-Klasse und
+  Speicherung der Anzeigeoptionen mit unveränderten Bestandszielen.
+- 13 Node-/DOM-Prüfprogramme erfolgreich: keine voreingestellten Haken bei neuen
+  Laufwerken, gegenseitiger Ausschluss, Auf-/Zuklappen, Speichern/Neuladen und
+  gespeicherte Offline-Laufwerke. Andere Geräte und Kopplungsdaten bleiben erhalten.
+- Headless Edge bei 1280 und 390 Pixeln ohne horizontalen Überlauf oder Seitenfehler.
+  Desktopansicht visuell geprüft: [Beispiel](docs/screenshots/usb-drives.png).
+- USB-Klassen simuliert; keine Installation oder Änderung auf .112 für diesen
+  Test. Linux-Installer wird zusätzlich durch den vorhandenen CI-Workflow geprüft.
+
 ## 0.1.35: Barcode-/QR-Scanner und MQTT-Tags
 
 Anschließend [Praxistest auf .112 / HA .193 abgeschlossen](docs/tests/scanner-live-0.1.35-20261122.md):

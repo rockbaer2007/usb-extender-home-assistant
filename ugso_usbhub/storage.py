@@ -111,6 +111,8 @@ def validate(c):
             raise ValueError("Unbekanntes MQTT-Ziel")
     targets(c.get("default_targets", []))
     for device in c.get("devices", {}).values():
+        if device.get('device_view','normal') not in ('normal','system','hidden'):
+            raise ValueError('Geräteansicht: normal, system oder hidden')
         for flag in ('scanner_enabled','scanner_ha_urls'):
             if type(device.get(flag,flag=='scanner_ha_urls')) is not bool:raise ValueError('Scanner-Option muss ein/aus sein')
         if device.get('scanner_layout','de') not in ('de','us'):raise ValueError('Scanner-Tastaturlayout: de oder us')

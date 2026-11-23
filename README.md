@@ -2,8 +2,24 @@
 
 **USB-Geräte und Stream Decks über MQTT verbinden – für Raspberry Pi.**
 
-Version **0.1.35** · Öffentliches Testrelease · Stand 22. November 2026.
-[Download ZIP und Prüfsumme](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.35) · [English](README.en.md).
+Version **0.1.36** · Öffentliches Testrelease · Stand 23. November 2026.
+[Download ZIP und Prüfsumme](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.36) · [English](README.en.md).
+
+### Neu in 0.1.36: kompakte USB-Laufwerke
+
+USB-Massenspeicher werden anhand ihrer USB-Klasse erkannt. Neue Laufwerke erhalten
+keine Eingabefreigabe und keine ausgewählten MQTT-Ziele. Unpassende Eingabe-,
+Display- und Gerätezuordnungsfelder werden nicht angeboten.
+
+Unter „USB / Virtuelle Geräte“ stehen zwei gegenseitig ausschließende Checkboxen:
+**System** klappt die Zeile auf **Name · Systemlaufwerk** zusammen, **Hidden** auf
+**nur den Namen**. Zum Bearbeiten aufklappen. Ohne beide Markierungen bleibt der
+Eintrag geöffnet. Die Auswahl wird mit „Speichern“ gesichert und bleibt auch für
+gespeicherte Offline-Laufwerke erhalten. „System“ ist eine manuelle Kennzeichnung,
+keine automatische Prüfung des Bootlaufwerks. Beide Optionen ändern nur die Anzeige;
+vorhandene MQTT-Ziele, Belegungen und Mobile-Kopplungen werden erhalten.
+
+![USB-Laufwerke mit System/Hidden – lokale Beispielansicht](docs/screenshots/usb-drives.png)
 
 ### Neu in 0.1.35: Barcode-/QR-Scanner und HA-Tags
 

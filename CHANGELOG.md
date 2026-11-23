@@ -1,5 +1,15 @@
 # Änderungen
 
+## 0.1.36 – 23. November 2026
+
+- USB-Massenspeicher über Geräte-/Interface-Klasse erkennen, einschließlich UAS.
+  Neue Laufwerke ohne Eingabefreigabe und ohne ausgewählte MQTT-Ziele.
+- „System“ und „Hidden“ schließen sich gegenseitig aus: eingeklappt Name plus
+  „Systemlaufwerk“ oder nur Name. Aufklappbar, gespeichert und offline verfügbar.
+- Keine unpassenden Eingabe-/Display-/Neuzuordnungsfelder bei Laufwerken.
+  Bestehende Ziele und andere Geräte-/Mobile-Einstellungen bleiben erhalten.
+- README DE/EN, Dokumentation DE/EN/FR, neues Installations-ZIP und Prüfsumme.
+
 ## 0.1.35 – 22. November 2026 (öffentliches Testrelease)
 
 Enthält die zuvor lokalen Zwischenstände 0.1.32–0.1.34: acht Richtungswerte und

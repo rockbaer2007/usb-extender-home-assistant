@@ -1,5 +1,14 @@
 # Aktueller Stand
 
+## 0.1.36 – USB-Laufwerke, System und Hidden
+
+- Neue USB-Speicher ohne voreingestellte Haken; Bestandszuordnungen erhalten.
+- Gegenseitig ausschließende Anzeigeoptionen, kompakte Zusammenfassung, jederzeit
+  aufklappbar. Speicherung einschließlich Offline-Kennung; keine Laufwerksoperation.
+- Quellstand vorher unter `M:\repos-backups\usb-extender-before-036-20261123-135834.zip`
+  gesichert und CRC geprüft. Tests verwenden temporäre Konfigurationen und lokale
+  USB-/Web-Simulationen; keine Änderung oder Installation auf dem Raspberry Pi.
+
 ## 0.1.35 – Barcode-/QR-Scanner, öffentliches Testrelease
 
 - Release-Prüfung: 238 Python-Tests und zwölf Node-/DOM-Prüfprogramme erfolgreich.

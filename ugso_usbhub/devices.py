@@ -11,6 +11,7 @@ def descriptor(device):
     result={name:device.get(name, '') for name in
             ('hardware_key','observed_id','vendor','product_id','serial','port','kind')}
     result['observed_id']=device.get('observed_id',device['id'])
+    result['usb_class']='mass-storage' if device.get('usb_storage') else ''
     return result
 
 

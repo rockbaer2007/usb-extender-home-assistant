@@ -2,8 +2,23 @@
 
 **Connect USB input devices and Stream Decks through MQTT — for Raspberry Pi.**
 
-Version **0.1.35** · Public test release · [Deutsch](README.md) · **English**.
-[Download ZIP and checksum](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.35).
+Version **0.1.36** · Public test release · [Deutsch](README.md) · **English**.
+[Download ZIP and checksum](https://github.com/rockbaer2007/usb-extender-home-assistant/releases/tag/v0.1.36).
+
+### New in 0.1.36: compact USB drives
+
+USB mass-storage devices are identified by their USB class. New drives start with
+input disabled and no selected MQTT targets. Irrelevant input, display and device
+reassignment controls are omitted.
+
+In USB / Virtual Devices, the mutually exclusive **System** and **Hidden** checkboxes
+collapse a drive to **name + Systemlaufwerk (system drive)** or **name only**.
+Expand the row to edit it. With neither option selected, the entry starts expanded.
+Use Save to persist the choice, including for saved offline drives. System is a
+manual label, not automatic boot-drive detection. Both options affect display only;
+existing MQTT targets, bindings and Mobile pairings are preserved.
+
+![USB drives with System/Hidden – local example view](docs/screenshots/usb-drives.png)
 
 ### New in 0.1.35: barcode/QR scanners and HA tags
 

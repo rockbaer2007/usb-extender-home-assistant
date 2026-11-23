@@ -239,14 +239,30 @@ function devices() {
   const all=status.devices.filter(d=>!(d.connection==='mobile'&&forgottenDecks.has(d.id)));Object.keys(config.devices).forEach(id=>{if(!all.some(d=>d.id===id))all.push({id,name:config.devices[id].name||id,kind:'offline',identity_hint:'Nicht verbunden; Einstellungen bleiben erhalten'});});
   for(const d of status.mobile?.known_decks||[])if(!all.some(x=>x.id===d.id)&&!forgottenDecks.has(d.id))all.push({...d,kind:'offline',connection:'mobile'});
   all.forEach(d=>{
-    const c=card(), row=el('div',undefined,'row spread');row.append(el('h2',d.name),el('span',d.kind,'badge'+(d.kind==='offline'?' offline':'')));c.append(row,el('div',d.id,'device-id'),el('small',d.identity_hint||''));
-    const settings=config.devices[d.id] ||= {name:d.name,enabled:false,targets:[...config.default_targets],receive_broker:'',brightness:30};
+    const storage=!!d.usb_storage||config.devices[d.id]?.hardware?.usb_class==='mass-storage';
+    const settings=config.devices[d.id] ||= {name:d.name,enabled:false,targets:storage?[]:[...config.default_targets],receive_broker:'',brightness:30};
+    const outer=card();let c=outer,refreshDrive=()=>{};
+    if(storage){
+      outer.classList.add('usb-drive');outer.dataset.device=d.id;
+      const details=el('details',undefined,'usb-drive-details'),summary=el('summary'),name=el('strong'),badge=el('span',undefined,'badge');summary.append(name,badge);details.append(summary);outer.append(details);
+      c=el('div',undefined,'usb-drive-body');details.append(c);
+      refreshDrive=()=>{name.textContent=settings.name||d.name;const mode=settings.device_view||'normal';badge.textContent=mode==='system'?'Systemlaufwerk':'USB-Laufwerk';badge.hidden=mode==='hidden';outer.dataset.view=mode;};
+      let system,hidden;
+      const flags=el('div',undefined,'row usb-drive-flags');c.append(flags);
+      const choose=(mode,on)=>{settings.device_view=on?mode:'normal';system.checked=settings.device_view==='system';hidden.checked=settings.device_view==='hidden';details.open=settings.device_view==='normal';refreshDrive();};
+      system=field(flags,'System',settings.device_view==='system',v=>choose('system',v),'checkbox');
+      hidden=field(flags,'Hidden',settings.device_view==='hidden',v=>choose('hidden',v),'checkbox');
+      details.open=!['system','hidden'].includes(settings.device_view);refreshDrive();
+    }else{const row=el('div',undefined,'row spread');row.append(el('h2',d.name),el('span',d.kind,'badge'+(d.kind==='offline'?' offline':'')));c.append(row);}
+    c.append(el('div',d.id,'device-id'),el('small',d.identity_hint||''));
     const fields=el('div',undefined,'fields');c.append(fields);
-    field(fields,'Anzeigename',settings.name,v=>settings.name=v);
+    field(fields,'Anzeigename',settings.name,v=>{settings.name=v;refreshDrive();});
+    if(!storage){
     field(fields,'Gerät für Eingaben freigeben',settings.enabled,v=>settings.enabled=v,'checkbox');
     field(fields,'Broker für Display-Rückmeldungen',settings.receive_broker,v=>settings.receive_broker=v,'select',[['','Keiner'],...config.brokers.map(b=>[b.id,b.name])]);
     const bright=field(fields,'Stream-Deck-Helligkeit (0–100)',settings.brightness,v=>settings.brightness=v,'number');bright.min=0;bright.max=100;
-    if(d.kind==='input'||(d.kind==='offline'&&d.connection!=='mobile'&&!d.id.startsWith('mobile-'))){
+    }
+    if(!storage&&(d.kind==='input'||(d.kind==='offline'&&d.connection!=='mobile'&&!d.id.startsWith('mobile-')))){
       const scanner=el('details',undefined,'scanner-options');c.append(scanner);scanner.append(el('summary','Barcode-/QR-Scanner · USB-Tastatur'));
       const controls=el('fieldset',undefined,'fields');
       field(scanner,'Als Barcode-/QR-Scanner verwenden',!!settings.scanner_enabled,v=>{settings.scanner_enabled=v;controls.disabled=!v;refreshScannerVisuals();},'checkbox');
@@ -275,7 +291,7 @@ function devices() {
       gamepad.append(el('p','Analogmodus am Gamepad verwenden. Vier Stickachsen: 0–100, Mitte 50; die vom Gerät gemeldete Totzone beruhigt die Mitte. ABS_Z wird ignoriert. Eigene Topics und HA-Sensoren am selben Gerät; Geräte-Zielbroker gelten. Änderungen erst speichern.'));
       gamepad.append(el('small','Schultertasten und Stick-Klicks unter „Tasten & Anzeigen“ anlernen: L1 = BTN_BASE, R1 = BTN_BASE2, L2 = BTN_TOP2, R2 = BTN_PINKIE, linker Klick = BTN_BASE5, rechter Klick = BTN_BASE6. L2/R2 sind digitale Tasten. Vorhandene Belegungen und Linux-IDs bleiben erhalten.'));
     }
-    if(!settings.scanner_enabled&&!isDragonrise(d.id)&&(d.kind==='input'||(d.kind==='offline'&&!d.id.startsWith('mobile-')))){
+    if(!storage&&!settings.scanner_enabled&&!isDragonrise(d.id)&&(d.kind==='input'||(d.kind==='offline'&&!d.id.startsWith('mobile-')))){
       field(fields,'Touchpad-Gesten auswerten',!!settings.touchpad_gestures,v=>settings.touchpad_gestures=v,'checkbox');
       c.append(el('small','Für T650 und andere Multitouch-Touchpads: Tippen, Ein-Finger-Slide, Scrollen, Wischen und Pinch anlernen. Zuerst freigeben, Gesten aktivieren und speichern.'));
       const options=el('details',undefined,'touchpad-options');options.append(el('summary','Ein-Finger-Slide und optionale X/Y-Werte'));c.append(options);
@@ -319,14 +335,15 @@ function devices() {
       options.append(el('small','10 = empfindlich, 1 = größere Bewegung nötig. Acht Richtungen im Anlernmodus: TOUCHPAD_SLIDE_LEFT/RIGHT/UP/DOWN sowie UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT. X/Y ist standardmäßig aus, nutzt die Geräte-Zielbroker und sendet reine Zahlen, kein JSON. X: links 0 → rechts 100; Y: oben 0 → unten 100. Kein zusätzlicher Tipp nach Schieben.'));
     }
     c.append(el('div','Standardziele für dieses Gerät','route-title'));routes(c,settings.targets,v=>settings.targets=v);
-    if(d.kind==='inventory')c.append(el('p','Für dieses Gerät gibt es noch keinen Eingabetreiber. Die Freigabe allein ergänzt kein herstellerspezifisches Protokoll.','warning'));
+    if(storage)c.append(el('p','USB-Laufwerk · System/Hidden ändern nur die Anzeige. Zum Bearbeiten die Zeile aufklappen. Vorhandene Einstellungen bleiben erhalten.'));
+    else if(d.kind==='inventory')c.append(el('p','Für dieses Gerät gibt es noch keinen Eingabetreiber. Die Freigabe allein ergänzt kein herstellerspezifisches Protokoll.','warning'));
     const actions=el('div',undefined,'row');c.append(actions);
     if(savedConfig.devices[d.id]||(status.mobile?.known_decks||[]).some(x=>x.id===d.id)){
       const remove=button(actions,'🗑 Gerät entfernen',async()=>{
         if(confirm('„'+settings.name+'“ mit Tasten, Seiten und MQTT-Zuordnungen entfernen? Iconpakete und die Mobile-Kopplung bleiben erhalten. Ein angeschlossenes USB-Gerät erscheint danach nicht freigegeben.'))await deviceAction('remove',d.id);
       },'danger');remove.setAttribute('aria-label','Gerät entfernen: '+settings.name);
     }
-    if(d.kind!=='offline'&&d.connection!=='mobile'){
+    if(!storage&&d.kind!=='offline'&&d.connection!=='mobile'){
       const choices=Object.entries(savedConfig.devices).filter(([id,s])=>id!==d.id&&!id.startsWith('mobile-')&&!status.devices.some(x=>x.id===id)&&(!s.hardware?.vendor||s.hardware.vendor===d.vendor));
       if(choices.length){
         let target=choices[0][0];field(actions,'Vorhandenem Gerät zuordnen',target,v=>target=v,'select',choices.map(([id,s])=>[id,s.name||id]));

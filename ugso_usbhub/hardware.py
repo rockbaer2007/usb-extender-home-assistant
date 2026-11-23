@@ -34,6 +34,13 @@ def hardware_key(vendor, product, serial):
     return vendor+'-'+product+'-'+hashlib.sha256(serial.encode()).hexdigest() if serial else ''
 
 
+def usb_storage(path):
+    """USB mass-storage class, including UAS and per-interface class devices."""
+    return text(path / 'bDeviceClass') == '08' or any(
+        text(interface / 'bInterfaceClass') == '08'
+        for interface in path.parent.glob(path.name + ':*'))
+
+
 def inventory():
     from StreamDeck.ProductIDs import USBProductIDs
     deck_products = {f"{value:04x}" for key, value in vars(USBProductIDs).items() if key.startswith("USB_PID_STREAMDECK_")}
@@ -54,7 +61,8 @@ def inventory():
                         "port": path.name, "name": text(path / "product") or f"USB {vendor}:{product}",
                         "inputs": inputs, "kind": "streamdeck" if vendor == "0fd9" and product in deck_products else "input" if inputs else "inventory",
                         "identity_hint": "Seriennummer · portunabhängig" if serial else "Keine eindeutige Seriennummer · bei Umstecken vorhandenem Gerät zuordnen",
-                        "hardware_key":hardware_key(vendor,product,serial)}
+                        "hardware_key":hardware_key(vendor,product,serial),
+                        "usb_storage":usb_storage(path)}
         devices.append(record)
         # Unifying/Bolt receivers can expose separate paired HID++ input units.
         # Preserve the receiver as a legacy input route; child routes are opt-in.
